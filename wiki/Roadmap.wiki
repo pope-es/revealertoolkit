@@ -1,13 +1,11 @@
-= Roadmap =
-
-== v0.1 == 
+= v0.1 =
 
  * basic morgue management
  * basic preforensic tasks
  * basic search engine
  * RVT console shell console
 
-== v0.2 ==
+= v0.2 =
 
  * verbosity and error logging
  * activity traceability
