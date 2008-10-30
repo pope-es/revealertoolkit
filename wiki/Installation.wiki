@@ -1,0 +1,18 @@
+#labels Phase-Deploy
+
+= Introduction =
+
+By now, RVT is a pretty simple perl script that could be run almost without installation, but some prerequisites have to be taken into account.
+
+
+= Requirements =
+
+ * linux OS  (tested on Debian stable)
+ * The Sleuthkit (tested on v2.06)
+ * Perl (tested on v5.8.8)
+ * other minor components that i have to add...
+ * lots of pacience
+
+= Installation =
+
+ * ...
