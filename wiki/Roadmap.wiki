@@ -1,0 +1,20 @@
+#labels Phase-Requirements
+# RVT roadmap
+
+= Roadmap =
+
+= v0.1 =
+
+* basic morgue management
+* basic preforensic tasks
+* basic search engine
+* RVT console shell console
+
+= v0.2 =
+
+* verbosity and error logging
+* activity traceability
+* basic html output
+* search revision features
+* more preforensic tasks
+* text sandbox
