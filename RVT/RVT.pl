@@ -34,7 +34,7 @@ use Data::Dumper;
 use Getopt::Long;
 
 
-my $RVT_version = '0.1.0';
+my $RVT_version = '0.1.1';
 
 GetOptions(
         "batch:s"				=> \$RVT_batchmode,
@@ -521,7 +521,7 @@ sub RVT_split_diskname ($) {
     my $d = shift;
     my $r; 
     $r = {
-    		case   => 	RVT_get_casenumber($d), 
+    		    case   => 	RVT_get_casenumber($d), 
                 device => 	RVT_get_devicenumber($d),
                 disk   => 	RVT_get_disknumber($d),
                 partition => 	RVT_get_partitionnumber($d)
@@ -539,7 +539,42 @@ sub RVT_join_diskname ($$$) {
     return join('-', @_);
 }
 
+sub RVT_expand_object ($) {
+    # takes a image object (case, device or disk) and returns a variable
+    # with this structure
+    #  $r->{case}{}{device}{}{disk}{}   like $RVT_cases
 
+    my $v = shift;
+    my $case;
+    my $r;
+
+    # if there is not a case, return 0
+    my $v_split = RVT_split_diskname($v);
+    return 0 unless $v_split->{case};
+    $case = $v_split->{case};
+
+    # fills devices
+    if ($v_split->{device}) {
+        $r->{$case}{device}{$v_split->{device}}{v} = 1;
+    } else {
+        foreach my $dev ( keys %{$RVT_cases->{$case}{device}} ) {
+            $r->{$case}{device}{$dev}{v} = 1;
+        }
+    }
+    
+    # fills disks
+    if ($v_split->{disk} and $v_split->{device}) {
+        $r->{$case}{device}{$v_split->{device}}{disk}{$v_split->{disk}} = 1;
+    } else {
+        foreach my $dev ( keys %{$r->{$case}{device}} ) {
+            foreach my $disk ( keys %{$RVT_cases->{$case}{device}{$dev}{disk}} ) {
+                $r->{$case}{device}{$dev}{disk}{$disk} = 1;
+            }           
+        }
+    }
+
+    return $r;
+}
 
 
 
@@ -973,7 +1008,7 @@ sub RVT_script_search_launch  {
     my ( $searchesfilename, $disk ) = @_;
     
     $disk = $RVT_level->{tag} unless $disk;
-    
+    print "xx launching $disk\n";
     my $case = RVT_get_casenumber($disk);
     my $diskpath = RVT_get_morguepath($disk);
     my $stringspath = "$diskpath/output/strings";
@@ -1496,105 +1531,111 @@ sub RVT_mount_list {
 
 sub RVT_losetup_delete { 
 
-    my $case = shift(@_);
-    my ($device, $disk, $partition);
+    my $object = shift(@_);
+    my ($case, $device, $disk);
 
-	RVT_fill_level(\$case);
+	RVT_fill_level(\$object);
+	my $type = RVT_check_format($object);
+	return 0 unless ($type == 'disk');
 
-    for my $device (keys %{$RVT_cases->{$case}{device}}) {
-      for my $disk (keys %{$RVT_cases->{$case}{device}{$device}{disk}}) {
-        for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
-            
-	    my @args = ("sudo", "losetup", "-d", 
-	       "/dev/$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}{$partition}{loop}", );
-	    system(@args) == 0 or die "losetup failed: $?";
+    my $r = RVT_split_diskname($object);
+    $case = $r->{case};
+    $device = $r->{device};
+    $disk = $r->{disk};
     
-	    }
-      }
+    for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
+        my @args = ("sudo", "losetup", "-d", 
+       "/dev/$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}{$partition}{loop}", );
+        system(@args) == 0 or die "losetup failed: $?";
     }
-
+     
     RVT_losetup_recheck;
-
-} # una partición
+} 
 
 
 sub RVT_losetup_assign () {
 
-    my $case = shift(@_);
-    my ($devide, $disk, $partition);
-    
-    RVT_fill_level(\$case);
+    my $object = shift(@_);
+    my ($case, $device, $disk);
 
-    for my $device (keys %{$RVT_cases->{$case}{device}}) {
-      for my $disk (keys %{$RVT_cases->{$case}{device}{$device}{disk}}) {
-        for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
-            
-          my @args = ("sudo", "losetup", "-f", 
-            $RVT_cases->{$case}{imagepath}."/$case-$RVT_cases->{$case}{code}/$case-$device-$disk.dd", 
-            "-o $RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}{$partition}{obytes}" );
-          print "\n" . join (" ", @args) . "\n";
-          system(@args) == 0 or die "losetup failed: $?";
-	    
+	RVT_fill_level(\$object);
+	my $type = RVT_check_format($object);
+	return 0 unless ($type == 'disk');
+
+    my $r = RVT_split_diskname($object);
+    $case = $r->{case};
+    $device = $r->{device};
+    $disk = $r->{disk};
+    
+    for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
+      my @args = ("sudo", "losetup", "-f", 
+        $RVT_cases->{$case}{imagepath}."/$case-$RVT_cases->{$case}{code}/$case-$device-$disk.dd", 
+        "-o $RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}{$partition}{obytes}" );
+      print "\n" . join (" ", @args) . "\n";
+      system(@args) == 0 or die "losetup failed: $?"; 
 	}
-      }
-    }
+
     RVT_losetup_recheck;
 }
 
 
 sub RVT_mount_delete () {
 
-    my $case = shift(@_);
-    my ($devide, $disk, $partition);
+    my $object = shift(@_);
+    my ($case, $device, $disk);
 
-	RVT_fill_level(\$case);
+	RVT_fill_level(\$object);
+	my $type = RVT_check_format($object);
+	return 0 unless ($type == 'disk');
 
-    for my $device (keys %{$RVT_cases->{$case}{device}}) {
-      for my $disk (keys %{$RVT_cases->{$case}{device}{$device}{disk}}) {
-	my $pmnt = $RVT_cases->{$case}{morguepath}."/$case-" 
-		. $RVT_cases->{$case}{code} 
-		. "/$case-$device-$disk/mnt";
-        for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
-	  my $ppart = "$pmnt/p$partition"; 
-          my @args = ("sudo", "umount", $ppart);
-          print "\n" . join (" ", @args) . "\n";
-          system(@args) == 0 or  print "--> ERROR: umount $case-$device-$disk-$partition failed: $?\n";
-	    
-	}
-      }
-    }
+    my $r = RVT_split_diskname($object);
+    $case = $r->{case};
+    $device = $r->{device};
+    $disk = $r->{disk};
     
+    my $pmnt = $RVT_cases->{$case}{morguepath}."/$case-" 
+    . $RVT_cases->{$case}{code} 
+    . "/$case-$device-$disk/mnt";
+    for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
+        my $ppart = "$pmnt/p$partition"; 
+        my @args = ("sudo", "umount", $ppart);
+        print "\n" . join (" ", @args) . "\n";
+        system(@args) == 0 or  print "--> ERROR: umount $case-$device-$disk-$partition failed: $?\n";
+	}
+
     RVT_losetup_recheck;
 }
 
 
 sub RVT_mount_assign () {
 
-    my $case = shift(@_);
-    my ($device, $disk, $partition);
+    my $object = shift(@_);
+    my ($case, $device, $disk);
 
-	RVT_fill_level(\$case);
-	return 0 unless $case;
+	RVT_fill_level(\$object);
+	my $type = RVT_check_format($object);
+	return 0 unless ($type == 'disk');
 
-    for my $device (keys %{$RVT_cases->{$case}{device}}) {
-      for my $disk (keys %{$RVT_cases->{$case}{device}{$device}{disk}}) {
+    my $r = RVT_split_diskname($object);
+    $case = $r->{case};
+    $device = $r->{device};
+    $disk = $r->{disk};
+	
 	my $pmnt = $RVT_cases->{$case}{morguepath}."/$case-" 
-		. $RVT_cases->{$case}{code} 
-		. "/$case-$device-$disk/mnt";
+	    . $RVT_cases->{$case}{code} 
+	    . "/$case-$device-$disk/mnt";
 	if ( ! -d $pmnt ) { mkdir($pmnt) or die "JARL! no puedo hacer un directorio: $!\n"; }
-        for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
-	  my $ppart = "$pmnt/p$partition"; 
-	  if (! -d $ppart ) { mkdir ($ppart) or die "JARL! no puedo hacer un directorio: $!\n"; }
-          my @args = ("sudo", "mount",  
-            $RVT_cases->{$case}{imagepath}."/$case-$RVT_cases->{$case}{code}/$case-$device-$disk.dd",
+    for my $partition (keys %{$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}}) {
+	    my $ppart = "$pmnt/p$partition"; 
+	    if (! -d $ppart ) { mkdir ($ppart) or die "JARL! no puedo hacer un directorio: $!\n"; }
+        my @args = ("sudo", "mount",  
+        $RVT_cases->{$case}{imagepath}."/$case-$RVT_cases->{$case}{code}/$case-$device-$disk.dd",
 	    $ppart,
-            "-o", "ro,loop,iocharset=utf8,offset=$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}{$partition}{obytes},umask=$RVT_umask,gid=$RVT_gid" );
-          print "\n" . join (" ", @args) . "\n";
-          system(@args) == 0 or  print "--> ERROR: mount $case-$device-$disk-$partition failed: $?\n";
-	    
+        "-o", "ro,loop,iocharset=utf8,offset=$RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}{$partition}{obytes},umask=$RVT_umask,gid=$RVT_gid" );
+        print "\n" . join (" ", @args) . "\n";
+        system(@args) == 0 or  print "--> ERROR: mount $case-$device-$disk-$partition failed: $?\n";
 	}
-      }
-    }
+
     RVT_losetup_recheck;
 }
 
@@ -1787,13 +1828,32 @@ sub RVT_shell_function_exec ($$) {
     for (my $cc=0; $cc<=$#c; $cc++ ) {
         my $fun = 'RVT_' . join('_',@c[0..$cc]);
         if ( $RVT_functions{ $fun } ) {
-
-            #print "\nexecuting: $fun " . join(" ",@c[$cc+1..$#c]) . "\n\n";
-            eval {
-                    &{$fun}( @c[$cc+1..$#c] );
-            };
+            
+            # expanding @disks
+            # now, only works with last argument
+            my @disks;
+            if (($c[$#c] eq '@disks') and $RVT_level->{tag} ) {
+                my $r = RVT_expand_object ($RVT_level->{tag});
+                my $tcase = $RVT_level->{case};
+                foreach my $dev ( keys %{$r->{$tcase}{device}} ) {
+                    foreach my $disk ( keys %{$r->{$tcase}{device}{$dev}{disk}} ) {
+                        push (@disks,  RVT_join_diskname( $tcase, $dev, $disk ));
+                    }
+                }
+            } else {
+                # puts one element in @disks just to execute the command
+                # ... yes, this is a chunk of ugly code...
+                @disks[0] = ($#c == $cc)?'':$c[$#c];
+            }
+            
+            foreach my $disk ( @disks ) {
+                #print "\nexecuting: $fun " . join(" ",@c[$cc+1..$#c-1], $disk) . "\n\n";
+                eval {
+                    &{$fun}( @c[$cc+1..$#c-1], $disk );
+                };
                 if ($@) { print "\n\n--> ERROR:  the command exited with errors: \n$@\n\n"; }
-                return 0;
+            }
+            return 0;
         }
     }
 
