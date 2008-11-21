@@ -986,7 +986,7 @@ sub RVT_script_search_quickcount {
 	}
 	
 	open (R, ">$infopath/count_$name.txt") or die "jarl! $!";
-	foreach $k ( sort {$results{$a} cmp $results{$b}} keys %results) {
+	foreach $k ( sort {$results{$a} <=> $results{$b}} keys %results) {
 		print R "$results{$k}\t$k\n";
 		print  "\t $results{$k}\t$k\n";
 	} 
