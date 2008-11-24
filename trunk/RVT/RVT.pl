@@ -1079,10 +1079,10 @@ sub RVT_script_search_clusters  {
         
         open (BF, "<$searchespath/$f") or return 0;
         while (my $l=<BF>) {
-            $l =~ /^.+-\d{6}-\d{1,2}-\d{1,2}\.dd-(\d{1,2})\.(asc|uni):\s*(\d+) /;
+            $l =~ /^.+-\d{6}-\d{1,2}-\d{1,2}(\.dd)?-(\d{1,2})\.(asc|uni):\s*(\d+) /;
         
-            my $part = $1;
-            my $offset = $3;
+            my $part = $2;
+            my $offset = $4;
             my $fn = "$searchespath/i$f-$part";
             if (! defined($fnh{$fn})) {
        	        open ( $fnh{$fn}, ">$fn" ) or die "FATAL: $!";
