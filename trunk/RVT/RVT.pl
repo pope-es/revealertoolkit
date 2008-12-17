@@ -113,10 +113,22 @@ my %RVT_functions = (
  
  'RVT_set_level' => 'Sets working level a case, device, disk or partition',
  
+ 'RVT_cluster_generateindex' => "Creates sort of an index for quick cluster-to-inode\n
+                                    resolution. Required fot performing searches.",
+ 
+ 'RVT_cluster_toinode' => "Prints all the inodes associated with a cluster\n
+                            cluster toinode <cluster> <partition>",
+ 
+ 'RVT_cluster_allocationstatus' => "Prints cluster allocation status\n
+                                    cluster allocationstatus <cluster> <partition>", 
+ 
  'RVT_script_search_quickcount' => "Launch a quick search in a case or in an image \n
                                 script search quickcount <name:regular expression>  <image> ",
  'RVT_script_search_launch' => "Launch a search in a case or in an image \n
                                 script search launch <search file> <image or case> <image or case> ...",
+ 'RVT_script_search_clusterlist' => "Builds a list of clusters and file paths that matches a previous\n
+                                    search \n
+                                    script search clusterlist <search file> <image>",                               
  'RVT_script_search_clusters' => "Extract the clusters matched in a previous search\n
                                 script search clusters <search file> <image>", 
  'RVT_script_search_file_edit' => "Invokes VIM in order to create or edit a new file with searches\n
@@ -617,11 +629,13 @@ sub RVT_get_morguepath ($) {
     # checks if a case or disk is in the morgue
     # returns the path if OK, 0 if not present or error
     
-    my $thing = shift;
+    my $thing = shift;    
     my $type = RVT_check_format($thing);
     my $case = RVT_get_casenumber($thing);
+    my $device = RVT_get_devicenumber($thing);
+    my $disk = RVT_get_disknumber($thing);
+    $disk = RVT_join_diskname ($case, $device, $disk);
     return 0 if (!$case);
-    
  
     if ($type eq 'case number' or $type eq 'case code') {
         for my $morgue ( @{$RVT_paths->{morgues}} ) { 
@@ -630,10 +644,10 @@ sub RVT_get_morguepath ($) {
         }
     }
     
-    if ($type eq 'disk') {
+    if ($disk) {
         for my $morgue ( @{$RVT_paths->{morgues}} ) { 
-            return "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$thing" 
-                if (-d "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$thing");
+            return "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$disk" 
+                if (-d "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$disk");
         }
     }    
     
@@ -648,8 +662,10 @@ sub RVT_get_imagepath ($) {
     my $thing = shift;
     my $type = RVT_check_format($thing);
     my $case = RVT_get_casenumber($thing);
+    my $device = RVT_get_devicenumber($thing);
+    my $disk = RVT_get_disknumber($thing);
+    $disk = RVT_join_diskname ($case, $device, $disk);
     return 0 if (!$case);
-    
  
     if ($type eq 'case number' or $type eq 'case code') {
         for my $morgue ( @{$RVT_paths->{images}} ) { 
@@ -658,10 +674,10 @@ sub RVT_get_imagepath ($) {
         }
     }
     
-    if ($type eq 'disk') {
+    if ($disk) {
         for my $morgue ( @{$RVT_paths->{images}} ) { 
-            return "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$thing.dd" 
-                if (-e "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$thing.dd");
+            return "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$disk.dd" 
+                if (-e "$morgue/$case-" . $RVT_cases->{$case}{code} . "/$disk.dd");
         }
     }    
     
@@ -837,6 +853,111 @@ sub RVT_tsk_datastat ($$$) {
 #
 #######################################################################
 
+sub RVT_cluster_generateindex {
+    # creates the index for cluster-to-inode resolution
+    # (ifind could be very slow)
+    
+    my ( $disk ) = @_;
+    
+    $disk = $RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { print "ERR: that is not a disk\n\n"; return 0; }
+    
+    my $ad = RVT_split_diskname($disk);
+    my $morguepath = RVT_get_morguepath($disk);
+    my $imagepath = RVT_get_imagepath($disk);
+    if (! $morguepath) { print "ERR: there is no path to the morgue!\n\n"; return 0};
+
+    my $searchespath = "$morguepath/output/searches";
+    mkdir $searchespath unless (-e $searchespath);
+    if (! -d $searchespath) { print "ERR: there is no path to the morgue/searches!\n\n"; return 0};
+
+    
+	# generation for every partition 
+
+	my %parts = %{$RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
+    
+    foreach my $p ( keys %parts ) {
+        open (F, ">$searchespath/cindex-$disk-p$p");
+        open (ILS, "ils -e /dev/$parts{$p}{loop} |");
+        <ILS>; <ILS>; <ILS>; 
+        while (<ILS>) {   
+           /^(.+?)\|/;
+           my $inode = $1;
+           print F "$inode:";
+           open (ISTAT, "istat /dev/$parts{$p}{loop} $inode |");
+           while ( $sl = <ISTAT> ) {
+                next unless $sl =~ /^[0-9 ]+$/;
+                chomp $sl;
+                print F " $sl ";
+           }
+           print F "\n";
+        }
+        print "\t\tindex for partition $disk-p$p done\n";
+    }
+
+    print "\t clusters indexes done\n";
+    return 1;
+}
+
+
+sub RVT_get_inodefromcluster {
+    # gets the inodes associated with a cluster (or data unit)
+    # arguments:
+    #   cluster
+    #   partition
+    # returns an array with the results (one element per inode)
+    
+    my ( $cluster, $part ) = @_;
+    
+    next unless ($cluster =~ /^[0-9\-]+$/);
+    $part = $RVT_level->{tag} unless $part;
+    if (RVT_check_format($part) ne 'partition') { print "ERR: that is not a partition\n\n"; return 0; }
+
+    my $ad = RVT_split_diskname($part);
+    my $morguepath = RVT_get_morguepath($part);
+    if (! $morguepath) { print "ERR: there is no path to the morgue!\n\n"; return 0};
+
+    my $searchespath = "$morguepath/output/searches";
+    if (! -d $searchespath) { print "ERR: there is no path to the morgue/searches!\n\n"; return 0};        
+    
+    my @r = `grep $cluster $searchespath/cindex-$part | cut -d':' -f1 `;
+    @r = map { chomp; $_; } @r;
+    foreach my $kk (@r) { print "-$kk-";}
+    
+    return \@r;
+}
+
+
+sub RVT_cluster_toinode {
+    # prints the inodes associated with a cluster (or data unit)
+    # arguments:
+    #   cluster
+    #   partition
+    
+    my ( $cluster, $part ) = @_;
+     
+    my $r = RVT_get_inodefromcluster ( $cluster,$part );
+
+    print @{$r};
+}
+
+
+sub RVT_cluster_allocationstatus {
+
+    my ($cluster, $part) = @_;
+    
+    next unless ($cluster =~ /^[0-9\-]+$/);
+    $part = $RVT_level->{tag} unless $part;
+    if (RVT_check_format($part) ne 'partition') { print "ERR: $part that is not a partition\n\n"; return 0; }
+    
+    my $p = RVT_split_diskname( $part );
+    
+    my $disk = RVT_join_diskname ($p->{case}, $p->{device}, $p->{disk});
+    
+    print "Cluster $cluster: " . RVT_tsk_datastat ($disk, $p->{partition}, $cluster) . "\n";
+}
+
+
 sub RVT_script_search_file_edit  {
     # takes a case and a file name and creates a file
     # in morgue/case-code/searches_files
@@ -1008,7 +1129,7 @@ sub RVT_script_search_launch  {
     my ( $searchesfilename, $disk ) = @_;
     
     $disk = $RVT_level->{tag} unless $disk;
-    print "xx launching $disk\n";
+    print "\t launching $disk\n";
     my $case = RVT_get_casenumber($disk);
     my $diskpath = RVT_get_morguepath($disk);
     my $stringspath = "$diskpath/output/strings";
@@ -1034,6 +1155,81 @@ sub RVT_script_search_launch  {
     }
 
     return 1;
+}
+
+
+sub RVT_script_search_clusterlist {
+    # extract cluster lists from a search
+    # takes as arguments:
+    #   file with searches
+    #   disk
+
+    my ( $searchesfilename, $ndisk ) = @_;
+
+	$ndisk = $RVT_level->{tag} unless $ndisk;
+   
+    my $adisk = RVT_split_diskname($ndisk);
+    my $diskpath = RVT_get_morguepath($ndisk);
+    my $stringspath = "$diskpath/output/strings";
+    my $searchespath = "$diskpath/output/searches";
+    #return 0 if (! $disk);
+    return 0 if (! $diskpath);
+    return 0 if (! -d $stringspath);
+    return 0 if (! -d $searchespath);
+   
+    open (F, "<".RVT_get_morguepath($adisk->{case})."/searches_files/$searchesfilename") or return 0;
+    my @searches = grep {!/^\s*#/} <F>;
+    close (F);
+    
+    my %fnh;  # $fnh {$searchespath/$f-$part} = filehandler for writing in the file
+              # one for every busq-partition couple (with results)
+    
+    print "Creating cluster lists:\n\n";
+    
+    for $b (@searches) {
+        
+        chomp $b;
+        print "-- $b\n";
+        my $f = $b;
+        $f =~ s/ /-/g;
+        $f = 'busq_' . $f;
+        
+        open (BF, "<$searchespath/$f") or return 0;
+        while (my $l=<BF>) {
+            $l =~ /^.+-\d{6}-\d{1,2}-\d{1,2}(\.dd)?-(\d{1,2})\.(asc|uni):\s*(\d+) /;
+        
+            my $part = $2;
+            my $offset = $4;
+            my $cfn = "$searchespath/c$f-$part";
+            my $pfn = "$searchespath/p$f-$part";
+            if (! defined($fnh{$cfn})) {
+       	        open ( $fnh{$cfn}, "|sort -nu > $cfn" ) or die "FATAL: $!";
+       	        open ( $fnh{$pfn}, "|sort -u  > $pfn" ) or die "FATAL: $!";
+            }
+            my $chandler = $fnh{$cfn};
+            my $phandler = $fnh{$pfn};
+
+	        # cluster and allocation status
+	        my $du = int( $offset /
+	                       $RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
+    	    my $allocstat = RVT_tsk_datastat ($ndisk, $part, $du);
+    	    my $loopdev = $RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{loop};
+    	    
+    	    my $inodes = RVT_get_inodefromcluster( $du, "$ndisk-p$part" );
+    	    foreach my $inode (@{$inodes}) {
+    	        print "ffind /dev/$loopdev $inode\n";
+                my $path = `ffind /dev/$loopdev $inode`; 
+                chomp $path;
+                print $chandler "$du:$allocstat:$inode:$path\n";
+                print $phandler "$path";     
+            }
+        }
+        close (BF);
+    }    
+     
+    for $f (keys %fnh) { close($fnh{$f}); }
+
+    return 1;    
 }
 
 
