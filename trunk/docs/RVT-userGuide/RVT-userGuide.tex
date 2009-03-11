@@ -1,0 +1,650 @@
+
+\documentclass[a4paper,11pt,oneside]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[pdftex]{color,graphicx} 
+\usepackage[pdftex,colorlinks]{hyperref} 
+\usepackage{xspace}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{pdflscape}
+\usepackage{subfigure}
+\usepackage{pdfpages}
+
+
+\title{Revealer Toolkit -- User Guide}
+\author{Jose Navarro}
+
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\addtolength{\parskip}{0.5 \baselineskip}
+
+\chapter{License}
+
+\section{License of this document}
+
+    Copyright (C) 2009 Jose Navarro a.k.a. Dervitx
+    
+    Permission is granted to copy, distribute and/or modify this document
+    under the terms of the GNU Free Documentation License, Version 1.3
+    or any later version published by the Free Software Foundation;
+    with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+    
+    A copy of the license is included in the section entitled "GNU
+    Free Documentation License".
+    
+    More information at: http://www.gnu.org/licenses/fdl.html
+
+\section{License of the Revealer Toolkit}
+
+	Copyright (C) 2008 Jose Navarro a.k.a. Dervitx
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    
+     For more information, please visit
+     http://www.gnu.org/licenses/old--licenses/gpl--2.0.txt
+
+
+\chapter{Acknowledgments}
+
+\begin{itemize}
+     \item INCIDE (Investigacion Digital S.L., www.incide.es)
+       where developers and testers work
+     \item Manu Ginés aka xkulio 
+       creator of the original Chanchullos Revealer
+     \item Generalitat de Catalunya
+       for partial funding of the project
+\end{itemize}
+
+
+
+\chapter{Introduction}
+
+the Revealer Toolkit is a framework and simple scripts for computer forensics. It uses Brian Carrier's The Sleuth Kit as the backbone, as well as other free tools.
+
+The aim of the Revealer Toolkit is to automate rutinary tasks and to manage sources and results from another perspective than the usual forensic frameworks.
+
+RVT is developed and actively tested by computer forensic investigators working at INCIDE, spanish company sited at the beautiful city of Barcelona (see www.incide.es for more details)
+
+project state: we are using RVT actually in our production servers, although do not expect an easy and clean software yet or a quick installation. For any questions, help or comments, please, drop an email.
+
+You can find additional information, packages and all the source code at http://code.google.com/p/revealertoolkit
+
+
+
+% -----------------------------------
+% Installation
+% -----------------------------------
+
+
+\chapter{Installation} \label{sec:installation}
+
+This is and example installation of the Revealer Toolkit Shell on a Debian \emph{lenny} 5.00. Also covers the creation of a valid folder structure and a sample image.
+
+\section{Operating system}
+
+Download last Debian stable version. In this example, Debian 5.00 \emph{lenny} is used.
+
+Some additional packages are required to be installed with \emph{apt-get}:
+
+\begin{verbatim}
+apt-get install openssh-server
+apt-get install unzip
+apt-get install sudo vim
+apt-get install sleuthkit binutils
+apt-get install dosfstools
+
+groupadd -g 1010 forensics
+addgroup analyst forensics
+
+mkdir /media/morgue
+chgrp forensics morgue
+chmod g+sw morgue
+
+mkdir /media/datos
+chgrp forensics datos
+chmod g+sw datos
+
+chmod a+r /dev/loop*
+and add the last line to the  \emph{/etc/init.d/bootmisc.sh}  file (before the last \emph{:})
+\end{verbatim}
+
+
+as root, add this line to the sudoers file (with \emph{visudo} command):
+
+\begin{verbatim}
+Defaults:%forensics !authenticate
+
+%forensics ALL=(root) /bin/mount, (root) /bin/umount, (root) /sbin/losetup
+\end{verbatim}
+
+
+\section{Software}
+
+\begin{verbatim}
+wget revealertoolkit.googlecode.com/files/RVT_v0.1.zip
+unzip RVT_v0.1.zip
+chmod a+x RVT/RVT.pl
+\end{verbatim}
+
+as root:
+
+\begin{verbatim}
+ln -s /home/analyst/RVT/RVT.pl /usr/bin/RVT.pl
+\end{verbatim}
+
+
+\section{Folder structure}
+
+as user:
+
+\begin{verbatim}
+mkdir /media/morgue/imagenes
+mkdir /media/datos/imagenes
+\end{verbatim}
+
+\begin{verbatim}
+mkdir /media/morgue/imagenes/100101-ghost
+mkdir /media/morgue/100101-ghost
+mkdir /media/morgue/100101-ghost/100101-01-1
+mkdir /media/morgue/100101-ghost/100101-01-1/mnt
+mkdir /media/morgue/100101-ghost/100101-01-1/output
+\end{verbatim}
+
+
+
+\section{Sample image creation}
+
+as user:
+
+\begin{verbatim}
+cd /media/morgue/imagenes/100101-ghost/
+dd if=/dev/zero bs=1024 count=10240 > 100101-01-1.dd
+\end{verbatim}
+
+as root:
+
+\begin{verbatim}
+fdisk /media/morgue/imagenes/100101-ghost/100101-01-1.dd
+
+in fdisk:
+
+x (additional functions)
+
+c (cylinders)
+1024
+s (sectors)
+10
+h (heads)
+2
+
+r (main menu)
+n (new partition)
+p 
+1
+1   (first cylinder)
+512 (half of the disk)
+n (new partition)
+p 
+2
+513 (half of the disk)
+1024 (last cylinder)
+w (save and exit)
+\end{verbatim}
+
+and now, let's put some info inside, as root:
+
+\begin{verbatim}
+echo "losetup assign 100101" | RVT.pl -b
+echo "losetup list" | RVT.pl -b  
+   (the last command reveals the loop devices created)
+mkfs.vfat /dev/loop0
+mkfs.vfat -F 32 /dev/loop1   
+
+mkdir /media/aux1
+mount /dev/loop0 /media/aux1
+cp /home/analyst/RVT/RVT.pl /media/aux1
+umount /media/aux1
+mount /dev/loop1 /media/aux1
+cp /home/analyst/RVT/RVT.pl /media/aux1
+sync
+rm /media/aux1/RVT.pl
+echo "my email address is myemail@revealertoolkit.com" > /media/aux1/textfile.txt
+umount /media/aux1
+
+echo "losetup delete 100101" | RVT.pl -b
+\end{verbatim}
+
+
+\section{First test}
+
+Just for testing, some first commands can be executed. As analyst, execute the RVT Shell:
+
+\begin{verbatim}
+\$ RVT.pl 
+\end{verbatim}
+
+After the preliminar scanning, RVT Shell will offer you a prompt:
+
+\begin{verbatim}
+RVT >
+\end{verbatim}
+
+Now, execute these commands:
+
+\begin{verbatim}
+set level 100101-01-1
+script strings generate
+script timelines generate
+script webmail detection
+script software detection
+script search quickcount emails
+script search quickcount accounts
+quit
+\end{verbatim}
+
+You can check that the directory \emph{/media/morgue/100101-ghost/100101-01-1/output} has been populated with results.
+
+The same can be achieved creating a file with the commands and piping it to the RVT Shell using the \emph{-b} argument:
+
+\begin{verbatim}
+cat preforensics.rvt | RVT -b
+\end{verbatim}
+
+
+
+
+
+
+% -----------------------------------
+% Folder structure
+% -----------------------------------
+
+\chapter{Folder structure}
+
+The morgue stores disk images and results of forensic analysis. Each morgue must have a strict folder structure. 
+
+\section{Morgues}
+
+The Revealer Toolkit can handle more that one morgue. By default, two morgues are defined in RVT, mounted at \emph{/media/morgue} and \emph{/media/datos}. 
+
+These morgues can be managed modifying the RVT Shell internal code. See the RVT Developer Guide for more info.
+
+
+\section{Cases}
+
+Each forensic case is determined by a \emph{case number} and a \emph{case codename}, separated by a dash. For example, the example case created in the Chapter \ref{sec:installation} is noted as \emph{100101-ghost}.
+
+Each case has a folder assigned in the morgue, under the folder \emph{images}, where the disk images are stored.
+
+Also, each case has a folder in the morgue, where all the forensic results are stored.
+
+The folder structure, at the case level, for the example installation shown in chapter \ref{sec:installation}, will be:
+
+\begin{verbatim}
+/media/morgue/100101-ghost
+
+/media/morgue/imagenes/100101-ghost
+/media/morgue/imagenes/100101-ghost/100101-01-1.dd
+\end{verbatim}
+
+where \emph{100101-01-1.dd} is the dd image of a disk.
+
+
+\section{Devices, disks and partitions}
+
+Under the Revealer Toolkit, information sources are organized with:
+
+\begin{itemize}
+\item Devices: each case has a number of devices: computers, cell phones, digital cameras, ...   They are numbered sequencially from 01 to 99. 
+
+A device is noted as \emph{casenumber-devicenumber}, for example, \emph{100101-01} for the case 100101 and device 01.
+
+\item Disks: each device has a number of disks: hard disks, CD's, memory cards, ... They are numbered sequencially from 1 to 9
+
+A disk is noted as \emph{case-device-disknumber}, for example, \emph{100101-01-1}, for the disk 1
+
+\item Partitions:  each disk can have several partitions, numbered from 01 to 99. The numeration used by the Sleuthkit command \emph{mmls} is used.
+
+A partition is noted as \emph{case-device-disk-ppartition}, for example, 100101-01-1-p02 for partition 02.
+\end{itemize}
+
+
+Under each case folder, a folder must exist for every disk to be analyzed. 
+
+This folder structure, at a disk level, for the example installation shown in chapter \ref{sec:installation}, will be:
+
+\begin{verbatim}
+/media/morgue/100101-ghost
+/media/morgue/100101-ghost/100101-01-1
+
+/media/morgue/imagenes/100101-ghost
+/media/morgue/imagenes/100101-ghost/100101-01-1.dd
+\end{verbatim}
+
+
+\section{Forensic results}
+
+The Revealer Toolkit Shell manages and executes \emph{script modules}, which performs forensic operations on the disk images and disk information. The results of these script modules are stored in the corresponding disk folder, under a folder named \emph{output}.
+
+The folder structure and file content stored here depends on each script module. See chapter \ref{sec:modules} for further information.
+
+Furthermore, under the disk folder other folder exists, named \emph{mnt}, that contains the mounting points for the image partitions. 
+
+Then, the complete folder structure for the example shown in chapter \ref{sec:installation} will be:
+
+\begin{verbatim}
+/media/morgue/100101-ghost
+/media/morgue/100101-ghost/100101-01-1
+/media/morgue/100101-ghost/100101-01-1/mnt
+/media/morgue/100101-ghost/100101-01-1/output
+
+/media/morgue/imagenes/100101-ghost
+/media/morgue/imagenes/100101-ghost/100101-01-1.dd
+\end{verbatim}
+
+
+% -----------------------------------
+% Command guide
+% -----------------------------------
+
+
+\chapter{Command guide}
+
+The Revealer Toolkit Shell provide several commands used to (a) manage your forensic images and (b) execute forensic operations over them.
+
+RVT Shell is a Perl script that, when executed, performs a scan of the morgue and of all the images stored into it. After that, a prompt is shown and commands can be introduced.
+
+
+
+\section{General interaction}
+
+\begin{itemize}
+\item to execute one command, type it at the prompt, add the corresponding arguments, and type RETURN. Some commands return information on the screen, some, write information at the \emph{output} folder of the corresponding disk at the morgue. Other, do both.
+
+\item type one command followed by \emph{?} to obtain help about it
+
+\item type the TAB key to obtain a list of available commands
+
+\end{itemize}
+
+\begin{verbatim}
+Welcome to Revealer Tools Shell (v0.1.0):
+
+ RVT  > 
+        case
+        images
+        info
+        losetup
+        mount
+        script
+        set
+        test
+ RVT  > 
+\end{verbatim}
+
+
+\section{Command: \emph{case}}
+
+Case management.
+
+\subsection*{\emph{case list}}
+
+Gives a list of the cases stored in the morgue.
+
+\begin{verbatim}
+ RVT  > case list
+Cases in the morgue: 
+        100101 'ghost':
+                100101-01-1
+
+ \end{verbatim}
+
+
+
+\section{Command: \emph{images}}
+
+Image management.
+
+
+
+\subsection*{\emph{images list}}
+
+Gives a list of the disk images stored in the morgue.
+
+\begin{verbatim}
+ RVT  > images list
+Images in the morgue: 
+        100101 'ghost':
+                100101-01-1.dd
+
+\end{verbatim}
+
+
+
+\subsection*{\emph{images partition info}}
+
+Gives information about a partition.
+
+\begin{verbatim}
+ RVT  > images partition info 100101-01-1-p03                                 
+
+Info for partition  - 100101-01-1-p03:
+
+Filesystem:     FAT12
+Cluster size:   2048
+Sector size:    512
+Offset:         0000010240 sectors ( 5242880 bytes )
+\end{verbatim}
+
+\subsection*{\emph{images partition table}}
+
+Gives the partition table of an image.
+
+\begin{verbatim}
+ RVT  > images partition table 100101-01-1
+
+        03:     6 MB    Linux (0x83)
+        02:     5 MB    Linux (0x83)
+\end{verbatim}
+
+
+\subsection*{\emph{images scanall}}
+
+RVT scans the morgue. No output given. 
+
+\section{Command: \emph{info}}
+
+Manages RVT Shell configuration information.
+
+\subsection*{\emph{info list}}
+
+Gives RVT Shell configuration information.
+
+\begin{verbatim}
+ RVT  > info list
+
+        List of morgues:
+                /media/morgue 
+                /media/datos 
+
+
+        List of morgues of images:
+                /media/morgue/imagenes 
+                /media/datos/imagenes 
+\end{verbatim}
+
+
+\section{Command: \emph{losetup}}
+
+Loop device management.
+
+\subsection*{\emph{losetup assign}}
+
+Assigns a loop device to each partition of a case.
+
+\begin{verbatim}
+ RVT  > losetup assign 100101
+
+sudo losetup -f /media/morgue/imagenes/100101-ghost/100101-01-1.dd -o 5242880
+
+sudo losetup -f /media/morgue/imagenes/100101-ghost/100101-01-1.dd -o 5120
+\end{verbatim}
+
+
+\subsection*{\emph{losetup delete}}
+
+Delete loop devices assigned to a case
+
+\begin{verbatim}
+ RVT  > losetup delete 100101
+\end{verbatim}
+
+
+\subsection*{\emph{losetup list}}
+
+List all loop devices assigned.
+
+\begin{verbatim}
+ RVT  > losetup list                                                          
+Loop devices: 
+        loop1   100101-01-1.dd  5120
+        loop0   100101-01-1.dd  5242880
+\end{verbatim}
+
+
+\subsection*{\emph{losetup recheck}}
+
+Updates loop device information from the operating system.
+
+
+\section{Command: \emph{mount}}
+
+Mount points management.
+
+\subsection*{\emph{mount assign}}
+
+Mounts the partitions of a case at the path \emph{morgue/100xxx-case/100xxx-device-disk/mnt/p0N}, where N is the partition number.
+
+\begin{verbatim}
+ RVT  > mount assign 100101
+
+sudo mount /media/morgue/imagenes/100101-ghost/100101-01-1.dd /media/morgue/100101-ghost/100101-01-1/mnt/p03 -o ro,loop,iocharset=utf8,offset=5242880,umask=007,gid=1001
+
+sudo mount /media/morgue/imagenes/100101-ghost/100101-01-1.dd /media/morgue/100101-ghost/100101-01-1/mnt/p02 -o ro,loop,iocharset=utf8,offset=5120,umask=007,gid=1001
+\end{verbatim}
+
+
+\subsection*{\emph{mount delete}}
+
+Umounts partitions of a case.
+
+\begin{verbatim}
+ RVT  > mount delete 100101
+\end{verbatim}
+
+
+\subsection*{\emph{mount list}}
+
+List all mounted points.
+
+\begin{verbatim}
+ RVT  > mount list
+Mounted partitions: 
+        100101-01-1.dd  loop=/dev/loop0 offset=5242880
+        100101-01-1.dd  loop=/dev/loop1 offset=5120
+\end{verbatim}
+
+
+\subsection*{\emph{mount recheck}}
+
+Updates mount points information from the operating system.
+
+
+
+\section{Command: \emph{script}}
+
+Modular scripts. Each module is explained in a separated chapter (see Chapter \ref{sec:modules} for further information)
+
+
+\section{Command: \emph{set}}
+
+Sets RVT Shell configuration information.
+
+\subsection*{\emph{set level}}
+
+Sets the work level to a specific case, device, disk or partition. When the work level is stablished, is notified at the prompt and there is no need of indicate it as argument at the commands.
+
+\begin{verbatim}
+
+ RVT  > images partition table 100101-01-1                                    
+
+        03:     6 MB    Linux (0x83)
+        02:     5 MB    Linux (0x83)
+
+ RVT  > 
+ RVT  > images partition table
+
+
+I don't know what is this
+
+ RVT  > set level 100101-01-1                                                 
+
+ new format: disk
+ RVT 100101-01-1 > images partition table                                     
+
+        03:     6 MB    Linux (0x83)
+        02:     5 MB    Linux (0x83)
+
+ RVT 100101-01-1 > 
+\end{verbatim}
+
+
+
+
+
+\chapter{Script modules} \label{sec:modules}
+
+Scripts modules are forensic software components that perform specific forensic tasks on the stored images and information.
+
+Each module has particular objectives, methods, arguments and results, the documentation of which is detailed in the following sections.
+
+
+
+\section{\emph{script search}}
+
+
+\section{\emph{script software}}
+
+
+\section{\emph{script strings}}
+
+
+\section{\emph{script timelines}}
+
+
+\section{\emph{script webmail}}
+
+
+
+
+
+\end{document}
+
+
