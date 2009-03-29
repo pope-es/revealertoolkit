@@ -119,8 +119,14 @@ my %RVT_functions = (
  'RVT_cluster_toinode' => "Prints all the inodes associated with a cluster\n
                             cluster toinode <cluster> <partition>",
  
+ 'RVT_cluster_extract' => "Prints the contents of the cluster\n
+                            cluster extract <cluster> <partition>",
+ 
  'RVT_cluster_allocationstatus' => "Prints cluster allocation status\n
                                     cluster allocationstatus <cluster> <partition>", 
+ 
+  'RVT_inode_allocationstatus' => "Prints inode allocation status\n
+                                    inode allocationstatus <cluster> <partition>", 
  
  'RVT_script_search_quickcount' => "Launch a quick search in a case or in an image \n
                                 script search quickcount <name:regular expression>  <image> ",
@@ -801,7 +807,8 @@ sub RVT_tsk_fsstat ($) {
     my $p = RVT_tsk_mmls($disk);
     return 0 unless ($p);
     my $offset = $p->{$part}{offset};
-
+    
+    #print  "$RVT_tsk_path/fsstat -o $offset $diskpath  2> /dev/null | \n";
     open (FSSTAT,"$RVT_tsk_path/fsstat -o $offset $diskpath  2> /dev/null |") || die "$RVT_tsk_path/fsstat NOT FOUND";
     
     my $results;
@@ -820,11 +827,19 @@ sub RVT_tsk_fsstat ($) {
     }  
     
     close (FSSTAT);
+    
+    ## in TSK, in FAT filesystems, data units are considered as disk units
+    ## See TSK documentation for more information
+    ## http://wiki.sleuthkit.org/index.php?title=FAT_Implementation_Notes
+    if ( $results->{filesystem} =~ /FAT/ ) {
+        $results->{clustersize} = $results->{sectorsize};
+    }
+    
     return $results;
 }
 
 
-sub RVT_tsk_datastat ($$$) {
+sub RVT_tsk_blkstat ($$$) {
     # takes a disk, a partition and a dataunit, 
     # and gives the allocation status
     
@@ -837,12 +852,39 @@ sub RVT_tsk_datastat ($$$) {
     return 0 unless ($p);
     my $offset = $p->{$part}{offset};
 
-    open (PA,"$RVT_tsk_path/datastat -o $offset $diskpath $du | grep Allocated |") || die "$RVT_tsk_path/datastat NOT FOUND";    
+    open (PA,"$RVT_tsk_path/blkstat -o $offset $diskpath $du | grep Allocated |") || die "$RVT_tsk_path/blkstat NOT FOUND";    
     my $allocation = <PA>; 
     chomp $allocation;
     close (PA);
     
     return $allocation;
+}
+
+
+sub RVT_tsk_istat ($$$) {
+    # takes a disk, a partition and an inode, 
+    # and gives information
+    
+    my ( $disk,$part,$inode ) = @_;
+    
+    my $diskpath = RVT_get_imagepath($disk);
+    return 0 unless ($diskpath);
+    
+    my $p = RVT_tsk_mmls($disk);
+    return 0 unless ($p);
+    my $offset = $p->{$part}{offset};
+
+    open (PA,"$RVT_tsk_path/istat -o $offset $diskpath $inode | ") || die "$RVT_tsk_path/istat NOT FOUND";    
+    my @istatOutput = <PA>;
+    close (PA);
+    
+    my $results;
+    
+    my @rr = grep { /Allocated/ } @istatOutput;
+    @rr = map { chomp; $_; } @rr;
+    $results->{allocationStatus} = $rr[0];
+    
+    return $results;
 }
 
 
@@ -873,6 +915,9 @@ sub RVT_cluster_generateindex {
 
     
 	# generation for every partition 
+	
+	## TODO:  to check if the loop exists and image_scanall
+	## zero sized files generated if not
 
 	my %parts = %{$RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
     
@@ -906,7 +951,7 @@ sub RVT_get_inodefromcluster {
     #   cluster
     #   partition
     # returns an array with the results (one element per inode)
-    
+    #print "xx\n\n";
     my ( $cluster, $part ) = @_;
     
     next unless ($cluster =~ /^[0-9\-]+$/);
@@ -920,12 +965,46 @@ sub RVT_get_inodefromcluster {
     my $searchespath = "$morguepath/output/searches";
     if (! -d $searchespath) { print "ERR: there is no path to the morgue/searches!\n\n"; return 0};        
     
-    my @r = `grep $cluster $searchespath/cindex-$part | cut -d':' -f1 `;
+    my @r = `grep ' $cluster ' $searchespath/cindex-$part | cut -d':' -f1  `;
     @r = map { chomp; $_; } @r;
-    foreach my $kk (@r) { print "-$kk-";}
     
     return \@r;
 }
+
+
+
+sub RVT_cluster_extract {
+    # extracts the cluster
+    # arguments:
+    #   cluster
+    #   partition
+    
+    my ( $cluster, $part ) = @_;
+
+    next unless ($cluster =~ /^[0-9\-]+$/);
+    $part = $RVT_level->{tag} unless $part;
+    if (RVT_check_format($part) ne 'partition') { print "ERR: that is not a partition\n\n"; return 0; }
+    
+    my $disk = RVT_join_diskname ( 
+    		RVT_get_casenumber($part),
+    		RVT_get_devicenumber($part),
+    		RVT_get_disknumber($part)
+    		);
+    $part = RVT_get_partitionnumber($part);
+        
+    my $diskpath = RVT_get_imagepath($disk);
+    return 0 unless ($diskpath);
+    
+    my $p = RVT_tsk_mmls($disk);
+    return 0 unless ($p);
+    my $offset = $p->{$part}{offset};
+
+    print "$RVT_tsk_path/blkcat -o $offset $diskpath $cluster | ";
+    open (PA,"$RVT_tsk_path/blkcat -o $offset $diskpath $cluster | ") || die "$RVT_tsk_path/blkcat NOT FOUND";    
+    while ( my $l=<PA> ) { print $l; };    
+    close (PA);
+}
+
 
 
 sub RVT_cluster_toinode {
@@ -938,7 +1017,7 @@ sub RVT_cluster_toinode {
      
     my $r = RVT_get_inodefromcluster ( $cluster,$part );
 
-    print @{$r};
+    print "\ninodes:\n\n" . join ("\n",@{$r}) . "\n\n";
 }
 
 
@@ -954,7 +1033,23 @@ sub RVT_cluster_allocationstatus {
     
     my $disk = RVT_join_diskname ($p->{case}, $p->{device}, $p->{disk});
     
-    print "Cluster $cluster: " . RVT_tsk_datastat ($disk, $p->{partition}, $cluster) . "\n";
+    print "Cluster $cluster: " . RVT_tsk_blkstat ($disk, $p->{partition}, $cluster) . "\n";
+}
+
+
+sub RVT_inode_allocationstatus {
+
+    my ($inode, $part) = @_;
+    
+    next unless ($inode =~ /^[0-9\-]+$/);
+    $part = $RVT_level->{tag} unless $part;
+    if (RVT_check_format($part) ne 'partition') { print "ERR: $part that is not a partition\n\n"; return 0; }
+    
+    my $p = RVT_split_diskname( $part );
+    
+    my $disk = RVT_join_diskname ($p->{case}, $p->{device}, $p->{disk});
+    my $r_istat = RVT_tsk_istat ($disk, $p->{partition}, $inode);
+    print "inode $inode: " . $r_istat->{allocationStatus} . "\n";
 }
 
 
@@ -1196,7 +1291,7 @@ sub RVT_script_search_clusterlist {
         
         open (BF, "<$searchespath/$f") or return 0;
         while (my $l=<BF>) {
-            $l =~ /^.+-\d{6}-\d{1,2}-\d{1,2}(\.dd)?-(\d{1,2})\.(asc|uni):\s*(\d+) /;
+            $l =~ /^.+?-\d{6}-\d{1,2}-\d{1,2}(\.dd)?-(\d{1,2})\.(asc|uni):\s*(\d+) /;
         
             my $part = $2;
             my $offset = $4;
@@ -1212,16 +1307,15 @@ sub RVT_script_search_clusterlist {
 	        # cluster and allocation status
 	        my $du = int( $offset /
 	                       $RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
-    	    my $allocstat = RVT_tsk_datastat ($ndisk, $part, $du);
     	    my $loopdev = $RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{loop};
     	    
     	    my $inodes = RVT_get_inodefromcluster( $du, "$ndisk-p$part" );
     	    foreach my $inode (@{$inodes}) {
-    	        print "ffind /dev/$loopdev $inode\n";
+    	        my $r_istat = RVT_tsk_istat ($ndisk, $part, $inode);
                 my $path = `ffind /dev/$loopdev $inode`; 
                 chomp $path;
-                print $chandler "$du:$allocstat:$inode:$path\n";
-                print $phandler "$path";     
+                print $chandler "$du:$inode:".$r_istat->{allocationStatus}.":$path\n";
+                print $phandler "$path (". $r_istat->{allocationStatus} .")\n";     
             }
         }
         close (BF);
@@ -1275,7 +1369,7 @@ sub RVT_script_search_clusters  {
         
         open (BF, "<$searchespath/$f") or return 0;
         while (my $l=<BF>) {
-            $l =~ /^.+-\d{6}-\d{1,2}-\d{1,2}(\.dd)?-(\d{1,2})\.(asc|uni):\s*(\d+) /;
+            $l =~ /^.+?-\d{6}-\d{1,2}-\d{1,2}(\.dd)?-(\d{1,2})\.(asc|uni):\s*(\d+) /;
         
             my $part = $2;
             my $offset = $4;
@@ -1288,7 +1382,7 @@ sub RVT_script_search_clusters  {
 	        # cluster and allocation status
 	        my $du = int( $offset /
 	                      $RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
-    	    my $allocstat = RVT_tsk_datastat ($ndisk, $part, $du);
+    	    my $allocstat = RVT_tsk_blkstat ($ndisk, $part, $du);
     	    
  	        # strings line
        	    $l =~ /[^ ]+(.*)$/;
@@ -1894,6 +1988,7 @@ sub RVT_images_scanall {
             next unless ($img=~/^$case-(\d\d)-(\d\d?)\.dd$/ && -f $imgpath);  
             my $device = $1;
             my $disk = $2;
+            
             open(PA,"mmls $imgpath 2>/dev/null|") || die "FATAL: mmls NOT FOUND";
             while (my $line=<PA>) {
                 if ( $line =~ /Units are in (\d+)-byte sectors/) 
@@ -1910,6 +2005,7 @@ sub RVT_images_scanall {
                     
                 # filesystem information
                 
+                #print "$case-$device-$disk-p$pnum\n";
                 my $fsstat = RVT_tsk_fsstat ("$case-$device-$disk-p$pnum");
                 next unless ($fsstat);
                 $RVT_cases->{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{filesystem} = $fsstat->{filesystem};
@@ -1929,6 +2025,9 @@ sub RVT_images_scanall {
     }
     closedir( MORGUE ); 
   }
+  
+  #print Dumper($RVT_cases);
+  
   RVT_losetup_recheck;
 }
 
