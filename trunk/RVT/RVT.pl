@@ -37,7 +37,8 @@ use Getopt::Long;
 our $RVT_version = '0.1.1';
 
 GetOptions(
-        "batch:s"				=> \$RVT_batchmode,
+        "batch:s"			=> \$RVT_batchmode,
+        "level:s"           => \$RVT_initial_level,
         "shell"				=> \$RVT_shellmode 
         );
 
@@ -225,13 +226,6 @@ sub RVT_set_level ($) {
 
 
 
-sub RVT_chop_level {
-	# TODO
-	# gets a case, device, disk or partition
-	# and chops to the specified level
-	# f.ex.  RVT_chop_level('100101-01-1', 'case') = 100101	
-}
-
 
 
 
@@ -418,6 +412,8 @@ sub RVT_shell {
 
     print "\n\nWelcome to Revealer Tools Shell (v$RVT_version):\n\n";
     my ($cmdgrp, $command, $cmdhist);
+
+    if ($RVT_initial_level) { RVT_set_level($RVT_initial_level); }
 
     if ($RVT_batchmode) {
     	open (BATCH, "<$RVT_batchmode") or die "FATAL: $!";
