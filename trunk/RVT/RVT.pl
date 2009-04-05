@@ -106,8 +106,6 @@ use RVTbase::RVT_tsk;
 use RVTbase::RVT_morgue;
 RVTbase::RVT_morgue::constructor;
 
-use RVTbase::RVT_files;
-RVTbase::RVT_files::constructor;
 
 use RVTbase::RVT_info;
 RVTbase::RVT_info::constructor;
@@ -128,6 +126,8 @@ RVTscripts::RVT_software::constructor;
 use RVTscripts::RVT_webmail;
 RVTscripts::RVT_webmail::constructor;	
 
+use RVTscripts::RVT_files;
+RVTscripts::RVT_files::constructor;
 
 		
 #######################################################################
