@@ -404,7 +404,7 @@ Welcome to Revealer Tools Shell (v0.1.0):
 
 Case management.
 
-\subsection*{\emph{case list}}
+\subsection{\emph{case list}}
 
 Gives a list of the cases stored in the morgue.
 
@@ -424,7 +424,7 @@ Image management.
 
 
 
-\subsection*{\emph{images list}}
+\subsection{\emph{images list}}
 
 Gives a list of the disk images stored in the morgue.
 
@@ -438,7 +438,7 @@ Images in the morgue:
 
 
 
-\subsection*{\emph{images partition info}}
+\subsection{\emph{images partition info}}
 
 Gives information about a partition.
 
@@ -453,7 +453,7 @@ Sector size:    512
 Offset:         0000010240 sectors ( 5242880 bytes )
 \end{verbatim}
 
-\subsection*{\emph{images partition table}}
+\subsection{\emph{images partition table}}
 
 Gives the partition table of an image.
 
@@ -465,7 +465,7 @@ Gives the partition table of an image.
 \end{verbatim}
 
 
-\subsection*{\emph{images scanall}}
+\subsection{\emph{images scanall}}
 
 RVT scans the morgue. No output given. 
 
@@ -473,7 +473,7 @@ RVT scans the morgue. No output given.
 
 Manages RVT Shell configuration information.
 
-\subsection*{\emph{info list}}
+\subsection{\emph{info list}}
 
 Gives RVT Shell configuration information.
 
@@ -495,7 +495,7 @@ Gives RVT Shell configuration information.
 
 Loop device management.
 
-\subsection*{\emph{losetup assign}}
+\subsection{\emph{losetup assign}}
 
 Assigns a loop device to each partition of a case.
 
@@ -508,7 +508,7 @@ sudo losetup -f /media/morgue/imagenes/100101-ghost/100101-01-1.dd -o 5120
 \end{verbatim}
 
 
-\subsection*{\emph{losetup delete}}
+\subsection{\emph{losetup delete}}
 
 Delete loop devices assigned to a case
 
@@ -517,7 +517,7 @@ Delete loop devices assigned to a case
 \end{verbatim}
 
 
-\subsection*{\emph{losetup list}}
+\subsection{\emph{losetup list}}
 
 List all loop devices assigned.
 
@@ -529,7 +529,7 @@ Loop devices:
 \end{verbatim}
 
 
-\subsection*{\emph{losetup recheck}}
+\subsection{\emph{losetup recheck}}
 
 Updates loop device information from the operating system.
 
@@ -538,7 +538,7 @@ Updates loop device information from the operating system.
 
 Mount points management.
 
-\subsection*{\emph{mount assign}}
+\subsection{\emph{mount assign}}
 
 Mounts the partitions of a case at the path \emph{morgue/100xxx-case/100xxx-device-disk/mnt/p0N}, where N is the partition number.
 
@@ -551,7 +551,7 @@ sudo mount /media/morgue/imagenes/100101-ghost/100101-01-1.dd /media/morgue/1001
 \end{verbatim}
 
 
-\subsection*{\emph{mount delete}}
+\subsection{\emph{mount delete}}
 
 Umounts partitions of a case.
 
@@ -560,7 +560,7 @@ Umounts partitions of a case.
 \end{verbatim}
 
 
-\subsection*{\emph{mount list}}
+\subsection{\emph{mount list}}
 
 List all mounted points.
 
@@ -572,10 +572,55 @@ Mounted partitions:
 \end{verbatim}
 
 
-\subsection*{\emph{mount recheck}}
+\subsection{\emph{mount recheck}}
 
 Updates mount points information from the operating system.
 
+
+
+\section{Command: \emph{cluster}}
+
+Operations on clusters.
+
+\subsection{\emph{cluster allocationstatus}}
+
+Prints cluster allocation status
+
+\begin{verbatim}
+ RVT  > cluster allocationstatus 2 100101-01-1-p02
+Cluster 2: Allocated (Meta)
+\end{verbatim}
+
+
+\subsection{\emph{cluster extract}}
+
+Prints the contents of the cluster.
+
+\begin{verbatim}
+ RVT  > cluster extract 3 100101-01-1-p02                                     
+--------------------------------------------
+/usr/bin/blkcat -o 0000000001 /media/morgue/imagenes/100101-espejismo/100101-01-1.dd 3 | 
+\end{verbatim}
+
+
+\subsection{\emph{cluster generateindex}}
+
+Creates sort of an index for quick cluster-to-inode resolution. Required for performing searches. This is one of the few commands that writes files on the morgue.
+
+See \emph{script search} (página \pageref{script:search} module for more information.
+
+
+\subsection{\emph{cluster toinode}}
+
+Prints all the inodes associated with a cluster.
+
+\begin{verbatim}
+ RVT  > cluster toinode 2 100101-01-1-p02                                     
+
+inodes:
+
+159700
+\end{verbatim}
 
 
 \section{Command: \emph{script}}
@@ -587,7 +632,7 @@ Modular scripts. Each module is explained in a separated chapter (see Chapter \r
 
 Sets RVT Shell configuration information.
 
-\subsection*{\emph{set level}}
+\subsection{\emph{set level}}
 
 Sets the work level to a specific case, device, disk or partition. When the work level is stablished, is notified at the prompt and there is no need of indicate it as argument at the commands.
 
@@ -619,6 +664,13 @@ I don't know what is this
 
 
 
+
+
+
+
+
+
+
 \chapter{Script modules} \label{sec:modules}
 
 Scripts modules are forensic software components that perform specific forensic tasks on the stored images and information.
@@ -627,22 +679,229 @@ Each module has particular objectives, methods, arguments and results, the docum
 
 
 
-\section{\emph{script search}}
 
 
-\section{\emph{script software}}
+\section{\emph{script files}}
+
+Module for performing operations on mounted images.
+
+\subsection{\emph{script files allocfiles}} 
+
+Creates a file with a list of all the allocated files of the image.
+
+\begin{verbatim}
+files allocfiles <disk>
+\end{verbatim}
+
+It creates a file in the morgue with this path and name:
+
+\begin{verbatim}
+<morguepath>/<case>/<disk>/output/info/alloc_files.txt
+\end{verbatim}
+
+with a list of allocated files and folders.
+
+
+
+
+
+\section{\emph{script search}} \label{script:search}
+
+Module for performing searches. See the Appendix \ref{anx:searches} for a step-by-step tutorial.
+
+
+\subsection{\emph{script search clusterlist}}
+
+Builds a list of clusters and file paths that matches a previous search.
+
+\begin{verbatim}
+script search clusterlist <search file> <image>
+\end{verbatim}
+
+It creates several files in the morgue with this path and name:
+
+\begin{verbatim}
+<morguepath>/<case>/<disk>/output/searches/cbusq_<search>-<partition>
+\end{verbatim}
+
+with this format:
+
+\begin{verbatim}
+<cluster>:<inode>:<allocation status>:<file path>
+\end{verbatim}
+
+
+
+\subsection{\emph{script search clusters}}
+
+Extract the clusters matched in a previous search
+
+\begin{verbatim}
+script search clusters <search file> <image>
+\end{verbatim}
+
+It creates several files in the morgue with this path and name:
+
+\begin{verbatim}
+<morguepath>/<case>/<disk>/output/searches/ibusq_<search>-<partition>
+\end{verbatim}
+
+with this format:
+
+\begin{verbatim}
+---------------------------
+<byte offset>:<cluster>:<allocation status>:  <line that matches search>
+
+<cluster content>
+\end{verbatim}
+
+
+\subsection{\emph{script search file}}
+
+Commands to manage search files:
+
+\begin{itemize}
+\item	script search file delete <name>:  deletes file
+\item	script search file edit <name>:  creates and/or edit file
+\item	script search file list:  lists search files created
+\item	script search file show <name>:  prints file's contents
+\end{itemize}
+
+The files are created per case, and are stored at this path:
+
+\begin{verbatim}
+<morguepath>/<case>/searches_files
+\end{verbatim}
+
+
+\subsection{\emph{script search launch}}
+
+Launches a search in an image. 
+
+\begin{verbatim}
+script search launch <search file> <image>
+\end{verbatim}
+
+It creates several files in the morgue with this path and name:
+
+\begin{verbatim}
+<morguepath>/<case>/<disk>/output/searches/busq_<search>
+\end{verbatim}
+
+with this format:
+
+\begin{verbatim}
+<strings file that matches>: <byte offset> <line that matches>
+\end{verbatim}
+
+
+
+\subsection{\emph{script search quickcount}}
+
+Launch a quick search in a case or in an image with a count of the results.
+
+\begin{verbatim}
+script search quickcount <name:regular expression>  <image>
+\end{verbatim}
+
+It creates several files in the morgue with this path and name:
+
+\begin{verbatim}
+<morguepath>/<case>/<disk>/output/info/count_<name>
+\end{verbatim}
+
+with this format:
+
+\begin{verbatim}
+<times that the match appear>  <match>
+\end{verbatim}
+
+There are some quickcounts preconfigured:
+
+\begin{itemize}
+\item script search quickcount emails <image>: search emails addresses
+\item script search quickcount accounts <image>: search bank accounts
+\item script search quickcount ips <image>: search ip addresses
+\item script search quickcount phones <image>: search phone numbers
+\end{itemize}
+
+
 
 
 \section{\emph{script strings}}
 
+Module for creating and managing string files of images.
+
+\subsection{\emph{script strings generate}} 
+
+Generates strings for all partitions of a disk 
+
+\begin{verbatim}
+script strings generate <disk>
+\end{verbatim}
+
+It creates several files in the morgue with this path and name:
+
+\begin{verbatim}
+<morguepath>/<case>/<disk>/output/strings/strings-<case>-<partition>.asc
+<morguepath>/<case>/<disk>/output/strings/strings-<case>-<partition>.uni
+\end{verbatim}
+
+Strings files of ASCII characters have \emph{.asc} extension.
+
+Strings files of Unicode (UTF8) characters have \emph{.uni} extension.
+
+
+
+
 
 \section{\emph{script timelines}}
+
+Module for creating and managing timelines.
+
+\subsection{\emph{script timelines generate}} 
+
+Generates timelines for all partitions of a disk
+
+\begin{verbatim}
+script timelines generate <disk>
+\end{verbatim}
+
+It creates several files in the morgue with this path and name:
+
+\begin{verbatim}
+itimeline-<partition>.csv
+itimeline-day-<partition>.sum
+timeline.csv
+timeline.txt
+timeline-day.sum
+timeline-hour.sum
+\end{verbatim}
+
+Where \emph{i}timelines are calculated based on inodes, and timelines, with file names. \emph{day} and \emph{hour} sums are line counts grouped by days and hours.
+
+
 
 
 \section{\emph{script webmail}}
 
+Module for detecting and managing webmail.
 
+\subsection{\emph{script webmail detection}} 
 
+Tries to detect certain types of webmail traces in the disk
+
+\begin{verbatim}
+script webmail detection <disk>
+\end{verbatim}
+
+It creates a file in the morgue with this path and name:
+
+\begin{verbatim}
+<morguepath>/<case>/<disk>/output/info/webmails.txt
+\end{verbatim}
+
+This file \emph{only} says if traces of several types of webmails are found. In this process, some searches have been launched, so further investigation can be performed on these searches.
 
 
 \end{document}
