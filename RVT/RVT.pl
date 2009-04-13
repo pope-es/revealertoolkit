@@ -420,21 +420,23 @@ sub RVT_shell {
     }
 
     RVT_shell_prompt ($RVT_level->{tag});
-    while () {
+    EXECLOOP: while () {
         if ($RVT_shellmode) { $command = RVT_getcommand($cmdgrp, $cmdhist); }
-	if ($RVT_batchmode) { return unless ($command=<BATCH>); print $command;  }
+	    if ($RVT_batchmode) { return unless ($command=<BATCH>); print $command;  }
 
         chomp $command;
-        $cmdhist = $command if $command;
-        last if ($command =~ /quit$/);
-        if ( $command =~ /^\s*r(e|et|etu|etur|eturn)?/ ) {
-                $cmdgrp =~ s/^(.*?) *\S*$/$1/;
-                next;
+        foreach my $cmd ( split(';', $command )) {
+            $cmdhist = $cmd if $cmd;
+            last EXECLOOP if ($cmd =~ /quit$/);
+            if ( $cmd =~ /^\s*r(e|et|etu|etur|eturn)?/ ) {
+                    $cmdgrp =~ s/^(.*?) *\S*$/$1/;
+                    next;
+            }
+            if ($cmd =~ /\?/) { RVT_shell_help("$cmdgrp $cmd"); next; }
+            my $exec_result = RVT_shell_function_exec("$cmdgrp $cmd", $cmdgrp);
+            $cmdgrp = $exec_result if $exec_result;
         }
-        if ($command =~ /\?/) { RVT_shell_help("$cmdgrp $command"); next; }
-        my $exec_result = RVT_shell_function_exec("$cmdgrp $command", $cmdgrp);
-        $cmdgrp = $exec_result if $exec_result;
-    } continue { RVT_shell_prompt ($RVT_level->{tag}, $cmdgrp); }
+    } continue { RVT_shell_prompt ($RVT_level->{tag}, $cmdgrp) if ($RVT_shellmode); }
 
     if ($RVT_batchmode) { close(BATCH); }
 
