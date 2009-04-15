@@ -44,7 +44,7 @@ my $RVT_moduleName = "RVT_xx";
 my $RVT_moduleVersion = "1.0";
 my $RVT_moduleAuthor = "dervitx";
 
-use scripts::RVT_core;
+use RVTbase::RVT_core;
 use Data::Dumper;
 
 sub constructor {
