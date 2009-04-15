@@ -53,12 +53,12 @@ if (!$RVT_batchmode and !$RVT_shellmode) { $RVT_shellmode = 1; }
 #######################################################################
 
 our $RVT_paths = {
-    morgues => ['/media/morgue', '/media/datos']    ,
-    images => ['/media/morgue/imagenes', '/media/datos/imagenes']  ,
+    morgues => ['/media/morgue']    ,
+    images => ['/media/morgue/imagenes']  ,
     tmp => '/tmp'
 };
 
-our $RVT_tsk_path='/usr/bin';
+our $RVT_tsk_path='/usr/local/bin';
 
 # mount options
 our $RVT_umask = '007';
