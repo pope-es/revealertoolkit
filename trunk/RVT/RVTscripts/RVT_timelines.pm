@@ -85,20 +85,20 @@ sub RVT_script_timelines_generate  {
 		# glups ...
 		print  "\t Generando ficheros intermedios para $disk-p$p ... \n";
 		
-    	my $cmd = "/usr/bin/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . "@" . $sectorsize .
+    	my $cmd = "$main::RVT_tsk_path/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . "@" . $sectorsize .
     		" -i raw $imagepath >> $timelinespath/temp/body ";
     	`$cmd`;
     	
-    	my $cmd = "/usr/bin/ils -s 0 -e -m -o " . $parts{$p}{osects} . "@" . $sectorsize .
+    	my $cmd = "$main::RVT_tsk_path/ils -s 0 -e -m -o " . $parts{$p}{osects} . "@" . $sectorsize .
     		" -i raw $imagepath > $timelinespath/temp/ibody-$p ";
     	`$cmd`;
     }
     
     print  "\t Generando timelines para $disk ... \n";	
-    my $cmd = "/usr/bin/mactime -b $timelinespath/temp/body -d -i hour $timelinespath/timeline-hour.sum > "
+    my $cmd = "$main::RVT_tsk_path/mactime -b $timelinespath/temp/body -d -i hour $timelinespath/timeline-hour.sum > "
     	. "$timelinespath/timeline.csv";
     `$cmd`;
-    my $cmd = "/usr/bin/mactime -b $timelinespath/temp/body -i day $timelinespath/timeline-day.sum > "
+    my $cmd = "$main::RVT_tsk_path/mactime -b $timelinespath/temp/body -i day $timelinespath/timeline-day.sum > "
     	. "$timelinespath/timeline.txt";
     `$cmd`;
    
@@ -107,13 +107,13 @@ sub RVT_script_timelines_generate  {
 		print  "\t Generando itimeline para $disk-p$p ... \n";
 		    	
 		open (IDEST,">$timelinespath/itimeline-$p.csv");
-		open (PA,"/usr/bin/mactime -b $timelinespath/temp/ibody-$p -d -i day $timelinespath/itimeline-day-$p.sum |");
+		open (PA,"$main::RVT_tsk_path/mactime -b $timelinespath/temp/ibody-$p -d -i day $timelinespath/itimeline-day-$p.sum |");
 		<PA>;  # header
 		while ( my $line=<PA> ) { 
 			chop($line);
 			my @line = split(",", $line);
 			my $inode = $line[6];
-			my $filename = `/usr/bin/ffind -o $parts{$p}{osects}\@$sectorsize -i raw $imagepath $inode`;
+			my $filename = `$main::RVT_tsk_path/ffind -o $parts{$p}{osects}\@$sectorsize -i raw $imagepath $inode`;
 			chop($filename);	
 			print IDEST join(",",@line[0..6]) . ",$filename\n";
 		}

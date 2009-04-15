@@ -119,14 +119,14 @@ sub RVT_script_strings_generate  {
     	print "\t generating ASCII for $disk-p$p ...\n";
     	my $cmd = "/bin/dd if=" . $imagepath 
     		. " skip=" .  $parts{$p}{osects} . "$strcnt bs=512 2> /dev/null | "
-    		. "/usr/bin/strings -a -t d | tr /A-Z/ /a-z/ > " 
+    		. "$main::RVT_tsk_path/srch_strings -a -t d | tr /A-Z/ /a-z/ > " 
     		. "$stringspath/strings-$disk-$p.asc";
     	`$cmd`;
 
     	print "\t generating UNICODE for $disk-p$p ...\n";
     	my $cmd = "/bin/dd if=" . $imagepath 
     		. " skip=" .  $parts{$p}{osects} . "$strcnt bs=512 2> /dev/null | "
-    		. "/usr/bin/strings -a -t d  -e l | tr /A-Z/ /a-z/ > " 
+    		. "$main::RVT_tsk_path/srch_strings -a -t d  -e l | tr /A-Z/ /a-z/ > " 
     		. "$stringspath/strings-$disk-$p.uni";
     	`$cmd`;
     }
