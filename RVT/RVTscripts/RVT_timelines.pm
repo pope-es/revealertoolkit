@@ -85,6 +85,7 @@ sub RVT_script_timelines_generate  {
 		# glups ...
 		print  "\t Generando ficheros intermedios para $disk-p$p ... \n";
 		
+		# Pope> XX JOSE, este bloque sirve para algo?:
     	my $cmd = "$main::RVT_tsk_path/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . "@" . $sectorsize .
     		" -i raw $imagepath >> $timelinespath/temp/body ";
     	`$cmd`;
