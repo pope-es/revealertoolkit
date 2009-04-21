@@ -103,7 +103,13 @@ sub RVT_script_testpope_filelist {
 	my %parts = %{$main::RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
     foreach my $p ( keys %parts ) {
 		print "\tGenerating file list for $disk-p$p ... \n";
-		my $cmd = "cat $timelinespath/itimeline-". $p .".csv | cut -d, -f7- | sort -un | sed 's/^\\([^,]*\\),/\\1\\t". $disk ."-p". $p ."\\t/g' > ". $listpath ."/". $disk ."-p". $p ."_FileList.csv";
+		my $cmd = "cat $timelinespath/itimeline-". $p .".csv | cut -d, -f2,4,7- | sort -un | ". # Here we have CSV with Meta, Perms (to say File or Dir), size, and path+name: 62,-/rrwxrwxrwx,177,/zcat
+			"sed -e 's/^\\([^,]*\\),\\([^,]*\\),\\([^,]*\\),/\\3\\txxAllocUndefined\\t\\1\\t\\2\\t". $disk ."-p". $p ."\\t/g' | sed ". # until this sed, we have TSV with Meta, AllocationStatus, size, perms, disk-partition, and path+name: 177	xxAllocUndefined	62	-/rrwxrwxrwx	123015-01-1-p02	/zcat
+			"-e 's/^\\([^\\t]*\\)\\txxAllocUndefined\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\/\\([^\\t]*\\)/\\1\\tAllocated\\t\\2\\t\\3\\t\\4\\t\\/\\5/g' ". # Here we set AllocationStatus of allocated files
+			"-e 's/^\\([^\\t]*\\)\\txxAllocUndefined\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\* \\/\\-ORPHAN_FILE-\\/\\([^\\t]*\\)/\\1\\tDeleted\\+Orph\\t\\2\\t\\3\\t\\4\\t\\5/g' ". #ÊHere we set AllocationStatus of ORPHAN files
+			"-e 's/^\\([^\\t]*\\)\\txxAllocUndefined\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\* \\([^\\t]*\\)/\\1\\tDeleted   \\t\\2\\t\\3\\t\\4\\t\\5/g' ". #ÊHere we set AllocationStatus of files which were deleted but NOT orphan
+			" | sed -e 's/[-rwx]{9}\\t/\\t/g' ". # XX esta l’nea esta mal; me falta quitar el rwxrwxrwx (o similar) del 4¼ campo.
+			"> ". $listpath ."/". $disk ."-p". $p ."_FileList.csv";
 		`$cmd`;
 	}
 	
