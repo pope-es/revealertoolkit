@@ -108,8 +108,8 @@ sub RVT_script_strings_generate  {
     
 	# generation for every partition 
 
-	my %parts = %{$main::RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
-	my $sectorsize = $main::RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{sectorsize};
+	my %parts = %{$main::RVT_cases->{case}{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
+	my $sectorsize = $main::RVT_cases->{case}{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{sectorsize};
     
     foreach my $p ( keys %parts ) {
     	my $strcnt;
@@ -119,14 +119,14 @@ sub RVT_script_strings_generate  {
     	print "\t generating ASCII for $disk-p$p ...\n";
     	my $cmd = "/bin/dd if=" . $imagepath 
     		. " skip=" .  $parts{$p}{osects} . "$strcnt bs=512 2> /dev/null | "
-    		. "$main::RVT_tsk_path/srch_strings -a -t d | tr /A-Z/ /a-z/ > " 
+    		. "$main::RVT_cfg->{tsk_path}/srch_strings -a -t d | tr /A-Z/ /a-z/ > " 
     		. "$stringspath/strings-$disk-$p.asc";
     	`$cmd`;
 
     	print "\t generating UNICODE for $disk-p$p ...\n";
     	my $cmd = "/bin/dd if=" . $imagepath 
     		. " skip=" .  $parts{$p}{osects} . "$strcnt bs=512 2> /dev/null | "
-    		. "$main::RVT_tsk_path/srch_strings -a -t d  -e l | tr /A-Z/ /a-z/ > " 
+    		. "$main::RVT_cfg->{tsk_path}/srch_strings -a -t d  -e l | tr /A-Z/ /a-z/ > " 
     		. "$stringspath/strings-$disk-$p.uni";
     	`$cmd`;
     }
@@ -188,7 +188,6 @@ sub RVT_script_search_file_list {
     $case = RVT_get_casenumber($case);
     return 0 unless ($case);
     
-    print "xx $case\n";
     my $searchfile_path = RVT_get_morguepath($case) . '/searches_files';
     if ( ! -d $searchfile_path )  { print "No existe la carpeta $searchfile_path\n\n"; return 0; }    
     
@@ -388,8 +387,8 @@ sub RVT_script_search_clusterlist {
 
 	        # cluster and allocation status
 	        my $du = int( $offset /
-	                       $main::RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
-    	    my $loopdev = $main::RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{loop};
+	                       $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
+    	    my $loopdev = $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{loop};
     	    
     	    my $inodes = RVT_get_inodefromcluster( $du, "$ndisk-p$part" );
     	    foreach my $inode (@{$inodes}) {
@@ -463,7 +462,7 @@ sub RVT_script_search_clusters  {
 
 	        # cluster and allocation status
 	        my $du = int( $offset /
-	                      $main::RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
+	                      $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
     	    my $allocstat = RVT_tsk_blkstat ($ndisk, $part, $du);
     	    
  	        # strings line
@@ -479,8 +478,8 @@ sub RVT_script_search_clusters  {
             # gets the cluster and prints it
        
             my $dd_command =    "dd" . 
-                        " if=/dev/" .   $main::RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{loop} .
-                        " bs=" .   $main::RVT_cases->{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} . 
+                        " if=/dev/" .   $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{loop} .
+                        " bs=" .   $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} . 
                         " skip=" . $du .
                         " count=1 2> /dev/null |";
             open (DD, $dd_command) or die "FATAL: image is mounted? $!\n";

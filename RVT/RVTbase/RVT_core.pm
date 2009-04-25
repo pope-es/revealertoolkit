@@ -117,11 +117,11 @@ sub RVT_get_casenumber ($) {
     my $value = shift;
     if ($value =~ /^(\d{6})/) { 
         $value = $1; 
-        return $value if ($main::RVT_cases->{$value});
+        return $value if ($main::RVT_cases->{case}{$value});
         return 0;
     }
-    
-    for ( keys %{$main::RVT_cases} ) { if ($main::RVT_cases->{$_}{code} eq $value) {return $_;} }
+    print Dumper($main::RVT_cases);
+    for ( keys %{$main::RVT_cases->{case}} ) { if ($main::RVT_cases->{case}{$_}{code} eq $value) {return $_;} }
     
     return 0;
 }
@@ -139,8 +139,8 @@ sub RVT_get_devicenumber ($) {
     #if ($d and ($d !~ /\d\d/)) {
         # maybe is a code, so let's resolve it
         
-    #    for ( keys %{$main::RVT_cases->{$c}{device}} ) {
-    #        if ( $main::RVT_cases->{$c}{device}{$_}{code} eq $d ) {$d = $_;}
+    #    for ( keys %{$main::RVT_cases->{case}{$c}{device}} ) {
+    #        if ( $main::RVT_cases->{case}{$c}{device}{$_}{code} eq $d ) {$d = $_;}
     #    }
     #}
     
@@ -257,7 +257,7 @@ sub RVT_exploit_diskname ($$) {
         unshift (@devs, RVT_chop_diskname('device',$name));
     } else {
         foreach my $cc (@cases) {
-            foreach my $dd ( keys %{$main::RVT_cases->{$cc}{device}} ) 
+            foreach my $dd ( keys %{$main::RVT_cases->{case}{$cc}{device}} ) 
                 { unshift (@devs, "$cc-$dd"); }
         }        
     }
@@ -270,7 +270,7 @@ sub RVT_exploit_diskname ($$) {
     } else {    
         foreach my $dd (@devs) {
             my $nn = RVT_split_diskname($dd);
-            foreach my $ii ( keys %{$main::RVT_cases->{$nn->{case}}{device}{$nn->{device}}{disk}} )
+            foreach my $ii ( keys %{$main::RVT_cases->{case}{$nn->{case}}{device}{$nn->{device}}{disk}} )
                 { unshift (@disks, "$dd-$ii"); }
         }
     }       
@@ -282,7 +282,7 @@ sub RVT_exploit_diskname ($$) {
     } else {     
         foreach my $ii (@disks) {
             my $nn = RVT_split_diskname($ii);
-            foreach my $pp ( keys %{$main::RVT_cases->{$nn->{case}}{device}{$nn->{device}}{disk}{$nn->{disk}}{partition}} )
+            foreach my $pp ( keys %{$main::RVT_cases->{case}{$nn->{case}}{device}{$nn->{device}}{disk}{$nn->{disk}}{partition}} )
                 { unshift (@parts, "$ii-p$pp"); }        
         }
     }  
@@ -308,16 +308,16 @@ sub RVT_get_morguepath ($) {
     return 0 if (!$case);
 
     if ($type eq 'case number' or $type eq 'case code') {
-        for my $morgue ( @{$main::RVT_paths->{morgues}} ) { 
-            return "$morgue/$case-" . $main::RVT_cases->{$case}{code} 
-                if (-d "$morgue/$case-" . $main::RVT_cases->{$case}{code});
+        for my $morgue ( @{$main::RVT_cfg->{paths}[0]{morgues}} ) { 
+            return "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code} 
+                if (-d "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code});
         }
     }
     
     if ($disk) {
-        for my $morgue ( @{$main::RVT_paths->{morgues}} ) { 
-            return "$morgue/$case-" . $main::RVT_cases->{$case}{code} . "/$disk" 
-                if (-d "$morgue/$case-" . $main::RVT_cases->{$case}{code} . "/$disk");
+        for my $morgue ( @{$main::RVT_cfg->{paths}[0]{morgues}} ) { 
+            return "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code} . "/$disk" 
+                if (-d "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code} . "/$disk");
         }
     }    
     
@@ -344,7 +344,7 @@ sub RVT_expand_object ($) {
     if ($v_split->{device}) {
         $r->{$case}{device}{$v_split->{device}}{v} = 1;
     } else {
-        foreach my $dev ( keys %{$main::RVT_cases->{$case}{device}} ) {
+        foreach my $dev ( keys %{$main::RVT_cases->{case}{$case}{device}} ) {
             $r->{$case}{device}{$dev}{v} = 1;
         }
     }
@@ -354,7 +354,7 @@ sub RVT_expand_object ($) {
         $r->{$case}{device}{$v_split->{device}}{disk}{$v_split->{disk}} = 1;
     } else {
         foreach my $dev ( keys %{$r->{$case}{device}} ) {
-            foreach my $disk ( keys %{$main::RVT_cases->{$case}{device}{$dev}{disk}} ) {
+            foreach my $disk ( keys %{$main::RVT_cases->{case}{$case}{device}{$dev}{disk}} ) {
                 $r->{$case}{device}{$dev}{disk}{$disk} = 1;
             }           
         }
@@ -373,8 +373,8 @@ sub RVT_get_imagelist ($) {
     my $case = shift;
     my @result;
     
-    foreach my $dev ( keys %{$main::RVT_cases->{$case}{device}} ) {
-        for ( keys %{$main::RVT_cases->{$case}{device}{$dev}{disk}} ) {
+    foreach my $dev ( keys %{$main::RVT_cases->{case}{$case}{device}} ) {
+        for ( keys %{$main::RVT_cases->{case}{$case}{device}{$dev}{disk}} ) {
             push (@result, $_);
         }
     }
@@ -401,16 +401,16 @@ sub RVT_get_imagepath ($) {
     return 0 if (!$case);
  
     if ($type eq 'case number' or $type eq 'case code') {
-        for my $morgue ( @{$main::RVT_paths->{images}} ) { 
-            return "$morgue/$case-" . $main::RVT_cases->{$case}{code} 
-                if (-d "$morgue/$case-" . $main::RVT_cases->{$case}{code});
+        for my $morgue ( @{$main::RVT_cfg->{paths}[0]{images}} ) { 
+            return "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code} 
+                if (-d "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code});
         }
     }
     
     if ($disk) {
-        for my $morgue ( @{$main::RVT_paths->{images}} ) { 
-            return "$morgue/$case-" . $main::RVT_cases->{$case}{code} . "/$disk.dd" 
-                if (-e "$morgue/$case-" . $main::RVT_cases->{$case}{code} . "/$disk.dd");
+        for my $morgue ( @{$main::RVT_cfg->{paths}[0]{images}} ) { 
+            return "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code} . "/$disk.dd" 
+                if (-e "$morgue/$case-" . $main::RVT_cases->{case}{$case}{code} . "/$disk.dd");
         }
     }    
     
@@ -428,7 +428,7 @@ sub RVT_check_imageexists ($) {
     my $device = RVT_get_devicenumber($thing);
     my $disk = RVT_get_devicenumber($thing);
     
-    return 1 if ($main::RVT_cases->{$case}{device}{$device}{disk}{$disk});
+    return 1 if ($main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk});
     return 0;
 }
 

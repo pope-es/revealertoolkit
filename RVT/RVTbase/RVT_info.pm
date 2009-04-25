@@ -34,6 +34,9 @@ use strict;
        @ISA         = qw(Exporter);
        @EXPORT      = qw(   &constructor
                             &RVT_info_list
+                            &RVT_info_debug_dumprvtcases
+                            &RVT_info_debug_dumpmorguexml
+                            &RVT_info_debug_dumprvtcfg
                         );
        
        
@@ -46,10 +49,14 @@ my $RVT_moduleAuthor = "dervitx";
 
 use RVTbase::RVT_core;
 use Data::Dumper;
+use XML::Simple;
 
 sub constructor {
    
       $main::RVT_functions{RVT_info_list} =  'List the morgues';
+      $main::RVT_functions{RVT_info_debug_dumprvtcases} =  'print Dumper($main::RVT_cases)';
+      $main::RVT_functions{RVT_info_debug_dumpmorguexml} =  'print XMLout($main::RVT_cases, Rootname => "RVTmorgueInfo");';
+      $main::RVT_functions{RVT_info_debug_dumprvtcfg} =  'print Dumper($main::RVT_cfg)';
 
 }
 
@@ -60,13 +67,13 @@ sub RVT_info_list {
    my $bsize = shift(@_);
 
    print "\n\tList of morgues:\n";
-   for my $m (@{$main::RVT_paths->{morgues}}) { 
+   for my $m (@{$main::RVT_cfg->{paths}[0]{morgues}}) { 
 	if ($bsize eq '-s' or $bsize eq '--size') { $size = " (" . RVT_du($m) .")"; }
    	print "\t\t$m $size\n"; 
    }
 
    print "\n\n\tList of morgues of images:\n";
-   for my $m (@{$main::RVT_paths->{images}}) { 
+   for my $m (@{$main::RVT_cfg->{paths}[0]{images}}) { 
 	if ($bsize eq '-s' or $bsize eq '--size') { $size = " (" . RVT_du($m) .")"; }
    	print "\t\t$m $size\n"; 
    }
@@ -74,8 +81,11 @@ sub RVT_info_list {
    print "\n";
 }
 
+sub RVT_info_debug_dumprvtcases {  print Dumper($main::RVT_cases); print "\n"; }
 
+sub RVT_info_debug_dumpmorguexml { print XMLout($main::RVT_cases, Rootname => "RVTmorgueInfo"); } 
 
+sub RVT_info_debug_dumprvtcfg { print Dumper($main::RVT_cfg); print "\n"; }  
 
 1;  
 

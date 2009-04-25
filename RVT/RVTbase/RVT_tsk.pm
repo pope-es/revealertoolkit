@@ -76,7 +76,7 @@ sub RVT_tsk_mmls ($) {
     return 0 unless ($diskpath);
     my $results;
     
-    open(MMLS,"$main::RVT_tsk_path/mmls $diskpath 2>/dev/null|") || die "$main::RVT_tsk_path/mmls NOT FOUND";
+    open(MMLS,"$main::RVT_cfg->{tsk_path}/mmls $diskpath 2>/dev/null|") || die "$main::RVT_cfg->{tsk_path}/mmls NOT FOUND";
 	
 	while ( my $l = <MMLS> ) {
 	    chomp($l);
@@ -91,7 +91,7 @@ sub RVT_tsk_mmls ($) {
 
     return $results if ($results);
     
-    open (MMLS,"$main::RVT_tsk_path/fsstat $diskpath 2> /dev/null |") || die "$main::RVT_tsk_path/fsstat NOT FOUND";
+    open (MMLS,"$main::RVT_cfg->{tsk_path}/fsstat $diskpath 2> /dev/null |") || die "$main::RVT_cfg->{tsk_path}/fsstat NOT FOUND";
     
     while ( my $l  = <MMLS> ) {
         chomp ($l);
@@ -128,8 +128,8 @@ sub RVT_tsk_fsstat ($) {
     return 0 unless ($p);
     my $offset = $p->{$part}{offset};
     
-    #print  "$RVT_tsk_path/fsstat -o $offset $diskpath  2> /dev/null | \n";
-    open (FSSTAT,"$main::RVT_tsk_path/fsstat -o $offset $diskpath  2> /dev/null |") || die "$main::RVT_tsk_path/fsstat NOT FOUND";
+    #print  "$RVT_cfg->{tsk_path}/fsstat -o $offset $diskpath  2> /dev/null | \n";
+    open (FSSTAT,"$main::RVT_cfg->{tsk_path}/fsstat -o $offset $diskpath  2> /dev/null |") || die "$main::RVT_cfg->{tsk_path}/fsstat NOT FOUND";
     
     my $results;
     $results->{partition} = $part;
@@ -172,7 +172,7 @@ sub RVT_tsk_blkstat ($$$) {
     return 0 unless ($p);
     my $offset = $p->{$part}{offset};
 
-    open (PA,"$main::RVT_tsk_path/blkstat -o $offset $diskpath $du | grep Allocated |") || die "$main::RVT_tsk_path/blkstat NOT FOUND";    
+    open (PA,"$main::RVT_cfg->{tsk_path}/blkstat -o $offset $diskpath $du | grep Allocated |") || die "$main::RVT_cfg->{tsk_path}/blkstat NOT FOUND";    
     my $allocation = <PA>; 
     chomp $allocation;
     close (PA);
@@ -194,7 +194,7 @@ sub RVT_tsk_istat ($$$) {
     return 0 unless ($p);
     my $offset = $p->{$part}{offset};
 
-    open (PA,"$main::RVT_tsk_path/istat -o $offset $diskpath $inode | ") || die "$main::RVT_tsk_path/istat NOT FOUND";    
+    open (PA,"$main::RVT_cfg->{tsk_path}/istat -o $offset $diskpath $inode | ") || die "$main::RVT_cfg->{tsk_path}/istat NOT FOUND";    
     my @istatOutput = <PA>;
     close (PA);
     
