@@ -32,16 +32,74 @@
 
 use Data::Dumper;
 use Getopt::Long;
+use XML::Simple;
 
+our $RVT_version = '0.2';
 
-our $RVT_version = '0.1.1';
+sub usage {
+
+   my $error;
+   if ($error = shift(@_)) { print "\nERROR: $error \n\n"; }
+
+   print <<EOF ;
+
+   Revealer Toolkit Shell version $_version, 
+   Copyright (C) 2008 by Jose Navarro, a.k.a dervitx
+   This is free software distributed under GNU GPL v2 license
+
+   the Revealer Toolkit is a framework and simple scripts for computer 
+   forensics. It uses Brian Carrier's The Sleuth Kit as the backbone, 
+   as well as other free tools.
+
+   The aim of the Revealer Toolkit is to automate rutinary tasks and to
+   manage sources and results from another perspective than the usual 
+   forensic frameworks.
+ 
+
+   perl RVT.pl [--option=option value] 
+
+        --batch=filename   
+        -b filename     Batch Mode.  RVT Shell takes commands for the 
+                        file provided, or from the standard input if this
+                        file name is omitted
+        
+        --level=level   
+        -l level        RVT Shell will execute the command 'set level' with
+                        the provided level before executing other commands
+        
+        --shell         RVT Shell will start in Shell Mode. This is the 
+                        default behaviour of RVT Shell
+
+        --config        RVT Shell config file
+
+   Examples:
+
+      1) to obtain a shell, simply execute RVT
+
+      perl RVT.pl
+
+      2) batch mode: obtaining a list of cases stored in the morgue
+
+      echo "case list; quit" |  perl RVT.pl -b
+
+      3) batch mode: executing predefined commands on case 100101-01-1
+      
+      perl RVT.pl -l "100101-01-1" -b predefined-commands.rvt
+
+EOF
+
+   exit;
+}
 
 GetOptions(
         "batch:s"			=> \$RVT_batchmode,
         "level:s"           => \$RVT_initial_level,
-        "shell"				=> \$RVT_shellmode 
+        "shell"				=> \$RVT_shellmode,
+        "config:s"          => \$RVT_optConfigFileName
         );
 
+usage('Level must be specified if using --level option') if (defined($RVT_initial_level) and !$RVT_initial_level);
+usage('Could not open provided config file') if ( defined($RVT_optConfigFileName) and (! -r $RVT_optConfigFileName) );
 if (defined($RVT_batchmode) and !$RVT_batchmode) { $RVT_batchmode = '-'; }
 if (!$RVT_batchmode and !$RVT_shellmode) { $RVT_shellmode = 1; }
 
@@ -52,33 +110,41 @@ if (!$RVT_batchmode and !$RVT_shellmode) { $RVT_shellmode = 1; }
 #
 #######################################################################
 
-our $RVT_paths = {
-    morgues => ['/media/morgue']    ,
-    images => ['/media/morgue/imagenes']  ,
-    tmp => '/tmp'
-};
+my $configFileName;
 
-our $RVT_tsk_path='/usr/local/bin';
+$configFileName = '/etc/rvt/rvt.cfg' if (-e '/etc/rvt/rvt.cfg');
+$configFileName = '~/rvt.cfg' if (-e '~/rvt.cfg');
+$configFileName = 'rvt.cfg' if (-e 'rvt.cfg');
+$configFileName = $RVT_optConfigFileName if ($RVT_optConfigFileName);
 
-# mount options
-our $RVT_umask = '007';
-our $RVT_gid = '1010';
+our $RVT_cfg = XMLin ($configFileName, ForceArray => 1);
+if (!$RVT_cfg) {
+    #default configuration
+    
+    $RVT_cfg->{paths}[0] = {
+        morgues => ['/media/morgue', '/']    ,
+        images => ['/media/morgue/imagenes', '/imagenes']  ,
+        tmp => '/tmp'
+    };
 
-our $RVT_loglevel = '0';   # logs everything
+    $RVT_cfg->{tsk_path} = "/usr/local/bin";
+    $RVT_cfg->{morgueInfoXML} = "/media/morgue/RVTmorgueInfo.xml";
+    $RVT_cfg->{mount_umask} = "007";
+    $RVT_cfg->{mount_gid} = "1010";
+    $RVT_cfg->{log_level} = "0";
+}
 
-our $RVT_level;   		# current case, device, disk or partition
-						# see structure details at RVT_set_level function
+print Dumper($RVT_cfg);
 
-
-# $RVT_cases->{100xxx}
-#               {code}
-#		        {imagepath}
-#		        {morguepath}
-#               {device}{}
-#                       {code}
-#                       {disk}{}
-#                            {sectorsize}
-#                            {partition}{}
+# $RVT_cases->{case}{100xxx}
+#                     {code}
+#		              {imagepath}
+#		              {morguepath}
+#                     {device}{}
+#                         {code}
+#                           {disk}{}
+#                               {sectorsize}
+#                               {partition}{}
 #                                   {type}
 #                                   {osects}  offset in sectors
 #                                   {obytes}  offset in bytes
@@ -100,6 +166,7 @@ our %RVT_functions = (
 #my $jarl = 'use RVTscripts::RVT_files;' ;
 #eval ($jarl);
 #print $@ if ($@);
+
 
 use RVTbase::RVT_core;
 use RVTbase::RVT_tsk;
@@ -138,10 +205,9 @@ RVTscripts::RVT_files::constructor;
 #######################################################################		
 		
 		
-print "Scanning morgues. Please wait ...\n\n";
 RVT_log ('ACT', 'Iniciando RVT (v$RVT_version)');
 
-RVT_images_scanall();
+RVT_images_scanall() unless ( RVT_images_loadconfig() );
 RVT_shell(); 
 exit;
 
@@ -183,17 +249,18 @@ sub RVT_log {
 
 
 
-sub RVT_charge_file ($$) {
-   # receives a reference to an array, and a path to a filename
-   # then, reads the contents of the file into de array
+sub RVT_charge_file ($) {
+   # receives a path to a filename
+   # then, reads the contents of the file into an array
    # but removes all the lines that begin with '\s+#'
-   # returns 1 if OK, 0 if errors
+   # returns the reference to the array if OK, 0 if errors
 
-    my ($filename, $array) = @_;
-
+    my $filename = shift;
+    my $array;
+    
     open (FILE, $filename) or return 0;
     @{$array} = grep {!/^\s+#/} <FILE>;
-    return 1;
+    return $array;
 
 };
 

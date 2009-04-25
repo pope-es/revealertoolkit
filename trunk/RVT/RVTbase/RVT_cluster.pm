@@ -93,7 +93,7 @@ sub RVT_cluster_generateindex {
 	## TODO:  to check if the loop exists and image_scanall
 	## zero sized files generated if not
 
-	my %parts = %{$main::RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
+	my %parts = %{$main::RVT_cases->{case}{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
     
     foreach my $p ( keys %parts ) {
         open (F, ">$searchespath/cindex-$disk-p$p");
@@ -175,8 +175,8 @@ sub RVT_cluster_extract {
 
     $cluster =~ s/,/ /;
     print "--------------------------------------------\n";
-    print "$main::RVT_tsk_path/blkcat -o $offset $diskpath $cluster | \n\n";
-    open (PA,"$main::RVT_tsk_path/blkcat -o $offset $diskpath $cluster | ") || die "$main::RVT_tsk_path/blkcat NOT FOUND";    
+    print "$main::RVT_cfg->{tsk_path}/blkcat -o $offset $diskpath $cluster | \n\n";
+    open (PA,"$main::RVT_cfg->{tsk_path}/blkcat -o $offset $diskpath $cluster | ") || die "$main::RVT_cfg->{tsk_path}/blkcat NOT FOUND";    
     while ( my $l=<PA> ) { print $l; };    
     close (PA);
 }

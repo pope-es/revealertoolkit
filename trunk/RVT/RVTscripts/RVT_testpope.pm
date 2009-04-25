@@ -100,7 +100,7 @@ sub RVT_script_testpope_filelist {
 
 
 	# For every given partition, generate 100ccc-DD-dd-pPP_Filelist.csv
-	my %parts = %{$main::RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
+	my %parts = %{$main::RVT_cases->{case}{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
     foreach my $p ( keys %parts ) {
 		print "\tGenerating file list for $disk-p$p ... \n";
 		my $cmd = "cat $timelinespath/itimeline-". $p .".csv | cut -d, -f2,4,7- | sort -un | ". # Here we have CSV with Meta, Perms (to say File or Dir), size, and path+name: 62,-/rrwxrwxrwx,177,/zcat
@@ -119,7 +119,7 @@ sub RVT_script_testpope_filelist {
 
 	# For every given partition, 100ccc-DD-dd-p??_Filelist.csv, generate two new sets of lists:
 	# one based on allocation criteria; and another one splitting by EXTENSION: doc, jpg, lnk...
-	my %parts = %{$main::RVT_cases->{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
+	my %parts = %{$main::RVT_cases->{case}{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
     foreach my $p ( keys %parts ) {
 # xx por aki :		my $cmd = "cat ". $listpath ."/". $disk ."-p". $p ."_FileList.csv";
 		`$cmd`;
