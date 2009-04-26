@@ -399,8 +399,8 @@ sub RVT_images_loadconfig {
     $main::RVT_cases = eval { XMLin( $main::RVT_cfg->{morgueInfoXML}, ForceArray => 1 ) };
 
     return 0 if ($@);
-    print "\nMorgue XML configuration loaded. Last updated: ".$main::RVT_cases->{thisConfig}[0]{updated}."\n";
-    print "   Run 'images scanall' command to update\n";
+    RVT_log ('INFO', "Morgue XML configuration loaded. Last updated: ".$main::RVT_cases->{thisConfig}[0]{updated});
+    RVT_log ('INFO', "Run 'images scanall' command to update");
 }
 
 
@@ -473,7 +473,6 @@ sub RVT_images_scanall {
   
   RVT_losetup_recheck;
   
-  #print Dumper($main::RVT_cases);
   open (my $XMLFile, ">" . $main::RVT_cfg->{morgueInfoXML}) or die ("JARL: could not create XML file");
   XMLout($main::RVT_cases, Rootname => "RVTmorgueInfo", OutputFile => $XMLFile);
   close XMLFile;
