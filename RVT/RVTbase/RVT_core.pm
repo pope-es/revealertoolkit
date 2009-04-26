@@ -25,6 +25,7 @@ package RVTbase::RVT_core;
 use strict;
 #use warnings;
 use Data::Dumper;
+use Sys::Syslog;
 
    BEGIN {
        use Exporter   ();
@@ -34,6 +35,7 @@ use Data::Dumper;
 
        @ISA         = qw(Exporter);
        @EXPORT      = qw(   &constructor
+                            &RVT_log
                             &RVT_du
                             &RVT_check_format 
                             &RVT_get_morguepath
@@ -74,6 +76,34 @@ sub constructor {
 #  core RVT functions
 #
 #######################################################################
+
+
+sub RVT_log ($$) {
+	# logs RVT activity/Users/jose/Desktop/scripts/plot_bars.pl
+	
+	my $type = shift(@_);
+	if (!grep(/$type/, (    'EMERG', # - system is unusable
+                            'ALERT', # - action must be taken immediately
+                            'CRIT',  # - critical conditions
+                            'ERR',   # - error conditions
+                            'WARNING', # - warning conditions
+                            'NOTICE', # - normal, but significant, condition
+                            'INFO', # - informational message
+                            'DEBUG' ) # - debug-level message
+	                    )) { return; };                   
+	
+	my $message = shift(@_);
+	chomp ($message);
+	
+	my $remoteSub = $@{caller(1)}[3];
+	my $remotePackage = $@{caller(1)}[0];
+	my $message = join ( ' ',  
+	                $type,
+	                $main::RVT_user."@".$main::RVT_remoteIP,
+	                $message );
+	
+	syslog ('LOG_' . $type, $message );
+}
 
 
 sub RVT_du {
@@ -120,7 +150,6 @@ sub RVT_get_casenumber ($) {
         return $value if ($main::RVT_cases->{case}{$value});
         return 0;
     }
-    print Dumper($main::RVT_cases);
     for ( keys %{$main::RVT_cases->{case}} ) { if ($main::RVT_cases->{case}{$_}{code} eq $value) {return $_;} }
     
     return 0;
@@ -432,14 +461,6 @@ sub RVT_check_imageexists ($) {
     return 0;
 }
 
-
-sub RVT_log  {
-    # logs second argument as indicated by the first, which can be:
-    # 'w'  warning
-    # '...
-    # or a combination, like 'wls' (warning + log + screen)
-
-}
 
 
 

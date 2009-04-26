@@ -33,6 +33,7 @@
 use Data::Dumper;
 use Getopt::Long;
 use XML::Simple;
+use Sys::Syslog;
 
 our $RVT_version = '0.2';
 
@@ -72,6 +73,8 @@ sub usage {
 
         --config        RVT Shell config file
 
+        --verbose       outputs all the messages sent to syslog
+
    Examples:
 
       1) to obtain a shell, simply execute RVT
@@ -86,6 +89,10 @@ sub usage {
       
       perl RVT.pl -l "100101-01-1" -b predefined-commands.rvt
 
+
+      For further reading, look for User Guide and Developer Guide at The
+      website:   http://code.google.com/p/revealertoolkit
+
 EOF
 
    exit;
@@ -95,7 +102,8 @@ GetOptions(
         "batch:s"			=> \$RVT_batchmode,
         "level:s"           => \$RVT_initial_level,
         "shell"				=> \$RVT_shellmode,
-        "config:s"          => \$RVT_optConfigFileName
+        "config:s"          => \$RVT_optConfigFileName,
+        "verbose"           => \$RVT_verbose
         );
 
 usage('Level must be specified if using --level option') if (defined($RVT_initial_level) and !$RVT_initial_level);
@@ -103,6 +111,27 @@ usage('Could not open provided config file') if ( defined($RVT_optConfigFileName
 if (defined($RVT_batchmode) and !$RVT_batchmode) { $RVT_batchmode = '-'; }
 if (!$RVT_batchmode and !$RVT_shellmode) { $RVT_shellmode = 1; }
 
+
+
+#######################################################################
+#
+#  logging and accounting
+#
+#######################################################################
+
+
+my $RVTlog_fd;   # general log file descriptor
+our $RVT_user = getlogin();
+my @tt = split(' ', $ENV{SSH_CLIENT});
+our $RVT_remoteIP = $tt[0];
+
+if ($RVT_verbose)  {
+    openlog('RVT', 'ndelay, perror', 'local0');
+} else {
+    openlog('RVT', 'ndelay', 'local0');
+}    
+
+RVT_log('INFO', "starting up RVT v$RVT_version" );
 
 #######################################################################
 #
@@ -117,13 +146,13 @@ $configFileName = '~/rvt.cfg' if (-e '~/rvt.cfg');
 $configFileName = 'rvt.cfg' if (-e 'rvt.cfg');
 $configFileName = $RVT_optConfigFileName if ($RVT_optConfigFileName);
 
-our $RVT_cfg = XMLin ($configFileName, ForceArray => 1);
-if (!$RVT_cfg) {
+our $RVT_cfg = eval { XMLin ($configFileName, ForceArray => 1) };
+if (!$RVT_cfg or $@) {
     #default configuration
     
     $RVT_cfg->{paths}[0] = {
-        morgues => ['/media/morgue', '/']    ,
-        images => ['/media/morgue/imagenes', '/imagenes']  ,
+        morgues => ['/media/morgue']    ,
+        images => ['/media/morgue/imagenes']  ,
         tmp => '/tmp'
     };
 
@@ -134,7 +163,6 @@ if (!$RVT_cfg) {
     $RVT_cfg->{log_level} = "0";
 }
 
-print Dumper($RVT_cfg);
 
 # $RVT_cases->{case}{100xxx}
 #                     {code}
@@ -174,7 +202,6 @@ use RVTbase::RVT_tsk;
 use RVTbase::RVT_morgue;
 RVTbase::RVT_morgue::constructor;
 
-
 use RVTbase::RVT_info;
 RVTbase::RVT_info::constructor;
 
@@ -197,16 +224,17 @@ RVTscripts::RVT_webmail::constructor;
 use RVTscripts::RVT_files;
 RVTscripts::RVT_files::constructor;
 
+
+
 		
 #######################################################################
 #
 #  main
 #
 #######################################################################		
-		
-		
-RVT_log ('ACT', 'Iniciando RVT (v$RVT_version)');
 
+
+RVT_log ('INFO', 'loading configuration');
 RVT_images_scanall() unless ( RVT_images_loadconfig() );
 RVT_shell(); 
 exit;
@@ -226,26 +254,6 @@ sub RVT_test {
     print "args: " . join(',',@_) . "\n";
 
 }
-
-my $log_fd;  # static local vars in perl??
-sub RVT_log {
-	# logs RVT activity/Users/jose/Desktop/scripts/plot_bars.pl
-	
-	my $type = shift(@_);
-	if (!grep(/$type/, ('ERR', 'WRN', 'ACT', 'INF'))) { return; };
-	my $message = shift(@_);
-	chomp ($message);
-	
-	unless ($log_fd) {
-		open ($log_fd, '>RVT.log') or die "FATAL: $!";
-	}
-	
-	my @tt = caller(1);	
-	print $log_fd gmtime(time) ." GMT, $type, $tt[3], $message \n";
-}
-
-
-
 
 
 
@@ -385,12 +393,13 @@ sub RVT_shell_function_exec ($$) {
             
             foreach my $obj ( @objects ) {
                 #print "\nexecuting: $fun " . join(" ",@c[$cc+1..$#c-1], $disk) . "\n\n";
+                RVT_log('INFO', "executing ". $RVT_level->{tag} .": ". $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj));
                 eval {
                     &{$fun}( @c[$cc+1..$#c-1], $obj );
                 };
-                if ($@) { print "\n\n--> ERROR:  the command exited with errors: \n$@\n\n"; }
+                if ($@) { print "\n\n--> ERROR:  the command exited with errors: \n$@\n\n"; return 0; }
             }
-            return 0;
+            return 1;
         }
     }
 
@@ -454,6 +463,7 @@ sub RVT_getcommand {
 				$cmd =~ s/^$cmdgrp//;
 		 	}
 
+		 	$cmd = $cmd . " ";
 		 	RVT_shell_prompt ($RVT_level->{tag}, $cmdgrp, $cmd);
 		 	next;
  		 }
@@ -477,10 +487,14 @@ sub RVT_shell_prompt {
 
 sub RVT_shell {
 
+    RVT_log('INFO', 'RVT shell started');
     print "\n\nWelcome to Revealer Tools Shell (v$RVT_version):\n\n";
     my ($cmdgrp, $command, $cmdhist);
 
-    if ($RVT_initial_level) { RVT_set_level($RVT_initial_level); }
+    if ($RVT_initial_level) { 
+        RVT_log('INFO', 'executing : RVT_set_level ' . $RVT_initial_level);
+        RVT_set_level($RVT_initial_level); 
+    }
 
     if ($RVT_batchmode) {
     	open (BATCH, "<$RVT_batchmode") or die "FATAL: $!";
@@ -501,7 +515,8 @@ sub RVT_shell {
             }
             if ($cmd =~ /\?/) { RVT_shell_help("$cmdgrp $cmd"); next; }
             my $exec_result = RVT_shell_function_exec("$cmdgrp $cmd", $cmdgrp);
-            $cmdgrp = $exec_result if $exec_result;
+            $cmdgrp = $exec_result if ($exec_result and ($exec_result != 1));
+            print "syntax error\n" unless $exec_result;
         }
     } continue { RVT_shell_prompt ($RVT_level->{tag}, $cmdgrp) if ($RVT_shellmode); }
 
@@ -512,6 +527,12 @@ sub RVT_shell {
 
 
 
+END {
+
+    RVT_log ('INFO', 'ending session');
+    closelog();
+
+}
 
 
 
