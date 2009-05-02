@@ -103,9 +103,11 @@ GetOptions(
         "level:s"           => \$RVT_initial_level,
         "shell"				=> \$RVT_shellmode,
         "config:s"          => \$RVT_optConfigFileName,
-        "verbose"           => \$RVT_verbose
+        "verbose"           => \$RVT_verbose,
+        "help"				=> \$RVT_usage
         );
 
+usage() if ($RVT_usage);
 usage('Level must be specified if using --level option') if (defined($RVT_initial_level) and !$RVT_initial_level);
 usage('Could not open provided config file') if ( defined($RVT_optConfigFileName) and (! -r $RVT_optConfigFileName) );
 if (defined($RVT_batchmode) and !$RVT_batchmode) { $RVT_batchmode = '-'; }
@@ -121,7 +123,7 @@ if (!$RVT_batchmode and !$RVT_shellmode) { $RVT_shellmode = 1; }
 
 
 my $RVTlog_fd;   # general log file descriptor
-our $RVT_user = getlogin();
+our $RVT_user = getpwuid($<);
 my @tt = split(' ', $ENV{SSH_CLIENT});
 our $RVT_remoteIP = $tt[0];
 
@@ -224,7 +226,8 @@ RVTscripts::RVT_webmail::constructor;
 use RVTscripts::RVT_files;
 RVTscripts::RVT_files::constructor;
 
-
+use RVTscripts::RVT_regripper;
+RVTscripts::RVT_regripper::constructor;
 
 		
 #######################################################################
@@ -463,7 +466,6 @@ sub RVT_getcommand {
 				$cmd =~ s/^$cmdgrp//;
 		 	}
 
-		 	$cmd = $cmd . " ";
 		 	RVT_shell_prompt ($RVT_level->{tag}, $cmdgrp, $cmd);
 		 	next;
  		 }

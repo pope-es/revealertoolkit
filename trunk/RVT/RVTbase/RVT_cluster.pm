@@ -55,7 +55,8 @@ use Data::Dumper;
 sub constructor {
    
    $main::RVT_functions{RVT_cluster_generateindex } = "Creates sort of an index for quick cluster-to-inode\n
-                                    resolution. Required fot performing searches.";
+                                    resolution. Required fot performing searches.\n
+                                    cluster generateindex <disk>";
    $main::RVT_functions{RVT_cluster_toinode } = "Prints all the inodes associated with a cluster\n
                             cluster toinode <cluster> <partition>";
    $main::RVT_functions{RVT_cluster_extract } = "Prints the contents of the cluster\n
