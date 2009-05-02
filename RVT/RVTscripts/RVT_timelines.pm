@@ -55,6 +55,38 @@ sub constructor {
 }
 
 
+sub RVT_get_timelinefiles ($$$) {
+	# from the timeline of a partition (itimeline-xx files)
+	# returns an array with those whose name match the regular expression
+	# and MAC state, sorted by time 
+	#
+	# args:		regular expresion
+	#           mac
+	#			partition
+	
+	my ($regexpr, $mac, $part) = @_;
+	my @results;
+	
+	my $sdisk = RVT_split_diskname($part);
+	
+	open (F, "<" . RVT_get_morguepath($sdisk->{disk}) . "/output/timelines/itimeline-" . $sdisk->{partition} . ".csv") or die 'Could not open the timeline';
+    @results = grep { /^[^:]*:.*,.*,$mac,.*,.*,.*,.*,.*$regexpr/ } <F>;
+    @results = map {my @r = split(','); "$r[0],$r[2],$r[7]"} @results;
+	close (F);
+	
+	return @results;
+}
+
+
+sub RVT_script_timelines_printfiles ($$$) {
+	# args:		regular expresion
+	#           mac
+	#			partition
+	
+	my ($regexpr, $mac, $part) = @_;
+
+	foreach my $f (RVT_get_timelinefiles($regexpr, $mac, $part)) { print "$f\n"; };
+}
 
 
 sub RVT_script_timelines_generate  {

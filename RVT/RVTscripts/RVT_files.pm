@@ -34,6 +34,7 @@ use strict;
                @ISA         = qw(Exporter);
                @EXPORT      = qw(   &constructor
                                     &RVT_script_files_allocfiles 
+                                    &RVT_script_files_printfiles
                                 );
                
                
@@ -50,6 +51,10 @@ use Data::Dumper;
 sub constructor {
     
 	$main::RVT_functions{RVT_script_files_allocfiles } = "Creates a file with a list of all the allocated files\n   files allocfiles <disk>";
+	
+	$main::RVT_functions{RVT_script_files_printfiles } = "Gives a list of all the allocated files that matches\n
+						a regular expresion.\n
+						script files printfiles <regular expression> <disk>";
 
 }
 
@@ -75,6 +80,43 @@ sub RVT_script_files_allocfiles  {
     `$command`;
     
     return 1;
+}
+
+
+sub RVT_get_allocfiles ($$) {
+	# from the list of allocated files created by RVT_script_files_allocfiles
+	# returns an array with those whose name match the regular expression
+	#
+	# args:		regular expresion
+	#			disk
+	
+	my ($regexpr, $disk) = @_;
+	my @results;
+	
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { print "ERR: that is not a disk\n\n"; return 0; }
+	
+	open (F, "<" . RVT_get_morguepath($disk) . "/output/info/alloc_files.txt") or die 'Could not open output/info/alloc_files.txt';
+	while (<F>) {
+		next if (/^\s*#/);
+		chomp;
+		unshift(@results, $_) if (/$regexpr/);
+	}
+	
+	return @results;
+}
+
+
+sub RVT_script_files_printfiles ($$) {
+	# given a disk and a regular expression, return the path of all allocated files
+	# that matches that regular expression
+	#
+	# args:		regular expresions
+	#			disk
+
+    my ($regexpr, $disk) = @_;
+
+	foreach my $f (RVT_get_allocfiles($regexpr, $disk)) { print "$f\n"; };
 }
 
 
