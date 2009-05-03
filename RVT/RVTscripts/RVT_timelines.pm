@@ -34,6 +34,7 @@ use strict;
        @ISA         = qw(Exporter);
        @EXPORT      = qw(   &constructor
                             &RVT_script_timelines_generate
+                            &RVT_get_timelinefiles
                         );
        
        
@@ -68,10 +69,11 @@ sub RVT_get_timelinefiles ($$$) {
 	my @results;
 	
 	my $sdisk = RVT_split_diskname($part);
+	my $disk = RVT_chop_diskname('disk', $part);
 	
-	open (F, "<" . RVT_get_morguepath($sdisk->{disk}) . "/output/timelines/itimeline-" . $sdisk->{partition} . ".csv") or die 'Could not open the timeline';
+	open (F, "<" . RVT_get_morguepath($disk) . "/output/timelines/itimeline-" . $sdisk->{partition} . ".csv") or die 'Could not open the timeline';
     @results = grep { /^[^:]*:.*,.*,$mac,.*,.*,.*,.*,.*$regexpr/ } <F>;
-    @results = map {my @r = split(','); "$r[0],$r[2],$r[7]"} @results;
+    @results = map {my @r = split(','); chomp ($r[7]); "$r[0],$r[2],$r[7]"} @results;
 	close (F);
 	
 	return @results;

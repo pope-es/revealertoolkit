@@ -51,9 +51,18 @@ use Date::Manip;
 
 sub constructor {
    
-   $main::RVT_functions{RVT_script_regripper_listmodules} = "f";
-   $main::RVT_functions{RVT_script_regripper_execmodules} = "f";
-   $main::RVT_functions{RVT_script_regripper_execallmodules} = "f";
+   $main::RVT_functions{RVT_script_regripper_listmodules} = 
+      "lists all the plugins of RegRipper (rip.pl -l) \n
+       script regripper listmodules";
+   $main::RVT_functions{RVT_script_regripper_execmodule} = 
+      "executes one RegRipper plugin on the partition specified.\n
+      the hive type must be specified: takes the last modified one \n
+      script regripper execmodule <plugin> <hivetype> <partition>";
+   $main::RVT_functions{RVT_script_regripper_execallmodules} = 
+      "executes all the RegRipper plugins on all the files that seem\n 
+      a registry file. The results are stored at the output/regripper.\n
+      If hivetype 'all' is specified, all hivetypes are used\n
+      script regripper execmodule <hivetype> <partition>";
    
 }
 
@@ -62,7 +71,7 @@ my %rrTypes = { 'sam' => 'SAM$',
                 'system' => 'system$' , 
                 'software' => 'software$', 
                 'security' => 'security$', 
-                'ntuser' => 'Documents and Settings.*ntuser.dat$' 
+                'ntuser' => 'NTUSER.DAT$' 
                 };
 
 sub RVT_script_regripper_listmodules {
@@ -91,17 +100,14 @@ sub RVT_script_regripper_execmodule {
     return 0 unless ($spart->{partition});
     
     my $disk = RVT_chop_diskname('disk', $part);
-    
-    my $ofolder = RVT_get_morguepath($disk) . '/output/regripper';
-    if ( ! -d $ofolder )  { mkdir ($ofolder) or die "Could not create $ofolder"; }
-    
+ 
     my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm..', $part);
     @files = grep { !/, * / } @files;  # allocated files only
     
     for (my $f=$#files; $f>=0; $f--) {
         my @ff = split(',', $files[$f]);
         my $hivepath = RVT_get_morguepath($disk) . '/mnt/p' . $spart->{partition} . $ff[2];
-        my @r = `rip -r $hivepath -f $hivetype -m $module`;
+        my @r = `rip -r "$hivepath" -p $module`;
         next unless @r;
         print "\nfile: $files[$f]\n\n";
         print @r;
@@ -122,7 +128,13 @@ sub RVT_script_regripper_execallmodules {
 
     my ($hivetype, $part) = @_ ;
 
-    return 0 unless ($rrTypes{$hivetype});
+    return 0 unless ($rrTypes{$hivetype} or ($hivetype eq 'all'));
+    my @hivetypes;
+    if ( $hivetype eq 'all' ) {
+        @hivetypes = keys %rrTypes;
+    } else {
+        @hivetypes = ( $hivetype );
+    }
 
     RVT_fill_level(\$part);
     my $spart = RVT_split_diskname($part);
@@ -133,21 +145,23 @@ sub RVT_script_regripper_execallmodules {
     my $ofolder = RVT_get_morguepath($disk) . '/output/regripper';
     if ( ! -d $ofolder )  { mkdir ($ofolder) or die "Could not create $ofolder"; }
     
-    my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm..', $part);
-    @files = grep { !/, * / } @files;  # allocated files only
-    
-    foreach my $f (@files) {
-        my @ff = split(',', $files[$f]);
-        my $hivepath = RVT_get_morguepath($disk) . '/mnt/p' . $spart->{partition} . $ff[2];
-        my $opath = RVT_get_morguepath($disk) . '/output/regripper/' . $hivetype . '-' . ParseDate($ff[0]) ;
-        my @r = `rip -r $hivepath -f $hivetype`;
-        next unless @r;
-        open (F,">$opath") or die "Could not open $opath";
-        print F "$hivepath\n";
-        print F @r;
-        close F;
-        print "regripped: $files[$f]\n";
-    } 
+    foreach $hivetype (@hivetypes) {
+        my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm..', $part);
+        @files = grep { !/, * / } @files;  # allocated files only
+        
+        foreach my $f (@files) {
+            my @ff = split(',', $f);
+            my $hivepath = RVT_get_morguepath($disk) . '/mnt/p' . $spart->{partition} . $ff[2];
+            my $opath = RVT_get_morguepath($disk) . '/output/regripper/' . $hivetype . '-' . ParseDate($ff[0]) ;
+            my @r = `rip -r "$hivepath" -f $hivetype`;
+            next unless @r;
+            open (F,">$opath") or die "Could not open $opath";
+            print F "$hivepath\n";
+            print F @r;
+            close F;
+            print "regripped: $files[$f]\n";
+        } 
+    }
 }
 
 
