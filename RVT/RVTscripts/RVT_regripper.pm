@@ -67,12 +67,12 @@ sub constructor {
 }
 
 
-my %rrTypes = { 'sam' => 'SAM$', 
+my %rrTypes = ( 'sam' => 'SAM$', 
                 'system' => 'system$' , 
                 'software' => 'software$', 
                 'security' => 'security$', 
                 'ntuser' => 'NTUSER.DAT$' 
-                };
+                );
 
 sub RVT_script_regripper_listmodules {
 
