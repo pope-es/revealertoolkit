@@ -35,7 +35,8 @@ use strict;
        @EXPORT      = qw(   &constructor
                             &RVT_cluster_generateindex
                             &RVT_get_inodefromcluster
-                            &RVT_cluster_extract
+                            &RVT_cluster_extract_raw
+                            &RVT_cluster_extract_ascii
                             &RVT_cluster_toinode
                             &RVT_cluster_allocationstatus
                         );
@@ -59,8 +60,11 @@ sub constructor {
                                     cluster generateindex <disk>";
    $main::RVT_functions{RVT_cluster_toinode } = "Prints all the inodes associated with a cluster\n
                             cluster toinode <cluster> <partition>";
-   $main::RVT_functions{RVT_cluster_extract } = "Prints the contents of the cluster\n
+   $main::RVT_functions{RVT_cluster_extract_raw } = "Prints the contents of the cluster\n
                             cluster extract <cluster> <partition>";
+   $main::RVT_functions{RVT_cluster_extract_ascii } = "Prints the contents of the cluster\n
+                            but non-ascii character are translated to '.'\n
+                            cluster extract <cluster> <partition>";                            
    $main::RVT_functions{RVT_cluster_allocationstatus } = "Prints cluster allocation status\n
                                     cluster allocationstatus <cluster> <partition>";
    $main::RVT_functions{RVT_inode_allocationstatus } = "Prints inode allocation status\n
@@ -147,17 +151,17 @@ sub RVT_get_inodefromcluster {
 }
 
 
-
-sub RVT_cluster_extract {
-    # extracts the cluster
+sub RVT_get_cluster {
+    # extracts the cluster and return it in an array
     # arguments:
     #   cluster
     #   partition
     
     my ( $cluster, $part ) = @_;
+    my @results;
 
-    next unless ($cluster =~ /^[0-9\,]+$/);
-    $part = $main::RVT_level->{tag} unless $part;
+    return unless ($cluster =~ /^[0-9\,]+$/);
+    $cluster =~ s/,/ /;
     if (RVT_check_format($part) ne 'partition') { print "ERR: that is not a partition\n\n"; return 0; }
     
     my $disk = RVT_join_diskname ( 
@@ -175,11 +179,58 @@ sub RVT_cluster_extract {
     my $offset = $p->{$part}{offset};
 
     $cluster =~ s/,/ /;
-    print "--------------------------------------------\n";
-    print "$main::RVT_cfg->{tsk_path}/blkcat -o $offset $diskpath $cluster | \n\n";
     open (PA,"$main::RVT_cfg->{tsk_path}/blkcat -o $offset $diskpath $cluster | ") || die "$main::RVT_cfg->{tsk_path}/blkcat NOT FOUND";    
-    while ( my $l=<PA> ) { print $l; };    
+    while ( my $l=<PA> ) { push (@results, $l); };    
     close (PA);
+    
+    return @results;
+}
+
+
+sub RVT_cluster_extract_raw {
+    # extracts the cluster in raw format, that is, without formating, except
+    # what your console is going to introduce
+    # arguments:
+    #   cluster
+    #   partition
+    
+    my ( $cluster, $part ) = @_;
+    $part = $main::RVT_level->{tag} unless $part;
+    my @results = RVT_get_cluster ($cluster, $part);
+    return unless @results;
+
+    print "--------------------------------------------\n";
+    print "$part, $cluster \n\n";
+    print @results;   
+    print "\n\n";
+
+    return 1;
+}
+
+
+sub RVT_cluster_extract_ascii {
+    # extracts the cluster, but only ascii values. Other are translated to '.'
+    # Lines are 75 character long.
+    # arguments:
+    #   cluster
+    #   partition
+    
+    my $n = '75';
+    my ( $cluster, $part ) = @_;
+    $part = $main::RVT_level->{tag} unless $part;    
+    my @results = RVT_get_cluster ($cluster, $part);
+    return unless @results;
+
+    print "--------------------------------------------\n";
+    print "$part, $cluster \n\n";
+ 
+    @results = map {s/[\x00-\x09,\x0B-\x1F,\x7F-\xFF]/./g; $_;} @results;
+    foreach my $l (@results) {
+        while ( $l =~ /.{1,$n}/g ) { print "$&\n"; }
+    }
+    print "\n\n";
+    
+    return 1;
 }
 
 
