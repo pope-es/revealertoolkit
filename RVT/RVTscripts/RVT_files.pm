@@ -33,7 +33,8 @@ use strict;
 
                @ISA         = qw(Exporter);
                @EXPORT      = qw(   &constructor
-                                    &RVT_script_files_allocfiles 
+                                    &RVT_script_files_allocfiles
+                                    &RVT_get_allocfiles
                                     &RVT_script_files_printfiles
                                 );
                

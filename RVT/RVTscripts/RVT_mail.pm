@@ -68,11 +68,11 @@ sub RVT_script_mail_parsepsts {
     my $opath = RVT_get_morguepath($disk) . '/output/mail';
     mkdir $opath unless (-d $opath);
     
-    my @pstlist = RVT_get_allocfiles('/\.pst$/');
+    my @pstlist = RVT_get_allocfiles('pst$', $disk);
     
     foreach my $f (@pstlist) {
         my $fpath = RVT_create_folder($opath, 'pst');
-        my @args = ('libpst', '-S', '-vc', '-o', $fpath, $f);
+        my @args = ('readpst', '-S', '-cv', '-o', $fpath, $f);
         if (system (@args)) {
             print "PST parsed: $f\n";
         } else {
