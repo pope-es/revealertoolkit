@@ -46,7 +46,6 @@ use Sys::Syslog;
                             &RVT_split_diskname
                             &RVT_join_diskname
                             &RVT_chop_diskname
-                            &RVT_get_morguepath
                             &RVT_expand_object
                             &RVT_get_imagelist
                             &RVT_get_imagepath
@@ -54,6 +53,7 @@ use Sys::Syslog;
                             &RVT_log
                             &RVT_fill_level
                             &RVT_exploit_diskname
+                            &RVT_create_folder
                         );
        
        
@@ -465,6 +465,7 @@ sub RVT_check_imageexists ($) {
 
 
 sub RVT_fill_level {
+    # fills the given object ($obj) with info from level
 
    my $obj = shift;
    my $r = RVT_split_diskname($$obj);
@@ -485,6 +486,25 @@ sub RVT_fill_level {
    $$obj = RVT_join_diskname ($case, $device, $disk, $partition);
 }
 
+
+sub RVT_create_folder ($$) {
+    # given a folder, creates a new folder inside with a name with a given
+    # prefix. If a folder exists, creates other with a consecutive number
+    
+    # args:     mother folder in which create a new one
+    #           prefix
+    
+    my ($mother, $prefix) = @_;
+    
+    return unless (-d $mother);
+    return unless ($prefix =~ /^[A-Za-z0-9]+$/);
+    
+    my $n = 1;
+    $n++ while (-d "$mother/$prefix-$n");
+    mkdir ("$mother/$prefix-$n") or return;
+    
+    return "$mother/$prefix-$n";
+}
 
 
 1; 

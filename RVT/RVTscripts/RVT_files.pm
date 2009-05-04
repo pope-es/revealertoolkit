@@ -100,7 +100,7 @@ sub RVT_get_allocfiles ($$) {
 	while (<F>) {
 		next if (/^\s*#/);
 		chomp;
-		unshift(@results, $_) if (/$regexpr/);
+		unshift(@results, $_) if (/$regexpr/i);
 	}
 	
 	return @results;

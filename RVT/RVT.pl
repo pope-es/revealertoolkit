@@ -229,6 +229,8 @@ RVTscripts::RVT_files::constructor;
 use RVTscripts::RVT_regripper;
 RVTscripts::RVT_regripper::constructor;
 
+use RVTscripts::RVT_mail;
+RVTscripts::RVT_mail::constructor;		
 		
 #######################################################################
 #
