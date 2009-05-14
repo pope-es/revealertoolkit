@@ -145,7 +145,7 @@ sub RVT_images_list {
 		print "\t$case '$code'$size:\n";
 		opendir (CASE, $images . "/$f");
 		while (defined(my $ff=readdir(CASE))) {
-		    print "\t\t$ff\n" if ($ff=~/^$case-\d\d-\d\d?\.dd$/ && -f $images . "/$f/$ff");  }
+		    print "\t\t$ff\n" if ($ff=~/^$case-\d\d-\d\d?\.dd$/ && -e $images . "/$f/$ff");  }
 		closedir(CASE);
 	    }
 	    closedir( MORGUE );
@@ -430,7 +430,7 @@ sub RVT_images_scanall {
 	    opendir (CASE, $images . "/$f") or die "FATAL: jarl $!";
         while (defined(my $img=readdir(CASE))) {
             my $imgpath = $images . "/$f/$img";
-            next unless ($img=~/^$case-(\d\d)-(\d\d?)\.dd$/ && -f $imgpath);  
+            next unless ($img=~/^$case-(\d\d)-(\d\d?)\.dd$/ && -e $imgpath);  
             my $device = $1;
             my $disk = $2;
             
