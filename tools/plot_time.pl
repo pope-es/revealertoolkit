@@ -28,6 +28,11 @@ use Getopt::Long;
 use Date::Manip;
 use File::ReadBackwards;
 
+# gnuplot check
+my $grep = `gnuplot -V`;
+(($grep =~ /gnuplot (\d)\.(\d)/) && ($1 >= 4) && (($1+$2) >= 6))  or  die "GNUPLOT v4.2 or greater needed on path";
+
+
 my $_version = '0.2';
 my $_args = join(' ', @ARGV);
 
@@ -209,7 +214,7 @@ if ($period and $tmin and $tmax) {
    $graphtmax = calc_p0( DateCalc($datatmax, $Delta{$period}) );
 }
 
-open (GNUPLOT, "| ./gnuplot") or die "FATAL: $!";
+open (GNUPLOT, "| gnuplot") or die "FATAL: $!";
 
 my $plot = <<EOF ;
 
