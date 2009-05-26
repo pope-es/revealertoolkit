@@ -66,7 +66,13 @@ my $RVT_moduleAuthor = "dervitx";
 
 sub constructor {
 
-    # nothing to do... yet
+   my @req = ('ils', 'istat', 'blkcat', 'mmls', 'srch_strings', 'ffind');
+   
+   foreach my $req ( @req ) {
+        $main::RVT_requirements{ $req } = `$req -V`;
+        next if ($main::RVT_requirements{ $req });
+        RVT_log('CRIT', "SleuthKit not properly installed ($req not found)");
+   }
 
 }
 
@@ -95,6 +101,19 @@ sub RVT_log ($$) {
 	my $message = shift(@_);
 	chomp ($message);
 	
+	# standard output
+	
+	if ($main::RVT_verbose || grep(/$type/, (     'EMERG', # - system is unusable
+                            'ALERT', # - action must be taken immediately
+                            'CRIT',  # - critical conditions
+                            'ERR',   # - error conditions
+                            'WARNING' ) # - warning conditions
+	                    )) { 
+	    print "\n$type: $message\n\n";
+	}
+	
+	# syslog output
+	
 	my $remoteSub = $@{caller(1)}[3];
 	my $remotePackage = $@{caller(1)}[0];
 	my $message = join ( ' ',  
@@ -103,6 +122,16 @@ sub RVT_log ($$) {
 	                $message );
 	
 	syslog ('LOG_' . $type, $message );
+	
+	# exiting RVT ?
+
+	if ($main::RVT_verbose || grep(/$type/, (     'EMERG', # - system is unusable
+                            'ALERT', # - action must be taken immediately
+                            'CRIT')  # - critical conditions
+	                    )) { 
+	    die;
+	}	
+	
 }
 
 
@@ -110,7 +139,8 @@ sub RVT_du {
 
    my $path = shift(@_);
 
-   my $r = `du -sh $path`;   # glups!
+   my $r = `du -sh $path` or RVT_log('CRIT', $@);   # glups!
+   
    my @r = split('\s+',$r);
 
    return $r[0];

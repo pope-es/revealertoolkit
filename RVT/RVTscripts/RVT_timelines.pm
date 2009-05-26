@@ -23,6 +23,7 @@
 package RVTscripts::RVT_timelines;  
 
 use strict;
+use Date::Manip;
 #use warnings;
 
    BEGIN {
@@ -119,7 +120,6 @@ sub RVT_script_timelines_generate  {
 		# glups ...
 		print  "\t Generando ficheros intermedios para $disk-p$p ... \n";
 		
-		# Pope> XX JOSE, este bloque sirve para algo?:
     	my $cmd = "$main::RVT_cfg->{tsk_path}/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . "@" . $sectorsize .
     		" -i raw $imagepath >> $timelinespath/temp/body ";
     	`$cmd`;
@@ -136,6 +136,7 @@ sub RVT_script_timelines_generate  {
     my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/body -i day $timelinespath/timeline-day.sum > "
     	. "$timelinespath/timeline.txt";
     `$cmd`;
+    RVT_ParseDate_strings ( "$timelinespath/timeline.csv" ,1 );
    
     foreach my $p ( keys %parts ) {
 		# glups ...
@@ -153,13 +154,46 @@ sub RVT_script_timelines_generate  {
 			print IDEST join(",",@line[0..6]) . ",$filename\n";
 		}
 		close (PA);
-		close(IDEST);    	
+		close(IDEST);  
+		RVT_ParseDate_strings ( "$timelinespath/itimeline-$p.csv" ,1 );
     } 
     
     print "\t timelines done\n";
     return 1;
 }
 
+
+sub RVT_ParseDate_strings ($$) { 
+    # takes a comma separated value file (first argument) and a field number (second number)
+    # and changes every line parsing the given field with ParseDate (from Data::Manip)
+    # 
+    # 'field number' is 1 for the first field
+
+
+    my ($file, $tf) = @_;
+    my @a;
+    
+    print "Date-Parsing $file\n";
+    
+    open (IF, "<$file") or { RVT_log('ERR', 'Couldn\'t open timeline') , return 0 };
+    open (OF, ">$file.tmp") or { RVT_log('ERR', 'Couldn\'t create a temporal timeline') , return 0 };
+    
+    while (<IF>) {
+        @a = split (',');
+        eval { $a[($tf-1)] = ParseDate($a[($tf-1)]); };
+        if ($@) { 
+            RVT_log('ERR', 'Error found parsing dates');
+            close (IF); close (OF); unlink "$file.tmp";
+            return 0;
+        }
+        
+        print OF join(',', @a);
+    }
+    
+    unlink "$file";
+    rename ("$file.tmp", "$file") or return 0;
+    return 1;
+}
 
 
 1;  

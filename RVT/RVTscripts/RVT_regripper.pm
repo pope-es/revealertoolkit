@@ -50,6 +50,15 @@ use Data::Dumper;
 use Date::Manip;
 
 sub constructor {
+
+   my $rip = `rip`;
+   
+   if (!$rip) {
+        RVT_log ('ERR', 'RVT_regripper not loaded (couldn\'t find regripper)');
+        return;
+   }
+   
+   $main::RVT_requirements{'rip'} = $rip;
    
    $main::RVT_functions{RVT_script_regripper_listmodules} = 
       "lists all the plugins of RegRipper (rip.pl -l) \n
@@ -77,7 +86,7 @@ my %rrTypes = ( 'sam' => 'SAM$',
 sub RVT_script_regripper_listmodules {
 
     my @args = ('rip', '-l');
-    system(@args) == 0 or print "\nProblem found executing RegRipper (rip.pl -l)\n\n";
+    system(@args) == 0 or RVT_log ('ERR', "Problem found executing RegRipper (rip.pl -l)");
     
 }
 
@@ -143,7 +152,7 @@ sub RVT_script_regripper_execallmodules {
     my $disk = RVT_chop_diskname('disk', $part);
     
     my $ofolder = RVT_get_morguepath($disk) . '/output/regripper';
-    if ( ! -d $ofolder )  { mkdir ($ofolder) or die "Could not create $ofolder"; }
+    if ( ! -d $ofolder )  { mkdir ($ofolder) or RVT_log ('CRIT', "Could not create $ofolder"); }
     
     foreach $hivetype (@hivetypes) {
         my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm..', $part);
@@ -155,7 +164,7 @@ sub RVT_script_regripper_execallmodules {
             my $opath = RVT_get_morguepath($disk) . '/output/regripper/' . $hivetype . '-' . ParseDate($ff[0]) ;
             my @r = `rip -r "$hivepath" -f $hivetype`;
             next unless @r;
-            open (F,">$opath") or die "Could not open $opath";
+            open (F,">$opath") or RVT_log ('CRIT', "Could not open $opath");
             print F "$hivepath\n";
             print F @r;
             close F;

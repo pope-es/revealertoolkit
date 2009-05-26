@@ -59,6 +59,14 @@ use RVTbase::RVT_morgue;
 use Data::Dumper;
 
 sub constructor {
+
+   my @req = ('dd', 'wc', 'tr', 'vim', 'cut', 'grep', 'tee');
+   
+   foreach my $req ( @req ) {
+        $main::RVT_requirements{ $req } = `$req --version`;
+        next if ($main::RVT_requirements{ $req });
+        RVT_log('CRIT', "$req not properly installed");
+   }
    
    $main::RVT_functions{RVT_script_search_quickcount } = "Launch a quick search in a case or in an image \n
                                 script search quickcount <name:regular expression>  <image> ";
@@ -94,16 +102,16 @@ sub RVT_script_strings_generate  {
     my ( $disk ) = @_;
     
     $disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { print "ERR: that is not a disk\n\n"; return 0; }
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
     
     my $ad = RVT_split_diskname($disk);
     my $morguepath = RVT_get_morguepath($disk);
     my $imagepath = RVT_get_imagepath($disk);
-    if (! $morguepath) { print "ERR: there is no path to the morgue!\n\n"; return 0};
+    if (! $morguepath) { RVT_log('ERR', "there is no path to the morgue!"); return 0};
 
     my $stringspath = "$morguepath/output/strings";
     mkdir $stringspath unless (-e $stringspath);
-    if (! -d $stringspath) { print "ERR: there is no path to the morgue/strings!\n\n"; return 0};
+    if (! -d $stringspath) { RVT_log('ERR', "there is no path to the morgue/strings!"); return 0};
 
     
 	# generation for every partition 
@@ -189,7 +197,7 @@ sub RVT_script_search_file_list {
     return 0 unless ($case);
     
     my $searchfile_path = RVT_get_morguepath($case) . '/searches_files';
-    if ( ! -d $searchfile_path )  { print "No existe la carpeta $searchfile_path\n\n"; return 0; }    
+    if ( ! -d $searchfile_path )  { RVT_log('ERR', "No existe la carpeta $searchfile_path"); return 0; }    
     
     opendir (DIR, $searchfile_path) or return 0;
     my @f = sort grep { -f "$searchfile_path/$_" } readdir (DIR);
@@ -248,7 +256,7 @@ sub RVT_script_search_quickcount {
 	
 	$re = lc ($re);
 	if (!$name) {
-		if ( $re !~ /^(\w+):(.*)$/ ) { print "ERR:  correct format is   <name:regular expression> \n or to use a special name\n\n"; return 0; }
+		if ( $re !~ /^(\w+):(.*)$/ ) { RVT_log('ERR', "correct format is <name:regular expression>  or to use a special name"); return 0; }
 		$name = $1;
 		$re = $2;
 	}
@@ -263,18 +271,18 @@ sub RVT_script_search_quickcount {
     return 0 if (! -d $stringspath);
     my $infopath = "$morguepath/output/info";
     mkdir $infopath unless (-e $infopath);
-    if (! -d $infopath) { print "ERR: there is no path to the morgue/info!\n\n"; return 0};
+    if (! -d $infopath) { RVT_log('ERR', "there is no path to the morgue/info!"); return 0};
 
-    opendir (DIR, "$stringspath") or die ("ERR: strings path not readable");
+    opendir (DIR, "$stringspath") or RVT_log('CRIT', "strings path not readable");
     my @strfiles = grep { /^strings/ } readdir(DIR);
     close DIR;
-    if (! @strfiles) { print "ERR: strings are not generated\n\n"; return 0; }	
+    if (! @strfiles) { RVT_log('ERR', "strings are not generated"); return 0; }	
 
 	print "\t Begining to count for $name: \n\n";
 
 	my %results;
 	foreach my $s (@strfiles) {
-		open (STR, "<$stringspath/$s") or die "jarl! $!";
+		open (STR, "<$stringspath/$s") or RVT_log('CRIT', "unable to open string file: $!");
 		while (my $l=<STR>) {
 			next if ($l !~ /$re/); 
 			$results{$&} = $results{$&} + 1;
@@ -282,7 +290,7 @@ sub RVT_script_search_quickcount {
 		close STR;
 	}
 	
-	open (R, ">$infopath/count_$name.txt") or die "jarl! $!";
+	open (R, ">$infopath/count_$name.txt") or RVT_log('CRIT', "unable to open count file: $!");
 	foreach my $k ( sort {$results{$a} <=> $results{$b}} keys %results) {
 		print R "$results{$k}\t$k\n";
 		print  "\t $results{$k}\t$k\n";
@@ -400,9 +408,10 @@ sub RVT_script_search_clusterlist {
             }
         }
         close (BF);
+        for my $f (keys %fnh) { close($fnh{$f}); }
     }    
      
-    for my $f (keys %fnh) { close($fnh{$f}); }
+    
 
     return 1;    
 }
@@ -482,7 +491,7 @@ sub RVT_script_search_clusters  {
                         " bs=" .   $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} . 
                         " skip=" . $du .
                         " count=1 2> /dev/null |";
-            open (DD, $dd_command) or die "FATAL: image is mounted? $!\n";
+            open (DD, $dd_command) or RVT_log('CRIT', "unable to extract cluster (is image mounted?): $!");
             while (<DD>) { print $fhandler $_; }
             close (DD);
             

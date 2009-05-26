@@ -54,6 +54,13 @@ use RVTbase::RVT_tsk;
 use Data::Dumper;
 
 sub constructor {
+
+   my $grep = `grep -V`;
+   
+   if (!$grep) {
+        RVT_log ('ERR', 'RVT_cluster not loaded (couldn\'t find grep)');
+        return;
+   }     
    
    $main::RVT_functions{RVT_cluster_generateindex } = "Creates sort of an index for quick cluster-to-inode\n
                                     resolution. Required fot performing searches.\n
@@ -81,16 +88,16 @@ sub RVT_cluster_generateindex {
     my ( $disk ) = @_;
     
     $disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { print "ERR: that is not a disk\n\n"; return 0; }
+    if (RVT_check_format($disk) ne 'disk') { RVT_log ('ERR', 'that is not a disk'); return 0; }
     
     my $ad = RVT_split_diskname($disk);
     my $morguepath = RVT_get_morguepath($disk);
     my $imagepath = RVT_get_imagepath($disk);
-    if (! $morguepath) { print "ERR: there is no path to the morgue!\n\n"; return 0};
+    if (! $morguepath) { RVT_log ('ERR', 'there is no path to the morgue!'); return 0};
 
     my $searchespath = "$morguepath/output/searches";
     mkdir $searchespath unless (-e $searchespath);
-    if (! -d $searchespath) { print "ERR: there is no path to the morgue/searches!\n\n"; return 0};
+    if (! -d $searchespath) { RVT_log ('ERR', 'there is no path to the morgue/searches!'); return 0};
 
     
 	# generation for every partition 
@@ -116,10 +123,10 @@ sub RVT_cluster_generateindex {
            }
            print F "\n";
         }
-        print "\t\tindex for partition $disk-p$p done\n";
+        RVT_log ('NOTICE', "index for partition $disk-p$p done");
     }
 
-    print "\t clusters indexes done\n";
+    RVT_log ('NOTICE', '\t clusters indexes done');
     return 1;
 }
 
@@ -135,16 +142,17 @@ sub RVT_get_inodefromcluster {
     
     next unless ($cluster =~ /^[0-9\-]+$/);
     $part = $main::RVT_level->{tag} unless $part;
-    if (RVT_check_format($part) ne 'partition') { print "ERR: that is not a partition\n\n"; return 0; }
+    if (RVT_check_format($part) ne 'partition') { RVT_log ('ERR', 'that is not a partition'); return 0; }
 
     my $ad = RVT_split_diskname($part);
     my $morguepath = RVT_get_morguepath($part);
-    if (! $morguepath) { print "ERR: there is no path to the morgue!\n\n"; return 0};
+    if (! $morguepath) { RVT_log ('ERR', 'there is no path to the morgue!'); return 0};
 
     my $searchespath = "$morguepath/output/searches";
-    if (! -d $searchespath) { print "ERR: there is no path to the morgue/searches!\n\n"; return 0};        
+    if (! -d $searchespath) { RVT_log ('ERR', 'there is no path to the morgue/searches!'); return 0};        
     
-    my @r = `grep ' $cluster ' $searchespath/cindex-$part | cut -d':' -f1  `;
+    my @r;
+    @r = `grep ' $cluster ' $searchespath/cindex-$part | cut -d':' -f1  `;
     @r = map { chomp; $_; } @r;
     
     return \@r;
@@ -162,7 +170,7 @@ sub RVT_get_cluster {
 
     return unless ($cluster =~ /^[0-9\,]+$/);
     $cluster =~ s/,/ /;
-    if (RVT_check_format($part) ne 'partition') { print "ERR: that is not a partition\n\n"; return 0; }
+    if (RVT_check_format($part) ne 'partition') { RVT_log( 'ERR', 'that is not a partition'); return 0; }
     
     my $disk = RVT_join_diskname ( 
     		RVT_get_casenumber($part),
@@ -179,7 +187,7 @@ sub RVT_get_cluster {
     my $offset = $p->{$part}{offset};
 
     $cluster =~ s/,/ /;
-    open (PA,"$main::RVT_cfg->{tsk_path}/blkcat -o $offset $diskpath $cluster | ") || die "$main::RVT_cfg->{tsk_path}/blkcat NOT FOUND";    
+    open (PA,"$main::RVT_cfg->{tsk_path}/blkcat -o $offset $diskpath $cluster | ") || RVT_log ('CRIT', 'Couldn\'t execute blkcat');    
     while ( my $l=<PA> ) { push (@results, $l); };    
     close (PA);
     
@@ -255,7 +263,7 @@ sub RVT_cluster_allocationstatus {
     
     next unless ($cluster =~ /^[0-9\-]+$/);
     $part = $main::RVT_level->{tag} unless $part;
-    if (RVT_check_format($part) ne 'partition') { print "ERR: $part that is not a partition\n\n"; return 0; }
+    if (RVT_check_format($part) ne 'partition') { RVT_log('ERR', "$part that is not a partition\n\n"); return 0; }
     
     my $p = RVT_split_diskname( $part );
     
@@ -271,7 +279,7 @@ sub RVT_inode_allocationstatus {
     
     next unless ($inode =~ /^[0-9\-]+$/);
     $part = $main::RVT_level->{tag} unless $part;
-    if (RVT_check_format($part) ne 'partition') { print "ERR: $part that is not a partition\n\n"; return 0; }
+    if (RVT_check_format($part) ne 'partition') { RVT_log('ERR', "$part that is not a partition\n\n"); return 0; }
     
     my $p = RVT_split_diskname( $part );
     
