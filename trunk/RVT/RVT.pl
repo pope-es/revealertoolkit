@@ -90,7 +90,7 @@ sub usage {
       perl RVT.pl -l "100101-01-1" -b predefined-commands.rvt
 
 
-      For further reading, look for User Guide and Developer Guide at The
+      For further reading, look for User Guide and Developer Guide at the
       website:   http://code.google.com/p/revealertoolkit
 
 EOF
@@ -127,11 +127,8 @@ our $RVT_user = getpwuid($<);
 my @tt = split(' ', $ENV{SSH_CLIENT});
 our $RVT_remoteIP = $tt[0];
 
-if ($RVT_verbose)  {
-    openlog('RVT', 'ndelay, perror', 'local0');
-} else {
-    openlog('RVT', 'ndelay', 'local0');
-}    
+
+openlog('RVT', 'ndelay', 'local0') or die "CRIT: couldn't open syslog";
 
 RVT_log('INFO', "starting up RVT v$RVT_version" );
 
@@ -183,6 +180,8 @@ if (!$RVT_cfg or $@) {
 #									{clustersize}
 
 our $RVT_cases;   
+
+our %RVT_requirements;
 
 our %RVT_functions = (
  'RVT_test' => "test",
@@ -397,12 +396,16 @@ sub RVT_shell_function_exec ($$) {
             }
             
             foreach my $obj ( @objects ) {
-                #print "\nexecuting: $fun " . join(" ",@c[$cc+1..$#c-1], $disk) . "\n\n";
+            
                 RVT_log('INFO', "executing ". $RVT_level->{tag} .": ". $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj));
+                
                 eval {
                     &{$fun}( @c[$cc+1..$#c-1], $obj );
                 };
-                if ($@) { print "\n\n--> ERROR:  the command exited with errors: \n$@\n\n"; return 0; }
+                if ($@) { 
+                    RVT_log('CRIT', "problem at execution: $@"); 
+                    return 0; 
+                }
             }
             return 1;
         }
@@ -529,6 +532,12 @@ sub RVT_shell {
     print "\n\nBye!\n";
 }
 
+
+sub RVT_die() {
+
+    die "Critical error found. Exiting RVT";
+
+}
 
 
 END {

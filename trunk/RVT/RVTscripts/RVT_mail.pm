@@ -50,9 +50,17 @@ use Data::Dumper;
 
 sub constructor {
    
+   my $readpst = `readpst -V`;
+   
+   if (!$readpst) {
+        RVT_log ('ERR', 'RVT_mail not loaded (couldn\'t find libpst)');
+        return;
+   }
+   
+   $main::RVT_requirements{'readpst'} = $readpst;
+   
    $main::RVT_functions{RVT_script_mail_parsepsts } = "Parses all PST's found on the partition using libpst\n
                                                     script mail parsepsts <partition>";
-
 }
 
 
@@ -62,7 +70,7 @@ sub RVT_script_mail_parsepsts {
     my $part = shift(@_);
     
     $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { print "ERR: that is not a partition\n\n"; return 0; }
+    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
     
     my $disk = RVT_chop_diskname('disk', $part);
     my $opath = RVT_get_morguepath($disk) . '/output/mail';
@@ -72,11 +80,11 @@ sub RVT_script_mail_parsepsts {
     
     foreach my $f (@pstlist) {
         my $fpath = RVT_create_folder($opath, 'pst');
-        my @args = ('readpst', '-S', '-cv', '-o', $fpath, $f);
+        my @args = ('readpst', '-S', '-q', '-cv', '-o', $fpath, $f);
         if (system (@args)) {
-            print "PST parsed: $f\n";
+            RVT_log ('NOTICE', "PST parsed: $f\n");
         } else {
-            print "Error encountered while parsing $f\n";
+            RVT_log ('ERR', "Error encountered while parsing $f\n");
         }
     }
 

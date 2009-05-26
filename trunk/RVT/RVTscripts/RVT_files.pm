@@ -50,6 +50,15 @@ use RVTbase::RVT_core;
 use Data::Dumper;
 
 sub constructor {
+
+   my $find = `find --version`;
+   
+   if (!$find) {
+        RVT_log ('ERR', 'RVT_file not loaded (couldn\'t find find)');
+        return;
+   }
+   
+   $main::RVT_requirements{'find'} = $find;
     
 	$main::RVT_functions{RVT_script_files_allocfiles } = "Creates a file with a list of all the allocated files\n   files allocfiles <disk>";
 	
@@ -67,13 +76,13 @@ sub RVT_script_files_allocfiles  {
     my $disk = shift(@_);
 
     $disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { print "ERR: that is not a disk\n\n"; return 0; }
+    if (RVT_check_format($disk) ne 'disk') { RVT_log ('ERR', "that is not a disk"); return 0; }
     
     my $morguepath = RVT_get_morguepath($disk);    
-    if (! $morguepath) { print "ERR: there is no path to the morgue!\n\n"; return 0};
+    if (! $morguepath) { RVT_log ('ERR', "there is no path to the morgue!"); return 0};
     my $infopath = "$morguepath/output/info";
     mkdir $infopath unless (-e $infopath);
-    if (! -d $infopath) { print "ERR: there is no path to the morgue/info!\n\n"; return 0};
+    if (! -d $infopath) { RVT_log ('ERR', "there is no path to the morgue/info!"); return 0};
 
     my $command = "find $morguepath/mnt > $infopath/alloc_files.txt";
     
@@ -95,9 +104,9 @@ sub RVT_get_allocfiles ($$) {
 	my @results;
 	
 	$disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { print "ERR: that is not a disk\n\n"; return 0; }
+    if (RVT_check_format($disk) ne 'disk') { RVT_log ('ERR', "that is not a disk"); return 0; }
 	
-	open (F, "<" . RVT_get_morguepath($disk) . "/output/info/alloc_files.txt") or die 'Could not open output/info/alloc_files.txt';
+	open (F, "<" . RVT_get_morguepath($disk) . "/output/info/alloc_files.txt") or RVT_log ('CRIT', 'Could not open output/info/alloc_files.txt');
 	while (<F>) {
 		next if (/^\s*#/);
 		chomp;
