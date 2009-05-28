@@ -93,7 +93,7 @@ sub RVT_script_testpope_filelist {
 	if (! -d $listpath) { print "ERR: there is no path to the morgue/list!\n\n"; return 0};
 
 	opendir (DIR, "$timelinespath") or die ("ERR: timelines path not readable");
-	my @tlfiles = grep { /^(timeline|itimeline-\d\d)\.csv$/ } readdir(DIR);
+	my @tlfiles = grep { /_i?TL\.csv$/ } readdir(DIR);
 	close DIR;
 	if (! @tlfiles) { print "ERR: timelines are not generated\n\n"; return 0; }
 	# end init.
@@ -103,7 +103,7 @@ sub RVT_script_testpope_filelist {
 	my %parts = %{$main::RVT_cases->{case}{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
     foreach my $p ( keys %parts ) {
 		print "\tGenerating file list for $disk-p$p ... \n";
-		my $cmd = "cat $timelinespath/itimeline-". $p .".csv | cut -d, -f2,4,7- | sort -un | ". # Here we have CSV with Meta, Perms (to say File or Dir), size, and path+name: 62,-/rrwxrwxrwx,177,/zcat
+		my $cmd = "cat $timelinespath/" . ${disk} . "-p" . ${p} . "_iTL.csv | cut -d, -f2,4,7- | sort -un | ". # Here we have CSV with Meta, Perms (to say File or Dir), size, and path+name: 62,-/rrwxrwxrwx,177,/zcat
 			"sed -e 's/^\\([^,]*\\),\\([^,]*\\),\\([^,]*\\),/\\3\\txxAllocUndefined\\t\\1\\t\\2\\t". $disk ."-p". $p ."\\t/g' | sed ". # until this sed, we have TSV with Meta, AllocationStatus, size, perms, disk-partition, and path+name: 177	xxAllocUndefined	62	-/rrwxrwxrwx	123015-01-1-p02	/zcat
 			"-e 's/^\\([^\\t]*\\)\\txxAllocUndefined\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\/\\([^\\t]*\\)/\\1\\tAllocated\\t\\2\\t\\3\\t\\4\\t\\/\\5/g' ". # Here we set AllocationStatus of allocated files
 			"-e 's/^\\([^\\t]*\\)\\txxAllocUndefined\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\([^\\t]*\\)\\t\\* \\/\\-ORPHAN_FILE-\\/\\([^\\t]*\\)/\\1\\tDeleted\\+Orph\\t\\2\\t\\3\\t\\4\\t\\5/g' ". #ÊHere we set AllocationStatus of ORPHAN files

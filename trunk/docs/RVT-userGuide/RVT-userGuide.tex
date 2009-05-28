@@ -870,15 +870,15 @@ script timelines generate <disk>
 It creates several files in the morgue with this path and name:
 
 \begin{verbatim}
-itimeline-<partition>.csv
-itimeline-day-<partition>.sum
-timeline.csv
-timeline.txt
-timeline-day.sum
-timeline-hour.sum
+<disk>-p<partition>_iTL.csv
+<disk>-p<partition>_iTL-day.sum
+<disk>_TL.csv
+<disk>_TL.txt
+<disk>_TL-day.sum
+<disk>_TL-hour.sum
 \end{verbatim}
 
-Where \emph{i}timelines are calculated based on inodes, and timelines, with file names. \emph{day} and \emph{hour} sums are line counts grouped by days and hours.
+Where \emph{i}timelines (from now on \textbf{iTL}) are calculated based on inodes, and timelines, with file names. \emph{day} and \emph{hour} sums are line counts grouped by days and hours.
 
 
 

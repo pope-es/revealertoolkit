@@ -72,7 +72,7 @@ sub RVT_get_timelinefiles ($$$) {
 	my $sdisk = RVT_split_diskname($part);
 	my $disk = RVT_chop_diskname('disk', $part);
 	
-	open (F, "<" . RVT_get_morguepath($disk) . "/output/timelines/itimeline-" . $sdisk->{partition} . ".csv") or die 'Could not open the timeline';
+	open (F, "<" . RVT_get_morguepath($disk) . "/output/timelines/" . $disk . "_TL.csv") or die 'Could not open the timeline';
     @results = grep { /^[^:]*:.*,.*,$mac,.*,.*,.*,.*,.*$regexpr/ } <F>;
     @results = map {my @r = split(','); chomp ($r[7]); "$r[0],$r[2],$r[7]"} @results;
 	close (F);
@@ -121,29 +121,29 @@ sub RVT_script_timelines_generate  {
 		print  "\t Generando ficheros intermedios para $disk-p$p ... \n";
 		
     	my $cmd = "$main::RVT_cfg->{tsk_path}/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . "@" . $sectorsize .
-    		" -i raw $imagepath >> $timelinespath/temp/body ";
+    		" -i raw $imagepath >> $timelinespath/temp/${disk}_body ";
     	`$cmd`;
     	
     	my $cmd = "$main::RVT_cfg->{tsk_path}/ils -s 0 -e -m -o " . $parts{$p}{osects} . "@" . $sectorsize .
-    		" -i raw $imagepath > $timelinespath/temp/ibody-$p ";
+    		" -i raw $imagepath > $timelinespath/temp/${disk}_ibody ";
     	`$cmd`;
     }
     
-    print  "\t Generando timelines para $disk ... \n";	
-    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/body -d -i hour $timelinespath/timeline-hour.sum > "
-    	. "$timelinespath/timeline.csv";
+    print  "\t Generating timelines for $disk ... \n";	
+    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}_body -d -i hour $timelinespath/${disk}_TL-hour.sum > "
+    	. "$timelinespath/${disk}_TL.csv";
     `$cmd`;
-    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/body -i day $timelinespath/timeline-day.sum > "
-    	. "$timelinespath/timeline.txt";
+    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}_body -i day $timelinespath/${disk}_TL-day.sum > "
+    	. "$timelinespath/${disk}_TL.txt";
     `$cmd`;
-    RVT_ParseDate_strings ( "$timelinespath/timeline.csv" ,1 );
+    RVT_ParseDate_strings ( "$timelinespath/${disk}_TL.csv" ,1 );
    
     foreach my $p ( keys %parts ) {
 		# glups ...
-		print  "\t Generando itimeline para $disk-p$p ... \n";
+		print  "\t Generating itimeline for $disk-p$p ... \n";
 		    	
-		open (IDEST,">$timelinespath/itimeline-$p.csv");
-		open (PA,"$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/ibody-$p -d -i day $timelinespath/itimeline-day-$p.sum |");
+		open (IDEST,">$timelinespath/$disk-p${p}_iTL.csv");
+		open (PA,"$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}_ibody -d -i day $timelinespath/$disk-p${p}_iTL-day.sum |");
 		<PA>;  # header
 		while ( my $line=<PA> ) { 
 			chop($line);
@@ -155,7 +155,7 @@ sub RVT_script_timelines_generate  {
 		}
 		close (PA);
 		close(IDEST);  
-		RVT_ParseDate_strings ( "$timelinespath/itimeline-$p.csv" ,1 );
+		RVT_ParseDate_strings ( "$timelinespath/$disk-p${p}_iTL.csv" ,1 );
     } 
     
     print "\t timelines done\n";
@@ -173,16 +173,16 @@ sub RVT_ParseDate_strings ($$) {
     my ($file, $tf) = @_;
     my @a;
     
-    print "Date-Parsing $file\n";
+    print "\t Parsing dates on: $file\n";
     
-    open (IF, "<$file") or { RVT_log('ERR', 'Couldn\'t open timeline') , return 0 };
-    open (OF, ">$file.tmp") or { RVT_log('ERR', 'Couldn\'t create a temporal timeline') , return 0 };
+    open (IF, "<$file") or { RVT_log('ERR', 'Cannot open timeline') , return 0 };
+    open (OF, ">$file.tmp") or { RVT_log('ERR', 'Cannot create a temporal timeline') , return 0 };
     
     while (<IF>) {
         @a = split (',');
         eval { $a[($tf-1)] = ParseDate($a[($tf-1)]); };
         if ($@) { 
-            RVT_log('ERR', 'Error found parsing dates on ' . join (',', @a));
+            RVT_log('ERR', 'ERROR parsing dates on ' . join (',', @a));
             close (IF); close (OF); unlink "$file.tmp";
             return 0;
         }

@@ -254,7 +254,7 @@ sub RVT_script_software_detection  {
     if (! -d $infopath) { print "ERR: there is no path to the morgue/info!\n\n"; return 0};
 
     opendir (DIR, "$timelinespath") or die ("ERR: timelines path not readable");
-    my @tlfiles = grep { /^(timeline|itimeline-\d\d)\.csv$/ } readdir(DIR);
+    my @tlfiles = grep { /_i?TL\.csv$/ } readdir(DIR);
     close DIR;
     if (! @tlfiles) { print "ERR: timelines are not generated\n\n"; return 0; }
     
