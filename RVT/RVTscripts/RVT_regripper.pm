@@ -110,7 +110,7 @@ sub RVT_script_regripper_execmodule {
     
     my $disk = RVT_chop_diskname('disk', $part);
  
-    my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm..', $part);
+    my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm...', $part);
     @files = grep { !/, * / } @files;  # allocated files only
     
     for (my $f=$#files; $f>=0; $f--) {
@@ -155,7 +155,7 @@ sub RVT_script_regripper_execallmodules {
     if ( ! -d $ofolder )  { mkdir ($ofolder) or RVT_log ('CRIT', "Could not create $ofolder"); }
     
     foreach $hivetype (@hivetypes) {
-        my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm..', $part);
+        my @files = RVT_get_timelinefiles ($rrTypes{$hivetype}, 'm...', $part);
         @files = grep { !/, * / } @files;  # allocated files only
         
         foreach my $f (@files) {
