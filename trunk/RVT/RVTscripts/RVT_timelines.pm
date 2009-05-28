@@ -182,12 +182,12 @@ sub RVT_ParseDate_strings ($$) {
         @a = split (',');
         eval { $a[($tf-1)] = ParseDate($a[($tf-1)]); };
         if ($@) { 
-            RVT_log('ERR', 'Error found parsing dates on ' . join (',' @a));
+            RVT_log('ERR', 'Error found parsing dates on ' . join (',', @a));
             close (IF); close (OF); unlink "$file.tmp";
             return 0;
         }
         
-        $a[0] ~= /(\d{4})(\d\d)(\d\d)(\d\d:\d\d:\d\d)/;
+        $a[0] =~ /(\d{4})(\d\d)(\d\d)(\d\d:\d\d:\d\d)/;
         $a[0] = "$1 $2 $3 $4";
         print OF join(',', @a);
     }
