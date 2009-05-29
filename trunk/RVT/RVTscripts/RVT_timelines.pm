@@ -72,7 +72,7 @@ sub RVT_get_timelinefiles ($$$) {
 	my $sdisk = RVT_split_diskname($part);
 	my $disk = RVT_chop_diskname('disk', $part);
 	
-	open (F, "<" . RVT_get_morguepath($disk) . "/output/timelines/" . $disk . "_TL.csv") or die 'Could not open the timeline';
+	open (F, "<" . RVT_get_morguepath($disk) . "/output/timelines/" . $disk . "-p" . $sdisk->{partition} . "_iTL.csv") or die 'Cannot open the timeline';
     @results = grep { /^[^:]*:.*,.*,$mac,.*,.*,.*,.*,.*$regexpr/ } <F>;
     @results = map {my @r = split(','); chomp ($r[7]); "$r[0],$r[2],$r[7]"} @results;
 	close (F);
