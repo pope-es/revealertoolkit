@@ -229,7 +229,10 @@ use RVTscripts::RVT_regripper;
 RVTscripts::RVT_regripper::constructor;
 
 use RVTscripts::RVT_mail;
-RVTscripts::RVT_mail::constructor;		
+RVTscripts::RVT_mail::constructor;
+
+use RVTscripts::RVT_filelist;
+RVTscripts::RVT_filelist::constructor;		
 		
 #######################################################################
 #

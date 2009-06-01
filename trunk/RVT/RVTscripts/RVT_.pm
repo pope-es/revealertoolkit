@@ -20,7 +20,7 @@
 #    http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 
-package scripts::RVT_xx;  
+package RVTscripts::RVT_xx;  
 
 use strict;
 #use warnings;
