@@ -121,29 +121,29 @@ sub RVT_script_timelines_generate  {
 		print  "\t Generando ficheros intermedios para $disk-p$p ... \n";
 		
     	my $cmd = "$main::RVT_cfg->{tsk_path}/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . "@" . $sectorsize .
-    		" -i raw $imagepath >> $timelinespath/temp/${disk}_body ";
+    		" -i raw $imagepath >> $timelinespath/temp/${disk}-disk_body ";
     	`$cmd`;
     	
     	my $cmd = "$main::RVT_cfg->{tsk_path}/ils -s 0 -e -m -o " . $parts{$p}{osects} . "@" . $sectorsize .
-    		" -i raw $imagepath > $timelinespath/temp/${disk}_ibody ";
+    		" -i raw $imagepath > $timelinespath/temp/${disk}-disk_ibody ";
     	`$cmd`;
     }
     
     print  "\t Generating timelines for $disk ... \n";	
-    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}_body -d -i hour $timelinespath/${disk}_TL-hour.sum > "
-    	. "$timelinespath/${disk}_TL.csv";
+    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_body -d -i hour $timelinespath/${disk}-disk_TL-hour.sum > "
+    	. "$timelinespath/${disk}-disk_TL.csv";
     `$cmd`;
-    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}_body -i day $timelinespath/${disk}_TL-day.sum > "
-    	. "$timelinespath/${disk}_TL.txt";
+    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_body -i day $timelinespath/${disk}-disk_TL-day.sum > "
+    	. "$timelinespath/${disk}-disk_TL.txt";
     `$cmd`;
-    RVT_ParseDate_strings ( "$timelinespath/${disk}_TL.csv" ,1 );
+    RVT_ParseDate_strings ( "$timelinespath/${disk}-disk_TL.csv" ,1 );
    
     foreach my $p ( keys %parts ) {
 		# glups ...
 		print  "\t Generating itimeline for $disk-p$p ... \n";
 		    	
 		open (IDEST,">$timelinespath/$disk-p${p}_iTL.csv");
-		open (PA,"$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}_ibody -d -i day $timelinespath/$disk-p${p}_iTL-day.sum |");
+		open (PA,"$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_ibody -d -i day $timelinespath/$disk-p${p}_iTL-day.sum |");
 		<PA>;  # header
 		while ( my $line=<PA> ) { 
 			chop($line);

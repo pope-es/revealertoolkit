@@ -681,6 +681,29 @@ Each module has particular objectives, methods, arguments and results, the docum
 
 
 
+\section{\emph{script filelist}}
+
+Module for automatic generation of file lists in every partition. Mainly oriented to Windows filesystems, does not show permissions, owner, or group.
+
+\subsection{\emph{script filelist generate}} 
+
+Generates file lists for all partitions of a disk
+
+\begin{verbatim}
+script filelist generate <disk>
+\end{verbatim}
+
+It creates several files in the morgue with this path and name:
+
+\begin{verbatim}
+output/FileList/<disk>-p<partition>_FileList.csv
+\end{verbatim}
+
+
+
+
+
+
 \section{\emph{script files}}
 
 Module for performing operations on mounted images.
@@ -870,12 +893,12 @@ script timelines generate <disk>
 It creates several files in the morgue with this path and name:
 
 \begin{verbatim}
-<disk>-p<partition>_iTL.csv
-<disk>-p<partition>_iTL-day.sum
-<disk>_TL.csv
-<disk>_TL.txt
-<disk>_TL-day.sum
-<disk>_TL-hour.sum
+output/timelines/<disk>-p<partition>_iTL.csv
+output/timelines/<disk>-p<partition>_iTL-day.sum
+output/timelines/<disk>_TL.csv
+output/timelines/<disk>_TL.txt
+output/timelines/<disk>_TL-day.sum
+output/timelines/<disk>_TL-hour.sum
 \end{verbatim}
 
 Where \emph{i}timelines (from now on \textbf{iTL}) are calculated based on inodes, and timelines, with file names. \emph{day} and \emph{hour} sums are line counts grouped by days and hours.
