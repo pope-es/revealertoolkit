@@ -132,7 +132,7 @@ sub RVT_script_filelist_generate {
 			# This block sets the allocation status and normalizes the path+name field
 			if ( $TL_path =~ /^\// ) {
 				$allocstatus="Allocated";
-			} elsif ( $TL_path =~ s/\* \/-ORPHAN_FILE-\///g ) { # WARNING! "s"
+			} elsif ( $TL_path =~ s/\* \/?-ORPHAN_FILE-\///g ) { # WARNING! "s"
 				$allocstatus="Deleted and orphan";
 			} elsif ( $TL_path =~ s/\* //g ) { # WARNING! "s"
 				$allocstatus="Deleted";
