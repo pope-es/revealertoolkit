@@ -118,15 +118,15 @@ sub RVT_script_filelist_generate {
 			$allocstatus="Undetermined";
 			
 			@splitline = split(',' , $item);
-			# it contains: 0)datetime; 1) size, 2) macb, 3) perms, 4) owner, 5) group, 6) size, 7) path+name+allocation_status
+			# it contains: 0)datetime; 1) size, 2) macb, 3) perms, 4) owner, 5) group, 6) inode, 7) path+name+allocation_status
 		
 			$TL_datetime = $splitline[0];
-			$TL_inode = $splitline[1];
+			$TL_size = $splitline[1];
 			$TL_mactimes = $splitline[2];
 			$TL_permissions = $splitline[3];
 			$TL_owner = $splitline[4];
 			$TL_group = $splitline[5];
-			$TL_size = $splitline[6];
+			$TL_inode = $splitline[6];
 			$TL_path = $splitline[7];
 		
 			# This block sets the allocation status and normalizes the path+name field
