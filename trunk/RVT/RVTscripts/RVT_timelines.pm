@@ -23,7 +23,6 @@
 package RVTscripts::RVT_timelines;  
 
 use strict;
-use Date::Manip;
 #use warnings;
 
    BEGIN {
@@ -130,20 +129,19 @@ sub RVT_script_timelines_generate  {
     }
     
     print  "\t Generating timelines for $disk ... \n";	
-    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_body -d -i hour $timelinespath/${disk}-disk_TL-hour.sum > "
+    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_body -m -y -d -i hour $timelinespath/${disk}-disk_TL-hour.sum > "
     	. "$timelinespath/${disk}-disk_TL.csv";
     `$cmd`;
-    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_body -i day $timelinespath/${disk}-disk_TL-day.sum > "
+    my $cmd = "$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_body -m -y -i day $timelinespath/${disk}-disk_TL-day.sum > "
     	. "$timelinespath/${disk}-disk_TL.txt";
     `$cmd`;
-    RVT_ParseDate_strings ( "$timelinespath/${disk}-disk_TL.csv" ,1 );
    
     foreach my $p ( keys %parts ) {
 		# glups ...
 		print  "\t Generating itimeline for $disk-p$p ... \n";
 		    	
 		open (IDEST,">$timelinespath/$disk-p${p}_iTL.csv");
-		open (PA,"$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_ibody -d -i day $timelinespath/$disk-p${p}_iTL-day.sum |");
+		open (PA,"$main::RVT_cfg->{tsk_path}/mactime -b $timelinespath/temp/${disk}-disk_ibody -m -y -d -i day $timelinespath/$disk-p${p}_iTL-day.sum |");
 		<PA>;  # header
 		while ( my $line=<PA> ) { 
 			chop($line);
@@ -155,45 +153,9 @@ sub RVT_script_timelines_generate  {
 		}
 		close (PA);
 		close(IDEST);  
-		RVT_ParseDate_strings ( "$timelinespath/$disk-p${p}_iTL.csv" ,1 );
     } 
     
     print "\t timelines done\n";
-    return 1;
-}
-
-
-sub RVT_ParseDate_strings ($$) { 
-    # takes a comma separated value file (first argument) and a field number (second number)
-    # and changes every line parsing the given field with ParseDate (from Data::Manip)
-    # 
-    # 'field number' is 1 for the first field
-
-
-    my ($file, $tf) = @_;
-    my @a;
-    
-    print "\t Parsing dates on: $file\n";
-    
-    open (IF, "<$file") or { RVT_log('ERR', 'Cannot open timeline') , return 0 };
-    open (OF, ">$file.tmp") or { RVT_log('ERR', 'Cannot create a temporal timeline') , return 0 };
-    
-    while (<IF>) {
-        @a = split (',');
-        eval { $a[($tf-1)] = ParseDate($a[($tf-1)]); };
-        if ($@) { 
-            RVT_log('ERR', 'ERROR parsing dates on ' . join (',', @a));
-            close (IF); close (OF); unlink "$file.tmp";
-            return 0;
-        }
-        
-        $a[0] =~ /(\d{4})(\d\d)(\d\d)(\d\d:\d\d:\d\d)/;
-        $a[0] = "$1 $2 $3 $4";
-        print OF join(',', @a);
-    }
-    
-    unlink "$file";
-    rename ("$file.tmp", "$file") or return 0;
     return 1;
 }
 
