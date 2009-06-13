@@ -101,6 +101,10 @@ sub RVT_log ($$) {
 	my $message = shift(@_);
 	chomp ($message);
 	
+	# subroutine caller information
+	
+	( my $package, my $filename, my $line ) = caller;
+	
 	# standard output
 	
 	if ($main::RVT_verbose || grep(/$type/, (     'EMERG', # - system is unusable
@@ -109,7 +113,7 @@ sub RVT_log ($$) {
                             'ERR',   # - error conditions
                             'WARNING' ) # - warning conditions
 	                    )) { 
-	    print "\n$type: $message\n\n";
+	    print "\n$type: $message\n";
 	}
 	
 	# syslog output
@@ -121,7 +125,6 @@ sub RVT_log ($$) {
 	                $main::RVT_user."@".$main::RVT_remoteIP,
 	                $message );
 	
-	syslog ('LOG_' . $type, $message );
 	
 	# exiting RVT ?
 
@@ -129,8 +132,14 @@ sub RVT_log ($$) {
                             'ALERT', # - action must be taken immediately
                             'CRIT')  # - critical conditions
 	                    )) { 
+	    $message .= " ($filename:$line)";
+	    syslog ('LOG_' . $type, $message );
+	    print "in $filename, line $line\n\n";
 	    die;
-	}	
+	} else {
+	    syslog ('LOG_' . $type, $message );
+	    print "\n";
+	}
 	
 }
 

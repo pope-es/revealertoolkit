@@ -151,7 +151,7 @@ if (!$RVT_cfg or $@) {
     
     $RVT_cfg->{paths}[0] = {
         morgues => ['/media/morgue']    ,
-        images => ['/media/morgue/imagenes']  ,
+        images => ['/media/morgue/images']  ,
         tmp => '/tmp'
     };
 
@@ -190,6 +190,7 @@ our %RVT_functions = (
 
  );
 		
+our $RVT_debug = 1;
 
 # dynamic module loading does not work, i don't know why
 #my $jarl = 'use RVTscripts::RVT_files;' ;
