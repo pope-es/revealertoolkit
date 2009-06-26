@@ -21,7 +21,7 @@
 
 \tableofcontents
 
-\addtolength{\parskip}{0.5 \baselineskip}
+%\addtolength{\parskip}{0.5 \baselineskip}
 
 \chapter{License}
 
@@ -61,7 +61,7 @@
      http://www.gnu.org/licenses/old--licenses/gpl--2.0.txt
 
 
-\chapter{Acknowledgments}
+\chapter{Acknowledgements}
 
 \begin{itemize}
      \item INCIDE (Investigacion Digital S.L., www.incide.es)
@@ -70,6 +70,10 @@
        creator of the original Chanchullos Revealer
      \item Generalitat de Catalunya
        for partial funding of the project
+       
+     \item People that have collaborated to (and suffered) the project:  Jose Navarro, Luis Gómez, Sara Rincón, Abraham Pasamar, Julián Sotos, ...
+     
+     
 \end{itemize}
 
 
@@ -78,11 +82,11 @@
 
 the Revealer Toolkit is a framework and simple scripts for computer forensics. It uses Brian Carrier's The Sleuth Kit as the backbone, as well as other free tools.
 
-The aim of the Revealer Toolkit is to automate rutinary tasks and to manage sources and results from another perspective than the usual forensic frameworks.
+The aim of the Revealer Toolkit is to automate rutinary tasks and to manage sources and results from another perspective than the usual forensic frameworks. It will be specially useful in cases with several computers and digitals forensic sources. 
 
 RVT is developed and actively tested by computer forensic investigators working at INCIDE, spanish company sited at the beautiful city of Barcelona (see www.incide.es for more details)
 
-project state: we are using RVT actually in our production servers, although do not expect an easy and clean software yet or a quick installation. For any questions, help or comments, please, drop an email.
+project state: we are using RVT actually in our production servers, although do not expect an easy and clean software yet, or a quick installation. For any questions, help or comments, please, drop an email.
 
 You can find additional information, packages and all the source code at http://code.google.com/p/revealertoolkit
 
@@ -99,34 +103,51 @@ This is and example installation of the Revealer Toolkit Shell on a Debian \emph
 
 \section{Operating system}
 
-Download last Debian stable version. In this example, Debian 5.00 \emph{lenny} is used.
+RVT is designed to work on Debian linux systems, and some errors have been reported when used on other linux flavours, so be patient.  
+
+Download lastest Debian stable version. In this example, Debian 5.00 \emph{lenny} is used.
 
 Some additional packages are required to be installed with \emph{apt-get}:
 
 \begin{verbatim}
-apt-get install openssh-server
-apt-get install unzip
-apt-get install sudo vim
-apt-get install sleuthkit binutils
-apt-get install dosfstools
+apt-get install openssh-server unzip sudo vim dosfstools gcc g++ make
+apt-get install libxml-simple-perl libdate-manip-perl 
 
+adduser analyst
+addgroup forensics
 groupadd -g 1010 forensics
-addgroup analyst forensics
+adduser analyst forensics
+adduser analyst disk
 
 mkdir /media/morgue
-chgrp forensics morgue
-chmod g+sw morgue
+chgrp forensics /media/morgue
+chmod g+sw /media/morgue
 
-mkdir /media/datos
-chgrp forensics datos
-chmod g+sw datos
+echo -e "\n\numask 002" >> /etc/profile
+\end{verbatim}
 
-chmod a+r /dev/loop*
-and add the last line to the  \emph{/etc/init.d/bootmisc.sh}  file (before the last \emph{:})
+download and install lastest The SleuthKit version. Code can be downloaded from \emph{http:// www.sleuthkit.org/ sleuthkit/ download.php}. For version 3.0.1, as root:
+
+\begin{verbatim}
+cd
+http://puzzle.dl.sourceforge.net/sourceforge/sleuthkit/sleuthkit-3.0.1.tar.gz
+tar -zxf sleuthkit-3.0.1.tar.gz
+cd sleuthkit-3.0.1
+./configure
+make
+make install
 \end{verbatim}
 
 
-as root, add this line to the sudoers file (with \emph{visudo} command):
+
+Also, adding additional loop devices is recommended. Modify your kernel boot to include the option \emph{max\_loop=32} to increase the number of loop devices to 32. Additionaly, these commands should be executed after every boot (so can be included in debian's /etc /init.d /bootmisc.sh).
+
+\begin{verbatim}
+for i in $(seq 8 31) ; do mknod /dev/loop$i b 7 $i ; done
+chmod 660 /dev/loop* ; chown 0.disk /dev/loop* 
+\end{verbatim}  
+
+as root, add these lines to the sudoers file (with \emph{visudo} command):
 
 \begin{verbatim}
 Defaults:%forensics !authenticate
@@ -137,99 +158,64 @@ Defaults:%forensics !authenticate
 
 \section{Software}
 
+Download and install last stable version of RVT. As root:
+
 \begin{verbatim}
-wget revealertoolkit.googlecode.com/files/RVT_v0.1.zip
-unzip RVT_v0.1.zip
+mkdir /usr/local/src/revealer
+cd /usr/local/src/revealer
+
+wget revealertoolkit.googlecode.com/files/RVT_v0.2.zip
+unzip RVT_v0.2.zip
 chmod a+x RVT/RVT.pl
+
 \end{verbatim}
 
-as root:
+while a proper perl package is prepared, this trick should be done to take RVT inside the path (if you know something better, please, let me know). Create \emph{/usr/local/bin/rvt} with the following content:
 
 \begin{verbatim}
-ln -s /home/analyst/RVT/RVT.pl /usr/bin/RVT.pl
+#!/bin/bash
+cd /usr/local/src/revealer/RVT
+perl RVT.pl $*
+cd - > /dev/null
+\end{verbatim}
+
+and give it proper permissions:
+
+\begin{verbatim}
+chgrp forensics /usr/local/bin/rvt
+chmod g+x /usr/local/bin/rvt
 \end{verbatim}
 
 
 \section{Folder structure}
 
-as user:
+as user analyst:
 
 \begin{verbatim}
-mkdir /media/morgue/imagenes
-mkdir /media/datos/imagenes
+mkdir /media/morgue/images
 \end{verbatim}
+
+RVT is not able yet to create new image and case folders, so you must do it manually (sorry). For example, for case 100101, codename \emph{ghost}:
 
 \begin{verbatim}
-mkdir /media/morgue/imagenes/100101-ghost
-mkdir /media/morgue/100101-ghost
-mkdir /media/morgue/100101-ghost/100101-01-1
-mkdir /media/morgue/100101-ghost/100101-01-1/mnt
-mkdir /media/morgue/100101-ghost/100101-01-1/output
+mkdir /media/morgue/images/100101-ghost
+mkdir -p /media/morgue/100101-ghost/100101-01-1/{mnt/output}
 \end{verbatim}
 
 
+\section{Sample image}
 
-\section{Sample image creation}
-
-as user:
+If you are installing RVT for evaluation purposes, maybe you don't have a hard disk image at hand. You can use a example image, like those on dftt.sf.net:
 
 \begin{verbatim}
-cd /media/morgue/imagenes/100101-ghost/
-dd if=/dev/zero bs=1024 count=10240 > 100101-01-1.dd
+cd /media/morgue/images/100101-ghost
+wget http://freefr.dl.sourceforge.net/sourceforge/dftt/1-extend-part.zip
+unzip 1-extend-part.zip
+mv 1-extend-part/ext-part-test-2.dd 100101-01-1.dd
 \end{verbatim}
 
-as root:
+You can also create a image from scratch. See appendix \ref{anx:scratch} for an example.
 
-\begin{verbatim}
-fdisk /media/morgue/imagenes/100101-ghost/100101-01-1.dd
-
-in fdisk:
-
-x (additional functions)
-
-c (cylinders)
-1024
-s (sectors)
-10
-h (heads)
-2
-
-r (main menu)
-n (new partition)
-p 
-1
-1   (first cylinder)
-512 (half of the disk)
-n (new partition)
-p 
-2
-513 (half of the disk)
-1024 (last cylinder)
-w (save and exit)
-\end{verbatim}
-
-and now, let's put some info inside, as root:
-
-\begin{verbatim}
-echo "losetup assign 100101" | RVT.pl -b
-echo "losetup list" | RVT.pl -b  
-   (the last command reveals the loop devices created)
-mkfs.vfat /dev/loop0
-mkfs.vfat -F 32 /dev/loop1   
-
-mkdir /media/aux1
-mount /dev/loop0 /media/aux1
-cp /home/analyst/RVT/RVT.pl /media/aux1
-umount /media/aux1
-mount /dev/loop1 /media/aux1
-cp /home/analyst/RVT/RVT.pl /media/aux1
-sync
-rm /media/aux1/RVT.pl
-echo "my email address is myemail@revealertoolkit.com" > /media/aux1/textfile.txt
-umount /media/aux1
-
-echo "losetup delete 100101" | RVT.pl -b
-\end{verbatim}
 
 
 \section{First test}
@@ -237,7 +223,8 @@ echo "losetup delete 100101" | RVT.pl -b
 Just for testing, some first commands can be executed. As analyst, execute the RVT Shell:
 
 \begin{verbatim}
-\$ RVT.pl 
+$ rvt
+$
 \end{verbatim}
 
 After the preliminar scanning, RVT Shell will offer you a prompt:
@@ -249,11 +236,10 @@ RVT >
 Now, execute these commands:
 
 \begin{verbatim}
+images scanall
 set level 100101-01-1
 script strings generate
 script timelines generate
-script webmail detection
-script software detection
 script search quickcount emails
 script search quickcount accounts
 quit
@@ -269,6 +255,15 @@ cat preforensics.rvt | RVT -b
 
 
 
+\section{Additional software}
+
+RVT is a forensic framework that uses software from the Revealer Toolkit project, but also from other sources. Additional software can be installed to activate some modules.
+
+\begin{itemize}
+\item \emph{libpst}:  libpst (www.five-ten-sg.com/libpst) parses Microsoft Outlook mailboxes, and is handled by RVT\_mail module. See section \ref{anx:libpst} for more information on libpst installation
+\item \emph{RegRipper}:  RegRipper (www.regripper.net) offers modular parsing and data mining on Microsoft Windows registry hives, and it is handled by RVT\_regripper module. See section \ref{anx:regripper} for more information on RegRipper installation
+\end{itemize}
+
 
 
 
@@ -280,11 +275,22 @@ cat preforensics.rvt | RVT -b
 
 The morgue stores disk images and results of forensic analysis. Each morgue must have a strict folder structure. 
 
+For now, this folder structure (image and case folders) must to be maintained manually, so don't forget to create image and case folders (including disks, mnt and output folders) every time you import a new forensic image in RVT.
+
+On page \ref{img:folderstructure}, the RVT folder structure is graphicaly represented.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\textheight,angle=270]{images/RVT_folder_structure.pdf} 
+\caption{RVT folder structure} \label{img:folderstructure}
+\end{figure}
+
+
+
 \section{Morgues}
 
-The Revealer Toolkit can handle more that one morgue. By default, two morgues are defined in RVT, mounted at \emph{/media/morgue} and \emph{/media/datos}. 
+The Revealer Toolkit can handle more that one morgue. By default, one morgue is defined in RVT, located at \emph{/media/morgue}. 
 
-These morgues can be managed modifying the RVT Shell internal code. See the RVT Developer Guide for more info.
 
 
 \section{Cases}
@@ -314,11 +320,11 @@ Under the Revealer Toolkit, information sources are organized with:
 \begin{itemize}
 \item Devices: each case has a number of devices: computers, cell phones, digital cameras, ...   They are numbered sequencially from 01 to 99. 
 
-A device is noted as \emph{casenumber-devicenumber}, for example, \emph{100101-01} for the case 100101 and device 01.
+A device is named as \emph{casenumber-devicenumber}, for example, \emph{100101-01} for the case 100101 and device 01.
 
 \item Disks: each device has a number of disks: hard disks, CD's, memory cards, ... They are numbered sequencially from 1 to 9
 
-A disk is noted as \emph{case-device-disknumber}, for example, \emph{100101-01-1}, for the disk 1
+A disk is named as \emph{case-device-disknumber}, for example, \emph{100101-01-1}, for the disk 1
 
 \item Partitions:  each disk can have several partitions, numbered from 01 to 99. The numeration used by the Sleuthkit command \emph{mmls} is used.
 
@@ -469,6 +475,8 @@ Gives the partition table of an image.
 
 RVT scans the morgue. No output given. 
 
+Necessary when adding a new image to the morgue. You can check what RVT thinks that is in your morgue executing \emph{info debug dumpmorguexml} (see \ref{cmd:info-debug})
+
 \section{Command: \emph{info}}
 
 Manages RVT Shell configuration information.
@@ -489,6 +497,45 @@ Gives RVT Shell configuration information.
                 /media/morgue/imagenes 
                 /media/datos/imagenes 
 \end{verbatim}
+
+
+
+\subsection{\emph{info debug}} \label{cmd:info-debug}
+
+dump the content of some system variables, like RVT configuration or morgue status:
+
+\begin{itemize}
+\item \emph{info debug dumpmorguexml}: dumps content of \emph{RVTmorgueInfo.xml} as imported by RVT
+\item \emph{info debug dumprvtcases}: dumps content of internal variable \emph{RVT\_cases} (for developers only)
+\item \emph{info debug dumprvtcfg}: dumps content of current RVT configuration
+\end{itemize}
+
+\begin{verbatim}
+ RVT  > info debug dumprvtcfg                                                 
+
+\$VAR1 = {
+          'morgueInfoXML' => '/media/morgue/RVTmorgueInfo.xml',
+          'log_level' => '0',
+          'mount_gid' => '1010',
+          'mount_umask' => '007',
+          'paths' => [
+                     {
+                       'images' => [
+                                   '/media/morgue/images'
+                                 ],
+                       'morgues' => [
+                                    '/media/morgue'
+                                  ],
+                       'tmp' => '/tmp'
+                     }
+                   ],
+          'tsk_path' => '/usr/local/bin'
+        };
+\end{verbatim}
+
+
+
+
 
 
 \section{Command: \emph{losetup}}
@@ -623,6 +670,23 @@ inodes:
 \end{verbatim}
 
 
+
+\section{Command: \emph{inode}}
+
+Operations on inodes
+
+\subsection{\emph{inode allocationstatus}}
+
+Prints inode allocation status
+
+\begin{verbatim}
+ RVT  > inode allocationstatus 2 100101-01-1-p02
+
+inode 2: Allocated
+\end{verbatim}
+
+
+
 \section{Command: \emph{script}}
 
 Modular scripts. Each module is explained in a separated chapter (see Chapter \ref{sec:modules} for further information)
@@ -632,7 +696,7 @@ Modular scripts. Each module is explained in a separated chapter (see Chapter \r
 
 Sets RVT Shell configuration information.
 
-\subsection{\emph{set level}}
+\subsection{\emph{set level}}  \label{cmd:set-level}
 
 Sets the work level to a specific case, device, disk or partition. When the work level is stablished, is notified at the prompt and there is no need of indicate it as argument at the commands.
 
@@ -745,12 +809,19 @@ It creates several files in the morgue with this path and name:
 
 \begin{verbatim}
 <morguepath>/<case>/<disk>/output/searches/cbusq_<search>-<partition>
+<morguepath>/<case>/<disk>/output/searches/pbusq_<search>-<partition>
 \end{verbatim}
 
 with this format:
 
+cbusq:
 \begin{verbatim}
 <cluster>:<inode>:<allocation status>:<file path>
+\end{verbatim}
+
+pbusq:
+\begin{verbatim}
+<file path> (<allocation status)
 \end{verbatim}
 
 
@@ -784,10 +855,10 @@ with this format:
 Commands to manage search files:
 
 \begin{itemize}
-\item	script search file delete <name>:  deletes file
-\item	script search file edit <name>:  creates and/or edit file
+\item	script search file delete $<$name$>$:  deletes file
+\item	script search file edit $<$name$>$:  creates and/or edit file
 \item	script search file list:  lists search files created
-\item	script search file show <name>:  prints file's contents
+\item	script search file show $<$name$>$:  prints file's contents
 \end{itemize}
 
 The files are created per case, and are stored at this path:
@@ -842,10 +913,10 @@ with this format:
 There are some quickcounts preconfigured:
 
 \begin{itemize}
-\item script search quickcount emails <image>: search emails addresses
-\item script search quickcount accounts <image>: search bank accounts
-\item script search quickcount ips <image>: search ip addresses
-\item script search quickcount phones <image>: search phone numbers
+\item script search quickcount emails $<$image$>$: search emails addresses
+\item script search quickcount accounts $<$image$>$: search bank accounts
+\item script search quickcount ips $<$image$>$: search ip addresses
+\item script search quickcount phones $<$image$>$: search phone numbers
 \end{itemize}
 
 
@@ -910,23 +981,588 @@ Where \emph{i}timelines (from now on \textbf{iTL}) are calculated based on inode
 
 Module for detecting and managing webmail.
 
-\subsection{\emph{script webmail detection}} 
+Deprecated. Has to be rewritten.
 
-Tries to detect certain types of webmail traces in the disk
+
+\section{\emph{script software}}
+
+Module for detecting software.
+
+Deprecated. Has to be rewritten.
+
+
+\section{\emph{script regripper}}
+
+Module for parsing Microsoft Windows registry hives using RegRipper (www.regripper.net). See section \ref{anx:regripper} for notes about its installation.
+
+\subsection{\emph{script regripper listmodules}}
+
+List all RegRipper available modules. If this command does not return anything, please refer to section \ref{anx:regripper} for notes about RegRipper installation.
+
+
+
+\subsection{\emph{script regripper execmodule}}
+
+Executes one RegRipper module of a particular hive type on a partition. RVT picks the most suitable hive file (simply, it gets the most recent modified hive), and prints results on the screen.
 
 \begin{verbatim}
-script webmail detection <disk>
+script regripper execmodule <plugin> <hivetype> <partition>
 \end{verbatim}
 
-It creates a file in the morgue with this path and name:
+where <hivetype> can be one of these: sam, security, software, system or ntuser
+
+
+
+\subsection{\emph{script regripper execallmodules}}
+
+Execute all RegRipper modules on all the hive files on a partition.
 
 \begin{verbatim}
-<morguepath>/<case>/<disk>/output/info/webmails.txt
+script regripper execallmodules  <hivetype> <partition>
 \end{verbatim}
 
-This file \emph{only} says if traces of several types of webmails are found. In this process, some searches have been launched, so further investigation can be performed on these searches.
+where <hivetype> can be one of these: sam, security, software, system, ntuser  \textbf{or} all 
+
+It stores the results on this folder \emph{output/regripper}, one file result per hive file, with this format:
+
+\begin{verbatim}
+output/regripper/<hivetype>-<last modified data>
+\end{verbatim}
+
+The first line of each results file have the path to the hive file on which RegRipper has been executed. 
+
+
+
+
+
+\section{\emph{script mail}}
+
+Module for extract emails in text format from Microsoft Outlook mailboxes (PST) using \emph{libpst} (www.five-ten-sg.com/libpst).
+
+\subsection{\emph{script mail parsepsts}}
+
+Search all Microsoft Outlook mailboxes (PST extension) and parse them with \emph{libpst}
+
+\begin{verbatim}
+script mail parsepsts <partition>
+\end{verbatim}
+
+Results are stored under \emph{output/mail}, where a folder is created for each PST file with the format:
+
+\begin{verbatim}
+output/mail/pst-n
+\end{verbatim}
+
+where \emph{n} is a increasing integer number.
+
+
+
+\chapter{Operational guides and tricks}
+
+
+\section{RVT Shell tricks}
+
+The Revealer Toolkit can accept commands by several ways. One of them is through a shell. This section will provide you with some tricks to ease your interaction with RVT.
+
+Yes, you will feel that RVT Shell is buggy and that lacks support for some keys, terminals and functionality, but, well, I made it myself and it is not perfect. It will be improved or substituted in future versions. Suggestions are welcome.
+
+
+\subsection{command level}
+
+Commands in RVT are \emph{nested} in levels. Each command level can contain commands, but also other command levels. You can enter a level entering its name in RVT Shell, and the RVT prompt will be modified.
+
+For example, in order to execute the following commands, they can be written directly to RVT ...
+
+\begin{verbatim}
+RVT > info list
+...
+RVT > info debug dumpmorguexml
+...
+RVT > info debug dumprvtcases
+...
+RVT > info debug dumprvtcfg
+...
+\end{verbatim}
+
+
+... but the following session, taking profit of command levels, also is possible:
+
+\begin{verbatim}
+ RVT  > info 
+ RVT  info> list
+ ...  
+ RVT  info> debug
+ RVT  info debug> dumpmorguexml
+ ...
+ RVT  info debug> dumprvtcases
+ ...
+ RVT  info debug> dumprvtcfg
+ ...
+\end{verbatim}
+
+
+To go up one level, enter `\emph{r}':
+
+\begin{verbatim}
+RVT  info debug> r
+RVT  info> r
+RVT  > 
+\end{verbatim}
+
+
+\subsection{case level}
+
+When working with a case or disk, usually you will have to type a lot of types this case or disk number because a lot of commands need it as argument. The \emph{set level} command (see section \ref{cmd:set-level}) will ease you user experience because it fixes a `case level' for the session. Commands that expect a case, device, disk or partition as an argument will use the `case level' established by \emph{set level} when the argument is not provided. 
+
+The case level can be changed with other \emph{set level} command, and erased when executing \emph{set level} without arguments.
+
+For example:
+
+\begin{verbatim}
+
+ RVT  > images partition table 100101-01-1                                    
+
+        03:     6 MB    Linux (0x83)
+        02:     5 MB    Linux (0x83)
+
+ RVT  > 
+ RVT  > images partition table
+
+
+I don't know what is this
+
+ RVT  > set level 100101-01-1                                                 
+
+ new format: disk
+ RVT 100101-01-1 > images partition table                                     
+
+        03:     6 MB    Linux (0x83)
+        02:     5 MB    Linux (0x83)
+
+ RVT 100101-01-1 > 
+\end{verbatim}
+
+
+Moreover, case level can be determined as an argument to RVT itself:
+
+\begin{verbatim}
+$ rvt -l 100101-01-1
+Scanning morgues. Please wait ...
+
+
+
+Welcome to Revealer Tools Shell (v0.2):
+
+
+ new format: disk
+ RVT 100101-01-1 >  
+\end{verbatim}
+
+
+
+\subsection{TAB key}
+
+When using the RVT Shell, the TAB key can be used in two ways:
+
+\begin{enumerate}
+\item at a command level, before writing, will show the available commands and levels
+\item when a command or level is half written, will show the available command and levels that begin with the fragment that is written
+\end{enumerate}
+
+For example:
+
+\begin{verbatim}
+ RVT  >  <TAB>	
+	case
+	cluster
+	images
+	info
+	inode
+	losetup
+	mount
+	script
+	set
+	test
+ RVT  > i<TAB>	
+	images
+	info
+	inode
+ RVT  > in<TAB>	
+	info
+	inode
+\end{verbatim}
+
+
+\subsection{command history}
+
+RVT Shell provide a very simple history feature, which consist of remembering the last command typed, that can be accessed type the up arrow.
+
+Future versions will improve the command history with bigger \emph{memory}.
+
+
+
+
+history
+
+
+
+known problems
+
+
+
+\section{entities expansion}
+
+Several commands recive a entity as an argument (a case, a device, a disk or a partition).  In some cases, is useful that a command could be applied to all the subentities below a entity of higher level. This could be achieved with \emph{entities expansion}.
+
+For example, the command 
+
+\begin{verbatim}
+mount assign 100101-01-1-p02
+\end{verbatim}
+
+ will mount the 02 partition of the disk \emph{100101-01-1}.  But, what if 100101-01-1 have six partitions? and what if 100101 case have ten disks, every one of them with six partitions?
+
+RVT will apply, automaticaly, a command to a group of subentities below a entity of higher level when the operands '@devices', '@disks' or '@partitions' are used just after the entity argument.
+
+For example, the following command will mount all partitions of all disks of all devices of a case:
+
+\begin{verbatim}
+mount assign 100101@partitions
+\end{verbatim}
+
+Other example: the following command will launch a search on all de disks of a case:
+
+\begin{verbatim}
+script search launch mysearches 100101@disks
+\end{verbatim}
+
+
+\textbf{Note:} you will see that \emph{mount assign 100101}, without entity expansion, also mounts all partitions of the case 100101. The reason is that some commands, coded before entity expansion, have internal support for managing several types of entites
+
+
+\section{chaining commands}
+
+Some of the RVT commands can take a long time to execute. If want to execute a list of commands sequencially you can choose between two options.
+
+On one hand, RVT Shell will execute sequencially commands separated by ';'. One example:
+
+\begin{verbatim}
+ RVT  > case list; images list
+
+Cases in the morgue: 
+	100101 'espejismo':
+		100101-03-1
+		100101-02-1
+
+
+Images in the morgue: 
+	100101 'espejismo':
+		100101-01-2.dd
+		100101-01-1.dd
+		100101-03-1.dd
+		100101-02-1.dd
+\end{verbatim}
+
+On the other hand, you can create a file containing a command on each line, and pipe them to RVT in batch mode (-b argument). For example:
+
+\begin{verbatim}
+$ cat commands.rvt 
+case list
+images list
+$
+$ cat commands.rvt | rvt -b
+
+Welcome to Revealer Tools Shell (v0.2):
+
+ RVT  > case list
+
+Cases in the morgue: 
+	100101 'espejismo':
+		100101-03-1
+		100101-02-1
+
+images list
+
+Images in the morgue: 
+	100101 'espejismo':
+		100101-01-2.dd
+		100101-01-1.dd
+		100101-03-1.dd
+		100101-02-1.dd
+
+$
+\end{verbatim}
+
+
+and, of course:
+
+
+\begin{verbatim}
+ 
+$ echo "case list; images list" |  rvt -b
+
+Welcome to Revealer Tools Shell (v0.2):
+
+ RVT  > case list
+
+Cases in the morgue: 
+	100101 'espejismo':
+		100101-03-1
+		100101-02-1
+
+images list
+
+Images in the morgue: 
+	100101 'espejismo':
+		100101-01-2.dd
+		100101-01-1.dd
+		100101-03-1.dd
+		100101-02-1.dd
+
+$
+\end{verbatim}
+
+
+
+
+
+\section{Logs}
+
+RVT will log its activity to the local syslog, including commands launched, time and date, error messages, IP from the user (in the case that access to the RVT server is done with ssh), and a bit more.
+
+For example, this unix command will show you the last RVT log messages:
+
+{ \footnotesize
+\begin{verbatim}
+# grep 'RVT: ' /var/log/syslog
+Jun 12 19:31:42 revealer RVT: INFO root@192.168.1.10 executing : RVT_images_list  
+Jun 12 19:31:42 revealer RVT: INFO root@192.168.1.10 ending session 
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 starting up RVT v0.2 
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 loading configuration 
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 Morgue XML configuration loaded. Last updated: 2009061216:17:42 
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 Run 'images scanall' command to update 
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 RVT shell started 
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 executing : RVT_case_list  
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 executing : RVT_images_list  
+Jun 12 19:31:53 revealer RVT: INFO root@192.168.1.10 ending session 
+
+...
+\end{verbatim}
+}
+
+and this, the commands on a particular disk:
+
+{ \footnotesize
+\begin{verbatim}
+# grep '100101-03-1' syslog | grep 'executing'
+
+Jun 12 16:17:56 revealer RVT: INFO root@192.168.1.10 executing : RVT_images_partition_table 100101-03-1 
+Jun 12 16:18:37 revealer RVT: INFO root@192.168.1.10 executing : RVT_set_level 100101-03-1 
+Jun 12 16:18:43 revealer RVT: INFO root@192.168.1.10 executing 100101-03-1: RVT_script_timelines_generate  
+Jun 12 16:19:06 revealer RVT: INFO root@192.168.1.10 executing : RVT_set_level 100101-03-1 
+Jun 12 16:19:11 revealer RVT: INFO root@192.168.1.10 executing 100101-03-1: RVT_script_timelines_generate  
+Jun 12 16:19:27 revealer RVT: INFO root@192.168.1.10 executing 100101-03-1: RVT_mount_assign  
+Jun 12 16:19:36 revealer RVT: INFO root@192.168.1.10 executing 100101-03-1: RVT_script_files_allocfiles  
+Jun 12 18:34:18 revealer RVT: INFO root@192.168.1.10 executing : RVT_inode_allocationstatus 2 100101-03-1-p02 
+Jun 12 18:34:44 revealer RVT: INFO root@192.168.1.10 executing : RVT_inode_allocationstatus 2 100101-03-1-p02 
+Jun 12 18:53:38 revealer RVT: INFO root@192.168.1.10 executing : RVT_mount_delete 100101-03-1-p02
+
+...
+\end{verbatim}
+}
+
+
+
+\section{Searches}
+
+The Revealer Toolkit can perform searches on forensic images. Several commands are required to be executed to perform a search, that are discussed in this section.
+
+The following two commands commands are required to be executed once before launching searches on a disk:
+
+\begin{itemize}
+\item \emph{script strings generate $<$disk$>$}:  extracts ascii and unicode strings from forensic image 
+\item \emph{cluster generateindex $<$disk$>$}:  create a index for quick cluster--inode resolution
+\end{itemize}
+
+Next step is to create a file that contains the terms to be searched. These files can be created with RVT commands, and are visible to all disks on a case:
+
+\begin{itemize}
+\item \emph{script file edit $<$file name$>$}: this command opens a \emph{vim} file editor, that can be used to write a search term on each line. Writing the file and exiting \emph{vim} returns to RVT and a file is created in the directory $<$case$>$/searches\_files 
+\end{itemize}
+
+\textbf{Warning!:}  these rules apply when creating search terms (sorry, these limitations will be eliminated in future versions):
+
+\begin{enumerate}
+\item search is always case insensitive. Also, always write search terms in lower case
+\item do not include characters outside ASCII charset (no accents, no ñ's, ...) So, for example, you cannot search "barça campió", so you have to search "a campi" instead. 
+\item some regular expression characters can be used, although escape sequences have not been well tested. So, you can use '.', '*', '?', but not backslash or complex regular expressions 
+\end{enumerate}
+
+Now, searches can be launched. Three commands create different output related with a search file:
+
+\begin{itemize}
+\item \emph{script search launch $<$file name$>$}:   greps every search term on $<$file name$>$ over the strings files. Results are stored on \emph{output/searches/busq\_ $<$search term$>$}
+\item \emph{script search clusters $<$file name$>$}:    for each \emph{busq\_} file generated before, extract the cluster that contains the term searched and writes the results on \emph{output/searches/ibusq\_$<$search term$>$}
+\item \emph{script search clusterlist $<$file name$>$}:   it takes each \emph{busq\_} file generated before and creates two new files: \emph{cbusq\_$<$search term$>$}, which contains a list of clusters that contain the searched terms, its allocation status and path if allocated, and  \emph{pbusq\_$<$search term$>$}, which contains a list of paths associated with allocated clusters that contains search terms\footnote{beware! if search terms are allocated on slack space, files could be included in the pbusq file that do actually not include this search term (because is on the slack space!)}
+\end{itemize}
+
+Now, you are ready to review megabytes and megabytes of results in a black shell window   :)
+
+A typical search session could be like this, where the objective is to search the words `revealer' and `toolkit' on all disks of the case `100101-ghost':
+
+\begin{verbatim}
+RVT > set level 100101
+RVT > script strings generate @disks
+RVT > cluster generateindex @disks
+RVT 100101 > script search
+RVT 100101 script search > file edit myFile
+
+(`i' key pressed on vim)
+revealer
+toolkit
+(ESC key pressed and then `:wq' to write and exit back to RVT)
+
+RVT 100101 script search > launch myFile @disks; clusters myFile @disks; 
+ clusterlist myFile @disks
+
+\end{verbatim}
+
+
+
+\appendix
+
+
+
+
+\chapter{Sample image from scratch} \label{anx:scratch}
+
+Sometimes could be useful to create an image from scratch. A simple procedure is provided in order to create such image from linux.
+
+as user:
+
+\begin{verbatim}
+cd /media/morgue/imagenes/100101-ghost/
+dd if=/dev/zero bs=1024 count=10240 > 100101-01-1.dd
+\end{verbatim}
+
+as root:
+
+\begin{verbatim}
+fdisk /media/morgue/imagenes/100101-ghost/100101-01-1.dd
+
+in fdisk:
+
+x (additional functions)
+
+c (cylinders)
+1024
+s (sectors)
+10
+h (heads)
+2
+
+r (main menu)
+n (new partition)
+p 
+1
+1   (first cylinder)
+512 (half of the disk)
+n (new partition)
+p 
+2
+513 (half of the disk)
+1024 (last cylinder)
+w (save and exit)
+\end{verbatim}
+
+and now, let's put some info inside, as root:
+
+\begin{verbatim}
+echo "images scanall; losetup assign 100101-01-1; losetup list" | RVT.pl -b
+   (the last command reveals loop devices created)
+mkfs.vfat /dev/loop0
+mkfs.vfat -F 32 /dev/loop1   
+
+mkdir /media/aux1
+mount /dev/loop0 /media/aux1
+cp /home/analyst/RVT/RVT.pl /media/aux1
+umount /media/aux1
+mount /dev/loop1 /media/aux1
+cp /home/analyst/RVT/RVT.pl /media/aux1
+sync
+rm /media/aux1/RVT.pl
+echo "my email address is myemail@revealertoolkit.com" > /media/aux1/textfile.txt
+umount /media/aux1
+
+echo "losetup delete 100101-01-1" | RVT.pl -b
+\end{verbatim}
+
+
+
+
+\chapter{Additional software installation}
+
+
+\section{libpst Utilities} \label{anx:libpst}
+
+Download lastest stable package from http://www.five-ten-sg.com/libpst/packages, unzip and compile. After that, copy or link \emph{readpst} executable to \emph{/usr/local/bin}.
+
+\begin{verbatim}
+cd /usr/local/src
+mkdir libpst
+cd libpst
+wget http://www.five-ten-sg.com/libpst/packages/libpst-0.6.37.tar.gz
+tar -zxf libpst-0.6.37.tar.gz
+cd libpst-0.6.37
+./configure
+make
+cp src/readpst /usr/local/bin
+\end{verbatim}
+
+
+
+\section{RegRipper} \label{anx:regripper}
+
+Download lastest stable package from www.regripper.net and unzip:
+
+\begin{verbatim}
+cpan Parse::Win32Registry
+
+mkdir /usr/local/src/regripper
+cd /usr/local/src/regripper
+wget http://www.regripper.net/RegRipper/RegRipper/rr_20080909.zip
+unzip rr_20080909.zip
+
+apt-get install tofrodos
+dos2unix rip.pl
+\end{verbatim}
+
+
+some changes have to be made on RegRipper code to be executable on Linux:
+
+\begin{verbatim}
+1c1
+< #! c:\perl\bin\perl.exe
+---
+> #!/usr/bin/perl
+29c29
+< my $plugindir = "plugins\\";
+---
+> my $plugindir = "/usr/local/src/regripper/plugins/";
+92c92
+< 			require "plugins\\".$plugins{$i}."\.pl";
+---
+> 			require $plugindir.$plugins{$i}."\.pl";
+\end{verbatim}
+
+and final touches:
+
+\begin{verbatim}
+perl rip.pl -l > plugins/plugins
+
+ln -s /usr/local/src/regripper/rip.pl /usr/local/bin/rip
+chmod a+x /usr/local/src/regripper/rip.pl
+\end{verbatim}
 
 
 \end{document}
-
-

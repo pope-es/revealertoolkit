@@ -39,6 +39,7 @@ use strict;
                             &RVT_cluster_extract_ascii
                             &RVT_cluster_toinode
                             &RVT_cluster_allocationstatus
+                            &RVT_inode_allocationstatus
                         );
        
        
