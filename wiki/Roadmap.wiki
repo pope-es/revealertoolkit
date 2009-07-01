@@ -10,8 +10,16 @@
 
  * verbosity and error logging
  * activity traceability
- * basic html output
+ * basic html output  _(finally not done)_
  * search revision features
  * more preforensic tasks
- * text sandbox
- * images sandbox
+ * text sandbox  _(finally not done)_
+ * images sandbox  _(finally not done)_
+
+= v0.3 =
+  
+ * clean code, correct bugs
+ * easier interaction
+ * more scripts, more modules
+ * Developer Guide
+ * Revealer Web Access (RWA)
