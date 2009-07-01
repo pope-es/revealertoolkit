@@ -86,9 +86,18 @@ The aim of the Revealer Toolkit is to automate rutinary tasks and to manage sour
 
 RVT is developed and actively tested by computer forensic investigators working at INCIDE, spanish company sited at the beautiful city of Barcelona (see www.incide.es for more details)
 
-project state: we are using RVT actually in our production servers, although do not expect an easy and clean software yet, or a quick installation. For any questions, help or comments, please, drop an email.
-
 You can find additional information, packages and all the source code at http://code.google.com/p/revealertoolkit
+
+
+\section*{Introduction to version 0.2}
+
+The current state of the project can be described as a `\emph{proof of concept}', that is, RVT version 0.2 proofs that the objectives we are looking for are reachable, but further work is necessary in order to have a stable version.
+
+Therefore, RVT v0.2 can be used to automate computer forensic tasks on a group of several digital forensic images, but the code is still buggy, some tasks have to be run manually, and the interface has to be improved. A complete working RVT system has been installed and is free (like in beer \emph{and} in freedom) for download at  xx.
+
+The objective of next version (0.3) will be to clean the code, solve bugs and ease the interaction. At the same time, more scripts and modules will be developed. For version 0.3, a \emph{RVT Developer Manual} is planned, as well as a automated reporting engine.
+
+For any questions, help or comments, please, do not hesitate to drop an message in our newsletter (http://groups.google.com/group/revealertoolkit).
 
 
 
@@ -126,7 +135,7 @@ chmod g+sw /media/morgue
 echo -e "\n\numask 002" >> /etc/profile
 \end{verbatim}
 
-download and install lastest The SleuthKit version. Code can be downloaded from \emph{http:// www.sleuthkit.org/ sleuthkit/ download.php}. For version 3.0.1, as root:
+Download and install lastest The SleuthKit version. Code can be downloaded from \emph{http:// www.sleuthkit.org/ sleuthkit/ download.php}. For version 3.0.1, as root:
 
 \begin{verbatim}
 cd
@@ -391,12 +400,14 @@ RVT Shell is a Perl script that, when executed, performs a scan of the morgue an
 \end{itemize}
 
 \begin{verbatim}
-Welcome to Revealer Tools Shell (v0.1.0):
+Welcome to Revealer Tools Shell (v0.2):
 
  RVT  > 
         case
+        cluster
         images
         info
+        inode
         losetup
         mount
         script
@@ -404,6 +415,266 @@ Welcome to Revealer Tools Shell (v0.1.0):
         test
  RVT  > 
 \end{verbatim}
+
+
+
+
+
+\section{Cheatsheets}
+
+For those who know the name of the game, the following tables could be used as quick reference.
+
+\begin{itemize}
+\item Command quick reference, Table \ref{tbl:cmd-ref}, page \pageref{tbl:cmd-ref}
+\item Script modules quick reference, Table \ref{tbl:scr-ref}, page \pageref{tbl:scr-ref}
+\end{itemize}
+
+
+\begin{table}[p]
+\footnotesize
+
+
+\begin{tabular}{| p{1cm}  p{10cm} | }
+
+\hline 
+
+\multicolumn{2}{|l|}{\it \bf
+case list
+} \\
+ & lists cases in the morgue \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+images list
+} \\
+ & lists images in the morgue \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+images partition info $<$partition$>$
+} \\
+ & prints partition's information  \\
+
+\multicolumn{2}{|l|}{\it \bf
+images partition table $<$disk$>$
+} \\
+ &  prints partitions of a disk \\
+
+\multicolumn{2}{|l|}{\it \bf
+images loadconfig
+} \\
+ & Loads the morgue config from XML file \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+info list
+} \\
+ & shows some morgue's information \\
+
+\multicolumn{2}{|l|}{\it \bf
+info debug $<$dumpmorguexml$|$dumprvtcases$|$dumprvtcfg$>$
+} \\
+ & prints part of the RVT internal configuration  \\
+
+\hline \hline
+
+
+\multicolumn{2}{|l|}{\it \bf
+losetup assign $<$disk$|$partition$>$
+} \\
+ & assigns a loop device to the partition \\
+
+\multicolumn{2}{|l|}{\it \bf
+losetup delete $<$disk$|$partition$>$
+} \\
+ & deletes a loop device assign to the partition \\
+
+\multicolumn{2}{|l|}{\it \bf
+losetup list 
+} \\
+ & lists the losetups devices assigned to RVT partitions \\
+
+\multicolumn{2}{|l|}{\it \bf
+losetup recheck
+} \\
+ & updates RVT internal configuration on loop devices \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+mount assign $<$disk$|$partition$>$
+} \\
+ & mounts a partition \\
+
+\multicolumn{2}{|l|}{\it \bf
+mount delete $<$disk$|$partition$>$
+} \\
+ & umounts a partition \\
+
+\multicolumn{2}{|l|}{\it \bf
+mount list 
+} \\
+ & list mounted RVT partitions \\
+
+\multicolumn{2}{|l|}{\it \bf
+mount recheck
+} \\
+ & updates RVT internal configuration on mounted partitions \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+cluster allocationstatus $<$cluster$>$ $<$partition$>$
+} \\
+ & prints cluster allocation status \\
+
+
+\multicolumn{2}{|l|}{\it \bf
+cluster extract $<$raw$|$ascii$>$ $<$cluster[,num]$>$ $<$partition$>$
+} \\
+ & extracts a cluster, or \emph{num} clusters, from partition \\
+
+
+\multicolumn{2}{|l|}{\it \bf
+cluster generateindex $<$disk$>$
+} \\
+ & creates files for a cluster-inode quick resolution \\
+
+
+\multicolumn{2}{|l|}{\it \bf
+cluster toinode $<$cluster$>$ $<$partition$>$
+} \\
+ & prints all inodes associated with a cluster \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+inode allocationstatus $<$inode$>$ $<$partition$>$
+} \\
+ & prints inode allocation status \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+set level [$<$case$|$device$|$disk$|$partition$>$]
+} \\
+ & sets working case level \\
+
+\hline
+
+\end{tabular}
+
+\caption{Command quick reference}\label{tbl:cmd-ref}
+
+
+\end{table}
+
+
+
+
+\begin{table}[p]
+\footnotesize
+
+
+\begin{tabular}{| p{1cm}  p{10cm} | }
+
+
+\hline 
+
+\multicolumn{2}{|l|}{\it \bf
+script filelist generate $<$disk$>$
+} \\
+ & generates lists of files for each partition \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+script files allocfiles $<$disk$>$
+} \\
+ & generates lists of allocated files for each partition \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+script search clusterlist $<$file$>$ $<$disk$>$
+} \\
+ & builds a list of clusters and file paths from a previous search \\
+
+\multicolumn{2}{|l|}{\it \bf
+script search clusters $<$file$>$ $<$disk$>$
+} \\
+ & extract clusters that match a previous search \\
+
+\multicolumn{2}{|l|}{\it \bf
+script search file $<$delete$|$edit$|$list$|$show$>$
+} \\
+ &  manages search files \\
+
+\multicolumn{2}{|l|}{\it \bf
+script search launch $<$file$>$ $<$disk$>$
+} \\
+ & launches a search \\
+
+\multicolumn{2}{|l|}{\it \bf
+script search quickcount $<$name:regexpr$>$ $<$disk$>$
+} \\
+ & counts the appearance of a regular expression. Predefined regexpr: \emph{emails, accounts, ips}. \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+script strings generate $<$disk$>$
+} \\
+ & generates strings for all partitions of a disk \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+script timelines generate $<$disk$>$
+} \\
+ & generates timelines for all partitions of a disk \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+script regripper listmodules
+} \\
+ & list available RegRipper modules \\
+
+\multicolumn{2}{|l|}{\it \bf
+script repripper execmodule $<$plugin$>$ $<$hivetype$>$ $<$partition$>$
+} \\
+ & executes one RegRipper module on the last modified hive of the type specified partition \\
+
+\multicolumn{2}{|l|}{\it \bf
+script regripper execallmodules $<$hivetype$>$ $<$partition$>$
+} \\
+ & executes all RegRipper modules on all hive files on the specified partition \\
+
+\hline \hline
+
+\multicolumn{2}{|l|}{\it \bf
+script mail parsepsts $<$partition$>$
+} \\
+ & parse all PST files on partition \\
+
+\hline 
+
+
+
+\end{tabular}
+
+\caption{Modules quick reference}\label{tbl:scr-ref}
+
+
+\end{table}
+
+
+
+
 
 
 \section{Command: \emph{case}}
@@ -477,6 +748,12 @@ RVT scans the morgue. No output given.
 
 Necessary when adding a new image to the morgue. You can check what RVT thinks that is in your morgue executing \emph{info debug dumpmorguexml} (see \ref{cmd:info-debug})
 
+
+\subsection{\emph{images loadconfig}}
+
+Loads the morgue config from XML file.
+
+
 \section{Command: \emph{info}}
 
 Manages RVT Shell configuration information.
@@ -544,7 +821,7 @@ Loop device management.
 
 \subsection{\emph{losetup assign}}
 
-Assigns a loop device to each partition of a case.
+Assigns a loop device to each partition of a case, disk or partition
 
 \begin{verbatim}
  RVT  > losetup assign 100101
@@ -557,7 +834,7 @@ sudo losetup -f /media/morgue/imagenes/100101-ghost/100101-01-1.dd -o 5120
 
 \subsection{\emph{losetup delete}}
 
-Delete loop devices assigned to a case
+Delete loop devices assigned to a case, disk or partition
 
 \begin{verbatim}
  RVT  > losetup delete 100101
@@ -587,7 +864,7 @@ Mount points management.
 
 \subsection{\emph{mount assign}}
 
-Mounts the partitions of a case at the path \emph{morgue/100xxx-case/100xxx-device-disk/mnt/p0N}, where N is the partition number.
+Mounts the partitions of a case, disk or partition at the path \emph{morgue/100xxx-case/100xxx-device-disk/mnt/p0N}, where N is the partition number.
 
 \begin{verbatim}
  RVT  > mount assign 100101
@@ -600,7 +877,7 @@ sudo mount /media/morgue/imagenes/100101-ghost/100101-01-1.dd /media/morgue/1001
 
 \subsection{\emph{mount delete}}
 
-Umounts partitions of a case.
+Umounts partitions of a case, disk or partition
 
 \begin{verbatim}
  RVT  > mount delete 100101
@@ -641,10 +918,17 @@ Cluster 2: Allocated (Meta)
 
 \subsection{\emph{cluster extract}}
 
-Prints the contents of the cluster.
+Prints the contents of the cluster. First argument specifies a post-treatment done to the cluster content before printing:
+
+\begin{itemize}
+\item raw:  prints original cluster without changes
+\item ascii:  only prints ascii characters. Others are substituted with a dot
+\end{itemize}
+
+Second argument is the cluster number to be extracted. When the cluster number is appended with a comma and a integer number, extracts this number of consecutive clusters. For example, \emph{cluster extract raw 100,2 100101-01-1-p02} extracts clusters 100 and 101.
 
 \begin{verbatim}
- RVT  > cluster extract 3 100101-01-1-p02                                     
+ RVT  > cluster extract ascii 3 100101-01-1-p02                                     
 --------------------------------------------
 /usr/bin/blkcat -o 0000000001 /media/morgue/imagenes/100101-espejismo/100101-01-1.dd 3 | 
 \end{verbatim}
@@ -654,7 +938,7 @@ Prints the contents of the cluster.
 
 Creates sort of an index for quick cluster-to-inode resolution. Required for performing searches. This is one of the few commands that writes files on the morgue.
 
-See \emph{script search} (página \pageref{script:search} module for more information.
+See \emph{script search} (página \pageref{anx:searches} module for more information.
 
 
 \subsection{\emph{cluster toinode}}
@@ -792,7 +1076,7 @@ with a list of allocated files and folders.
 
 
 
-\section{\emph{script search}} \label{script:search}
+\section{\emph{script search}} \label{anx:searches}
 
 Module for performing searches. See the Appendix \ref{anx:searches} for a step-by-step tutorial.
 
@@ -856,7 +1140,7 @@ Commands to manage search files:
 
 \begin{itemize}
 \item	script search file delete $<$name$>$:  deletes file
-\item	script search file edit $<$name$>$:  creates and/or edit file
+\item	script search file edit $<$name$>$:  creates and/or edit file with \emph{vim}
 \item	script search file list:  lists search files created
 \item	script search file show $<$name$>$:  prints file's contents
 \end{itemize}
@@ -1009,7 +1293,7 @@ Executes one RegRipper module of a particular hive type on a partition. RVT pick
 script regripper execmodule <plugin> <hivetype> <partition>
 \end{verbatim}
 
-where <hivetype> can be one of these: sam, security, software, system or ntuser
+where $<$hivetype$>$ can be one of these: sam, security, software, system or ntuser
 
 
 
@@ -1021,7 +1305,7 @@ Execute all RegRipper modules on all the hive files on a partition.
 script regripper execallmodules  <hivetype> <partition>
 \end{verbatim}
 
-where <hivetype> can be one of these: sam, security, software, system, ntuser  \textbf{or} all 
+where $<$hivetype$>$ can be one of these: sam, security, software, system, ntuser  \textbf{or} all 
 
 It stores the results on this folder \emph{output/regripper}, one file result per hive file, with this format:
 
@@ -1058,6 +1342,7 @@ where \emph{n} is a increasing integer number.
 
 
 \chapter{Operational guides and tricks}
+
 
 
 \section{RVT Shell tricks}
@@ -1201,12 +1486,6 @@ Future versions will improve the command history with bigger \emph{memory}.
 
 
 
-
-history
-
-
-
-known problems
 
 
 
@@ -1373,7 +1652,7 @@ Jun 12 18:53:38 revealer RVT: INFO root@192.168.1.10 executing : RVT_mount_delet
 
 
 
-\section{Searches}
+\section{Searches} \label{anx:searches}
 
 The Revealer Toolkit can perform searches on forensic images. Several commands are required to be executed to perform a search, that are discussed in this section.
 
@@ -1406,7 +1685,7 @@ Now, searches can be launched. Three commands create different output related wi
 \item \emph{script search clusterlist $<$file name$>$}:   it takes each \emph{busq\_} file generated before and creates two new files: \emph{cbusq\_$<$search term$>$}, which contains a list of clusters that contain the searched terms, its allocation status and path if allocated, and  \emph{pbusq\_$<$search term$>$}, which contains a list of paths associated with allocated clusters that contains search terms\footnote{beware! if search terms are allocated on slack space, files could be included in the pbusq file that do actually not include this search term (because is on the slack space!)}
 \end{itemize}
 
-Now, you are ready to review megabytes and megabytes of results in a black shell window   :)
+Now, you are ready to review megabytes and megabytes of results, that are stored under disk folder \emph{output/searches}, in a black shell window   :)
 
 A typical search session could be like this, where the objective is to search the words `revealer' and `toolkit' on all disks of the case `100101-ghost':
 
@@ -1426,6 +1705,43 @@ RVT 100101 script search > launch myFile @disks; clusters myFile @disks;
  clusterlist myFile @disks
 
 \end{verbatim}
+
+
+
+
+
+\section{F-Response compatibility}
+
+The Revealer Toolkit is fully compatible with F-Reponse (www.f-response.com), that is, forensic tasks on remote F-Response disks can be automated through RVT. 
+
+\emph{But}, RVT is \emph{optimized} to be used with F-Response, so expect a considerable load of time and network traffic on some operations.
+
+In order to use a F-Response created device, or, in general, any disk device as a RVT image, create a symbolic link to it from the \emph{images} directory (f.ex., \emph{ln -s /dev/sdx /media/morgue/images/ 100101-ghost/100101-02-1.dd})
+
+Future versions will include RVT commands for managing F-Response targets and devices.
+
+
+
+
+\section{Known problems}
+
+Remember that RVT is not stable yet, so there are some problems pending to be solved in future versions:
+
+
+\begin{itemize}
+
+\item error verbosity:  RVT do not offer a lot of verbosity when an error occurs
+
+\item commands dependences:  to be executed, each command has a list of dependences: executables installed on the system, other commands have to be executed before, arguments, ...  Sometimes, a command fails because one dependence is not found and is not checked automatically before executing
+
+\item keyboard does not work as expected:  RVT Shell code is very simple, and it does not handle properly a lot of keyboard actions, as movement arrows, delete keys, etc. This problem is worse when working with remote terminals, screens, and other shell tricks
+
+\item search engine has to be improved
+
+\item ... 
+
+\end{itemize}
+
 
 
 
