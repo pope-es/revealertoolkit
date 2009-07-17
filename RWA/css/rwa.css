@@ -1,0 +1,83 @@
+/* BEGIN PAGE-WIDE */
+
+body
+{
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 8pt;
+}
+
+.clearing
+{
+	clear: both;
+}
+
+a
+{
+	text-decoration: none;
+	color: #C0C0C0;
+}
+
+a:visited
+{
+	text-decoration: none;
+	color: #808080;
+}
+
+img
+{
+	border: 0px;
+}
+
+/* END PAGE-WIDE */
+
+/* BEGIN LAYOUT */
+
+span.title
+{
+	font-size: large;
+	font-weight: bold;
+}
+
+div.header
+{
+	color: white;
+	font-size: 8pt;
+	font-weight: bold;
+	height: 15px;
+	padding: 3px;
+	background-image: url( '../img/header.png' );
+	background-repeat: repeat-x;
+}
+
+/* END LAYOUT */
+
+/* BEGIN COMMANDS */
+
+div#commands
+{
+	margin: 5px;
+}
+
+label.command
+{
+	line-height: 25px;
+}
+
+label.command:hover
+{
+	text-decoration: none;
+	color: #C0C0C0;
+	border-bottom-style: dotted;
+	border-bottom-width: 1px;
+	cursor: pointer;
+}
+
+label.disabled
+{
+	cursor: default;
+	color: Gray;
+	text-decoration: none;
+	line-height: 25px;
+}
+
+/* END COMMANDS */

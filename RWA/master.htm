@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <link href="css/jquery.filetree.css" rel="Stylesheet" type="text/css" media="screen" />
+    <link href="css/rwa.css" rel="stylesheet" type="text/css" media="screen" />
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+    <meta http-equiv="cache-control" content="no-cache" />
+
+    <script type="text/javascript" src="js/jquery.js"></script>
+
+    <script type="text/javascript" src="js/jquery-ui.js"></script>
+
+    <script type="text/javascript" src="js/jquery.layout.js"></script>
+
+    <script type="text/javascript" src="js/jquery.filetree.js"></script>
+
+    <script type="text/javascript">
+        $(document).ready( function() {
+            $('body').layout({ 
+                applyDefaultStyles: true,
+                north__applyDefaultStyles: false,
+                north__resizable: false,
+                north__border: 0,
+                north__spacing_open: 0,
+                north__size: 65,
+                south__initClosed: true,
+                south__size: 150,
+                west__resizable: true,
+                west__border: 4,
+                west__maxSize: 300
+            });
+            
+            $('#casetree').fileTree({root: '/var/www/'}, function(file) { alert(Number.MAX_VALUE); });
+
+        });
+    </script>
+
+    <title>Revealer Toolkit Web Access - Pilot v0.1</title>
+</head>
+<body>
+    <div class="ui-layout-center">
+        <div class="contentplaceholder">
+        </div>
+    </div>
+    <div class="ui-layout-north" style="vertical-align: middle">
+        <img src="img/logo.jpg" alt="Revealer Toolkit" align="middle" style="padding: 8px" /><span
+            class="title">Revealer Toolkit Web Access v0.1</span><span></span>
+    </div>
+    <div class="ui-layout-west">
+        <div class="header">
+            Navigation</div>
+        <div style="min-height: 65%; max-height: 65%; overflow-y: auto; overflow-x: none">
+            <div id="casetree">
+            </div>
+        </div>
+        <div class="header">
+            Commands</div>
+        <div id="commands">
+            <input type="image" src="img/partition-list.png" align="absmiddle" id="command1" />
+            <label for="command1" class="command">
+                Partition list</label><br />
+            <input type="image" src="img/partition-info.png" align="absmiddle" id="command2" />
+            <label for="command2" class="command">
+                Partition info</label><br />
+            <input type="image" src="img/cluster-status.png" align="absmiddle" id="command3" />
+            <label for="command3" class="command">
+                Cluster status</label><br />
+            <input type="image" src="img/cluster-toinode.png" align="absmiddle" id="command4" />
+            <label for="command4" class="command">
+                Cluster to Inode</label><br />
+        </div>
+    </div>
+    <div class="ui-layout-south">
+        <div class="header">
+            Console LOG</div>
+        <div>
+        </div>
+    </div>
+</body>
+</html>
