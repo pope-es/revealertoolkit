@@ -51,6 +51,25 @@ div.header
 
 /* END LAYOUT */
 
+/* BEGIN NAVIGATION */
+
+input.first
+{}
+
+input.prev
+{}
+
+input.jump
+{}
+
+input.next
+{}
+
+input.last
+{}
+
+/* END NAVIGATION */
+
 /* BEGIN COMMANDS */
 
 div#commands
