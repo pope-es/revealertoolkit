@@ -145,22 +145,11 @@ $configFileName = '~/rvt.cfg' if (-e '~/rvt.cfg');
 $configFileName = 'rvt.cfg' if (-e 'rvt.cfg');
 $configFileName = $RVT_optConfigFileName if ($RVT_optConfigFileName);
 
-our $RVT_cfg = eval { XMLin ($configFileName, ForceArray => 1) };
-if (!$RVT_cfg or $@) {
-    #default configuration
-    
-    $RVT_cfg->{paths}[0] = {
-        morgues => ['/media/morgue']    ,
-        images => ['/media/morgue/images']  ,
-        tmp => '/tmp'
-    };
+RVT_defaultCfg();
 
-    $RVT_cfg->{tsk_path} = "/usr/local/bin";
-    $RVT_cfg->{morgueInfoXML} = "/media/morgue/RVTmorgueInfo.xml";
-    $RVT_cfg->{mount_umask} = "007";
-    $RVT_cfg->{mount_gid} = "1010";
-    $RVT_cfg->{log_level} = "0";
-}
+our $RVT_cfg = eval { XMLin ($configFileName, ForceArray => 1) };
+RVT_defaultCfg() if ($@);
+
 
 
 # $RVT_cases->{case}{100xxx}
@@ -261,6 +250,24 @@ sub RVT_test {
 
     print "args: " . join(',',@_) . "\n";
 
+}
+
+
+sub RVT_defaultCfg {
+    # default configuration
+
+    $RVT_cfg->{paths}[0] = {
+        morgues => ['/media/morgue']    ,
+        images => ['/media/morgue/images']  ,
+        tmp => '/tmp'
+    };
+
+    $RVT_cfg->{tsk_path} = "/usr/local/bin";
+    $RVT_cfg->{morgueInfoXML} = "/media/morgue/RVTmorgueInfo.xml";
+    $RVT_cfg->{mount_umask} = "007";
+    $RVT_cfg->{mount_gid} = "1010";
+    $RVT_cfg->{log_level} = "0";
+    $RVT_cfg->{history_limit} = "100";
 }
 
 
@@ -430,21 +437,29 @@ sub RVT_getcommand {
 	
 	my ($cmdgrp, $cmdhist) = @_;
 	my $cmd = '';
+	my $cmdhistPTR = -1;
+	my $minLimit = ($#$cmdhist < $RVT_cfg->{history_limit})?$#$cmdhist:$RVT_cfg->{history_limit};
 
 	system "stty", '-icanon', 'eol', '001';
 
 	while () {
 		 my $k = getc();
          if (ord($k) == 27 ) {
-                next unless ord(getc()) == 91;
-                next unless ord(getc()) == 65;
-                $cmd = $cmdhist;
+                next unless ord(getc()) eq 91;
+                my $arrow = ord(getc());
+                if ($arrow == 66) {  $cmdhistPTR-- ; }
+                if ($arrow == 65) {  $cmdhistPTR++ ; }
+                
+                if ($cmdhistPTR > $minLimit ) { $cmdhistPTR = $minLimit; }
+                $cmd = @{$cmdhist}[$cmdhistPTR];
+                if ($cmdhistPTR < 0 ) { $cmdhistPTR = -1; $cmd = '' }
                 print "\r                                                                              \r";
                 RVT_shell_prompt ($RVT_level->{tag}, $cmdgrp, $cmd);
                 next;
          }
 		 if (ord($k) == 127) {
 		 	chop $cmd;
+		 	# chapuza follows
 			print "\r                                                                              \r";
 			RVT_shell_prompt ($RVT_level->{tag}, $cmdgrp, $cmd);
 			next;
@@ -500,7 +515,8 @@ sub RVT_shell {
 
     RVT_log('INFO', 'RVT shell started');
     print "\n\nWelcome to Revealer Tools Shell (v$RVT_version):\n\n";
-    my ($cmdgrp, $command, $cmdhist);
+    my ($cmdgrp, $command);
+    my @cmdhist ;
 
     if ($RVT_initial_level) { 
         RVT_log('INFO', 'executing : RVT_set_level ' . $RVT_initial_level);
@@ -513,14 +529,20 @@ sub RVT_shell {
 
     RVT_shell_prompt ($RVT_level->{tag});
     EXECLOOP: while () {
-        if ($RVT_shellmode) { $command = RVT_getcommand($cmdgrp, $cmdhist); }
+        if ($RVT_shellmode) { $command = RVT_getcommand($cmdgrp, \@cmdhist); }
 	    if ($RVT_batchmode) { return unless ($command=<BATCH>); print $command;  }
 
         chomp $command;
-        foreach my $cmd ( split(';', $command )) {
-            $cmdhist = $cmd if $cmd;
+        if ($command) {
+            pop(@cmdhist) if ($#cmdhist == $RVT_cfg->{history_limit});
+            unshift (@cmdhist, $command);
+        }        
+        
+        foreach my $cmd ( split(';', $command )) { 
+
+            
             last EXECLOOP if ($cmd =~ /quit$/);
-            if ( $cmd =~ /^\s*r(e|et|etu|etur|eturn)?/ ) {
+            if ( $cmd =~ /^\s*r(e|et|etu|etur|eturn)?$/ ) {
                     $cmdgrp =~ s/^(.*?) *\S*$/$1/;
                     next;
             }
