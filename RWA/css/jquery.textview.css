@@ -1,0 +1,61 @@
+OL.jqueryTextView
+{
+	background-color: #AACCFF;
+	border: solid 1px #999;
+	font-weight: bold;
+}
+
+OL.jqueryTextView LI
+{
+	background-color: White;
+	border-left: solid 1px #999;
+	color: #000;
+	font-size: 1.2em;
+	min-height: 1.2em; /*for some reason, this doesn't work in IE7*/
+	margin: 0;
+	padding: .3em 0 .3em .8em;
+}
+
+OL.jqueryTextView LI.alt
+{
+	background-color: #CCEEFF;
+}
+
+OL.jqueryTextView PRE
+{
+	font-weight: normal;
+	margin: 0;
+	white-space: pre-wrap;
+}
+
+.btnleft
+{
+	background-image: url('../img/navbtnleft.png' );
+	width: 24px;
+	height: 24px;
+}
+
+.btncent
+{
+	background-image: url('../img/navbtncent.png' );
+	width: 24px;
+	height: 24px;
+}
+
+.btnright
+{
+	background-image: url('../img/navbtnright.png' );
+	width: 24px;
+	height: 24px;
+}
+
+.text
+{
+	background-image: url('../img/text.png' );
+	border: none;
+	background-color: Transparent;
+	width: 45px;
+	height: 24px;
+	font-weight: bold;
+	text-align: right;
+}
