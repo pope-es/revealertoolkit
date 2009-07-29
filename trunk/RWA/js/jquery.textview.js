@@ -40,7 +40,7 @@ if(jQuery) (function($){
 
 					function lastPage(){ goToPage(99999999); }
 
-					function toIndex() { goToPage(parseInt(document.getElementById('jquerytextviewindex').value) + 1); }
+					function toIndex() { goToPage(parseInt(document.getElementById('jquerytextviewindex').value)); }
 					
 					function goToPage(n)
 					{
