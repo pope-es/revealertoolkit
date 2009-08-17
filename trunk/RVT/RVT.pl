@@ -35,7 +35,7 @@ use Getopt::Long;
 use XML::Simple;
 use Sys::Syslog;
 
-our $RVT_version = '0.2';
+our $RVT_version = '0.2.1';
 
 sub usage {
 
@@ -223,6 +223,10 @@ RVTscripts::RVT_mail::constructor;
 
 use RVTscripts::RVT_filelist;
 RVTscripts::RVT_filelist::constructor;		
+
+use RVTscripts::RVT_lnk;
+RVTscripts::RVT_lnk::constructor;
+
 		
 #######################################################################
 #
