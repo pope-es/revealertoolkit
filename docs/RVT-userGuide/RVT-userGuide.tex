@@ -71,9 +71,7 @@
      \item Generalitat de Catalunya
        for partial funding of the project
        
-     \item People that have collaborated to (and suffered) the project:  Jose Navarro, Luis Gómez, Sara Rincón, Abraham Pasamar, Julián Sotos, Helena Fuentes, ...
-     
-     
+     \item People that have collaborated to (and suffered) the project:  Jose Navarro, Luis Gómez, Sara Rincón, Abraham Pasamar, Julián Sotos, Helena Fuentes, ... 
 \end{itemize}
 
 
@@ -269,6 +267,7 @@ cat preforensics.rvt | RVT -b
 RVT is a forensic framework that uses software from the Revealer Toolkit project, but also from other sources. Additional software can be installed to activate some modules.
 
 \begin{itemize}
+\item \emph{RVT tools}: some little but nice and GNU/GPL tools that are shipped with RVT source code, under the folder, guess, \emph{tools}. In order to some RVT functions to be operative, make sure that all the tools are on the system PATH.
 \item \emph{libpst}:  libpst (www.five-ten-sg.com/libpst) parses Microsoft Outlook mailboxes, and is handled by RVT\_mail module. See section \ref{anx:libpst} for more information on libpst installation
 \item \emph{RegRipper}:  RegRipper (www.regripper.net) offers modular parsing and data mining on Microsoft Windows registry hives, and it is handled by RVT\_regripper module. See section \ref{anx:regripper} for more information on RegRipper installation
 \end{itemize}
@@ -1341,6 +1340,31 @@ where \emph{n} is a increasing integer number.
 
 
 
+
+
+
+\section{\emph{script lnk}}
+
+
+Parsing and management of Microsoft Windows LNK files.
+
+\subsection{\emph{script lnk generate}} 
+
+Parse all LNK files of the disk (only those with \emph{lnk} extension).
+
+\begin{verbatim}
+script lnk generate <disk>
+\end{verbatim}
+
+Results are stored in a file, one line per lnk file, in the following path:
+
+\begin{verbatim}
+output/lnk/<disk>_lnk.csv
+\end{verbatim}
+
+
+
+
 \chapter{Operational guides and tricks}
 
 
@@ -1817,6 +1841,24 @@ echo "losetup delete 100101-01-1" | RVT.pl -b
 
 
 \chapter{Additional software installation}
+
+\section{RVT tools} \label{anx:rvttools}
+
+The Revealer Toolkit is not just a framework, but also include some little but nice tools that are shipped with the source code of the application under the folder, guess, \emph{tools}. 
+
+In order to some RVT functions to be operative, make sure that all the tools are on the system PATH.
+
+At this time, these are the tools included:
+
+\begin{itemize}
+\item \emph{dumplnk.pl:} code adapted from Jacob Cunningham's lnk-parse, which parses the contents of Microsoft Windows LNK files and output it in CSV format
+\item \emph{csv2latex.pl:} useful script to fill \LaTeX tables with the content of a csv file
+\item \emph{guess_csv.pl:} guesses the separator character of a value-separated file
+\item \emph{plot_bars.pl:} using \emph{gnuplot}, generates bar plots from csv files
+\item \emph{plot_time.pl:} useful script for graphical representation of values versus time
+\end{itemize}
+
+
 
 
 \section{libpst Utilities} \label{anx:libpst}
