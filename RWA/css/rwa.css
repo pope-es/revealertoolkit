@@ -16,7 +16,6 @@ a
 	text-decoration: none;
 	color: #C0C0C0;
 }
-
 a:visited
 {
 	text-decoration: none;
@@ -26,6 +25,11 @@ a:visited
 img
 {
 	border: 0px;
+}
+
+input
+{
+	outline: none;
 }
 
 /* END PAGE-WIDE */
@@ -40,35 +44,81 @@ span.title
 
 div.header
 {
+	background-image: url(  '../img/header.png' );
+	background-repeat: repeat-x;
 	color: white;
 	font-size: 8pt;
 	font-weight: bold;
 	height: 15px;
 	padding: 3px;
-	background-image: url( '../img/header.png' );
+}
+
+div.init
+{
+	background-image: url(  '../img/back.png' );
 	background-repeat: repeat-x;
 }
 
+td.msgleft
+{
+	background-image: url(  '../img/msgleft.png' );
+	background-repeat: no-repeat;
+	height: 24px;
+	width: 12px;
+}
+td.msgright
+{
+	background-image: url(  '../img/msgright.png' );
+	background-repeat: no-repeat;
+	height: 24px;
+	width: 12px;
+}
+td.msg
+{
+	background-color: #b3d9ff;
+	font-size: x-small;
+	white-space: nowrap;
+}
+div.msg
+{
+	background-image: url(  '../img/info.png' );
+	float: left;
+	height: 16px;
+	margin-right: 5px;
+	width: 16px;
+}
+
+
+td.errleft
+{
+	background-image: url(  '../img/errleft.png' );
+	background-repeat: no-repeat;
+	height: 24px;
+	width: 12px;
+}
+td.errright
+{
+	background-image: url(  '../img/errright.png' );
+	background-repeat: no-repeat;
+	height: 24px;
+	width: 12px;
+}
+td.err
+{
+	background-color: #ffa6a6;
+	font-size: x-small;
+	white-space: nowrap;
+}
+div.err
+{
+	background-image: url(  '../img/error.png' );
+	float: left;
+	height: 16px;
+	margin-right: 5px;
+	width: 16px;
+}
+
 /* END LAYOUT */
-
-/* BEGIN NAVIGATION */
-
-input.first
-{}
-
-input.prev
-{}
-
-input.jump
-{}
-
-input.next
-{}
-
-input.last
-{}
-
-/* END NAVIGATION */
 
 /* BEGIN COMMANDS */
 
@@ -76,12 +126,10 @@ div#commands
 {
 	margin: 5px;
 }
-
 label.command
 {
 	line-height: 25px;
 }
-
 label.command:hover
 {
 	text-decoration: none;
@@ -90,7 +138,6 @@ label.command:hover
 	border-bottom-width: 1px;
 	cursor: pointer;
 }
-
 label.disabled
 {
 	cursor: default;

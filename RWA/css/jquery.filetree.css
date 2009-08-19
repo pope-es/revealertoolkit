@@ -26,10 +26,12 @@ UL.jqueryFileTree A:hover {
 	background: #BDF;
 }
 
-/* Core Styles */
-.jqueryFileTree LI.directory { background: url(../img/directory.png) left top no-repeat; }
-.jqueryFileTree LI.expanded { background: url(../img/expand.png) left top no-repeat; }
-.jqueryFileTree LI.file { background: url(../img/file.png) left top no-repeat; }
+.selected {
+	background: #BDF;
+}
+
+.jqueryFileTree LI.case { background: url(../img/case.png) left top no-repeat; }
+.jqueryFileTree LI.device { background: url(../img/device.png) left top no-repeat; }
+.jqueryFileTree LI.disk { background: url(../img/disk.png) left top no-repeat; }
+.jqueryFileTree LI.partition { background: url(../img/partition.png) left top no-repeat; }
 .jqueryFileTree LI.wait { background: url(../img/spinner.gif) left top no-repeat; }
-/* File Extensions*/
-.jqueryFileTree LI.ext_txt { background: url(../img/txt.png) left top no-repeat; }
