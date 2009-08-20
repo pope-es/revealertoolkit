@@ -80,6 +80,14 @@ sub RVT_script_mail_parsepsts {
     
     foreach my $f (@pstlist) {
         my $fpath = RVT_create_folder($opath, 'pst');
+        
+        mkdir ("$fpath/contents") or die ("ERR: failed to create output directories.");
+        open (META, ">$fpath/RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
+            print META "Source file: $f\n";
+            print META "Parsed by RVT module $RVT_moduleName version $RVT_moduleVersion\n";
+        close (META);
+        
+        $fpath="$fpath/contents";
         my @args = ('readpst', '-S', '-q', '-cv', '-o', $fpath, $f);
         if (system (@args)) {
             RVT_log ('NOTICE', "PST parsed: $f\n");
