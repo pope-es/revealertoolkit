@@ -400,13 +400,16 @@ sub RVT_mount_assign () {
 
 sub RVT_images_loadconfig {
 
-    my $lockFile = $main::RVT_cfg->{morgueInfoXML} . ".lock";
     my $cc = 0;
-    while ( -e $lockFile ) { sleep 1; if (++$cc > 5) { RVT_log('CRIT', 'Waited 5 seconds for unlocking of morgue info xml file') } }
     return 0 unless ( -e $main::RVT_cfg->{morgueInfoXML} );
 
+	open (F, $main::RVT_cfg->{morgueInfoXML}) or return 0;
+	flock (F, 1);
+	my $RVTconfig = join ('', <F>);
+	close F;
+
     $main::RVT_cases = {};
-    $main::RVT_cases = eval { XMLin( $main::RVT_cfg->{morgueInfoXML}, ForceArray => 1 ) };
+    $main::RVT_cases = eval { XMLin( $RVTconfig, ForceArray => 1 ) };
 
     if ($@) {
         RVT_log('ERR', 'failed to import XML morgue configuration');
@@ -420,12 +423,8 @@ sub RVT_images_loadconfig {
 
 sub RVT_images_scanall {
 
-  my $lockFile = $main::RVT_cfg->{morgueInfoXML} . ".lock";
   my $cc = 0;
-  while ( -e $lockFile ) { sleep 1; if (++$cc > 5) { RVT_log('CRIT', 'Waited 5 seconds for unlocking of morgue info xml file') } }
-  open (LOCK, ">$lockFile") or die "JARL! could not create lock file";
-  close LOCK;
-
+  
   print "Scanning morgues. Please wait ...\n\n";
 
   $main::RVT_cases = {};
@@ -489,10 +488,9 @@ sub RVT_images_scanall {
   RVT_losetup_recheck;
   
   open (my $XMLFile, ">" . $main::RVT_cfg->{morgueInfoXML}) or RVT_log('CRIT', "could not create XML file");
+  flock ($XMLFile, 2);
   XMLout($main::RVT_cases, Rootname => "RVTmorgueInfo", OutputFile => $XMLFile);
-  close XMLFile;
-  
-  unlink($lockFile) or die RVT_log('CRIT', "could not delete lock file");
+  close $XMLFile;
   
 }
 

@@ -297,7 +297,6 @@ sub RVT_set_level ($) {
         my $new = shift(@_);
         if (!$new) {
                 $RVT_level = {};
-                return 1;
         }
 
         my $new_format = RVT_check_format($new);
@@ -314,8 +313,7 @@ sub RVT_set_level ($) {
         $RVT_level->{disk}      = RVT_get_disknumber ($new);
         $RVT_level->{partition} = RVT_get_partitionnumber ($new);
 
-        print "\n new format: $RVT_level->{type}\n";
-        return 1;
+        print "\n new object type: $RVT_level->{type}\n";
 }
 
 
@@ -412,14 +410,25 @@ sub RVT_shell_function_exec ($$) {
             
             foreach my $obj ( @objects ) {
             
+            	my $rfun;
+            	
                 RVT_log('INFO', "executing ". $RVT_level->{tag} .": ". $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj));
+                RVT_cmd_log ( $RVT_level->{tag}, $obj, $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj), 'STARTED' );
                 
                 eval {
-                    &{$fun}( @c[$cc+1..$#c-1], $obj );
+                    $rfun = &{$fun}( @c[$cc+1..$#c-1], $obj );
                 };
                 if ($@) { 
                     RVT_log('CRIT', "problem at execution: $@"); 
                     return 0; 
+                }
+                
+                if ($rfun) {
+                	RVT_log('INFO', "executed ". $RVT_level->{tag} .": ". $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj));
+                	RVT_cmd_log ( $RVT_level->{tag}, $obj, $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj), 'SUCCESS' );
+                } else {
+                	RVT_log('INFO', "failure ". $RVT_level->{tag} .": ". $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj));
+                	RVT_cmd_log ( $RVT_level->{tag}, $obj, $fun ." ".join(' ', @c[$cc+1..$#c-1], $obj), 'FAILURE' );
                 }
             }
             return 1;
