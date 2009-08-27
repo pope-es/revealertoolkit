@@ -95,7 +95,8 @@ sub RVT_script_mail_parsepsts {
             RVT_log ('ERR', "Error encountered while parsing $f\n");
         }
     }
-
+    
+    return 1;
 }
 
 
