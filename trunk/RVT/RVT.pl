@@ -227,6 +227,8 @@ RVTscripts::RVT_filelist::constructor;
 use RVTscripts::RVT_lnk;
 RVTscripts::RVT_lnk::constructor;
 
+use RVTscripts::RVT_report;
+RVTscripts::RVT_report::constructor;
 		
 #######################################################################
 #
