@@ -172,7 +172,7 @@ sub RVT_script_lnk_statistics
 	}
 	my @lnklist = RVT_get_allocfiles('\.lnk$', $disk) or die "FATAL: $!";
 	
-	return 1;∫
+	return 1;
 }
 
 
