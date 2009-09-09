@@ -30,6 +30,18 @@
 #    http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 
+BEGIN {
+
+	# loading RVT libraries path
+	use FindBin;
+	use lib "$FindBin::Bin/../lib" ;
+
+	our $RVT_realPath = $FindBin::RealBin;
+	push (@INC, $RVT_realPath);
+
+}
+
+
 use Data::Dumper;
 use Getopt::Long;
 use XML::Simple;
