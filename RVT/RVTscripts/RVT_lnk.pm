@@ -59,9 +59,15 @@ my $morguepath;
 sub constructor {
    
    my $dumplnk = `dumplnk.pl -V`;
+   my $fstrings = `f-strings -h`;   
    
    if (!$dumplnk) {
         RVT_log ('ERR', 'RVT_lnk not loaded (couldn\'t find dumplnk)');
+        return;
+   }
+   
+   if (!$fstrings) {
+        RVT_log ('ERR', 'RVT_lnk not loaded (couldn\'t find f-strings)');
         return;
    }
    
@@ -112,10 +118,14 @@ sub RVT_script_lnk_generate
 
     open (FOUT, ">>$fout" ) or die "Error: $!";
 	foreach my $lnk (@lnklist) {
-		open (FDUMP, "$DUMPLNK '$lnk' |") or die "Error: $!";
+		open (FDUMP, "$DUMPLNK '$lnk' | cat -A |") or die "Error: $!";
 		my $file=<FDUMP>;
 		close FDUMP;
-		next unless ($file =~ /Invalid Lnk file header/ );
+		#TODO: do a proper conversion
+		$file =~ s/\^@//g;
+		$file =~ s/\$+$//mg;
+		#TODO END
+		next if ($file =~ /Invalid Lnk file header/ );
 		print FOUT $file;
 	}
 	close FOUT;
