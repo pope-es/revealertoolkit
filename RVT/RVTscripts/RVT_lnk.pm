@@ -70,9 +70,9 @@ sub constructor {
    $main::RVT_functions{RVT_script_lnk_generate } = 
    "generates a file (csv) with the information of all lnk files allocated in a disk\n
    script lnk generate";
-   $main::RVT_functions{RVT_script_lnk_statistics } = 
-   "generates a statistics file with the information of the files\n
-      script lnk statistics";
+   #$main::RVT_functions{RVT_script_lnk_statistics } = 
+   #"generates a statistics file with the information of the files\n
+   #   script lnk statistics";
 }
 
 
