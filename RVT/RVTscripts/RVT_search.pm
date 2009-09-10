@@ -442,7 +442,7 @@ sub RVT_script_search_clusters  {
     close (F);
     
     print "\n\nScanning morgues ...\n";
-    RVT_images_scanall();
+    RVT_images_scan('all');
     
     my %fnh;  # $fnh {$searchespath/$f-$part} = filehandler for writing in the file
               # one for every busq-partition couple (with results)

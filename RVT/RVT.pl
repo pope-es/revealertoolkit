@@ -152,7 +152,7 @@ do 'RVT_init.pl';
 
 
 RVT_log ('INFO', 'loading configuration');
-RVT_images_scanall() unless ( RVT_images_loadconfig() );
+RVT_images_scan('all') unless ( RVT_images_loadconfig() );
 RVT_shell(); 
 exit;
 
