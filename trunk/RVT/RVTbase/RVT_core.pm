@@ -267,12 +267,13 @@ sub RVT_get_casenumber ($) {
     
     my $value = shift;
     if ($value =~ /^(\d{6})/) { 
-        $value = $1; 
-        return $value if ($main::RVT_cases->{case}{$value});
-        return 0;
+        #$value = $1; 
+        #return $value if ($main::RVT_cases->{case}{$value});
+        #return 0;
+        return $1;
     }
-    for ( keys %{$main::RVT_cases->{case}} ) { if ($main::RVT_cases->{case}{$_}{code} eq $value) {return $_;} }
-    
+    #for ( keys %{$main::RVT_cases->{case}} ) { if ($main::RVT_cases->{case}{$_}{code} eq $value) {return $_;} }
+
     return 0;
 }
 
