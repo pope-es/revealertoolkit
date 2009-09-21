@@ -139,8 +139,8 @@ if (!$RVT_batchmode and !$RVT_shellmode) { $RVT_shellmode = 1; }
 #######################################################################
 
 
-do 'RVT_init.pl';
-
+die ($!) unless ( do 'RVT_init.pl' );
+die ($@) if ($@);
 
 
 		
