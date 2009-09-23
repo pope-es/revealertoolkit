@@ -102,23 +102,32 @@ sub RVT_script_lnk_generate
 		RVT_log ('WARNING', 'No lnk file has been founded in allocfiles');
 		return 0;
 	}
+	printf ("kk: hay scalar %2d archivos de lnk",scalar (@lnklist));
 	
 	if (-e $fout){
-		RVT_log ('WARNING', 'File lnk.csv already exists. It\'s gonna be overwritten');
+		RVT_log ('WARNING', "File $fout already exists. It\'s gonna be overwritten");
 		unlink ($fout);
 	}
 
-    open (FOUT, ">>$fout" ) or die "Error: $!";
+	if   (! open (FOUT,">$fout" )) { RVT_log ("ERR", "$!"); return 0; }
 	foreach my $lnk (@lnklist) {
-		open (FDUMP, "$DUMPLNK '$lnk' | cat -A |") or die "Error: $!";
-		my $file=<FDUMP>;
-		close FDUMP;
+#		print "$lnk\n";
+#		open (FDUMP, "$DUMPLNK '$lnk' | cat -A |") or die "Error: $!";
+#		open (FDUMP,'$DUMPLNK "$lnk"|' ) or die "Error: $!";
+		#binmode (FDUMP,">:utf8");
+#		my $file=`$DUMPLNK "$lnk"`;		
+		open (FDUMP,"-|", "$DUMPLNK", $lnk) or die "Error: $!";
+		#my @file=<FDUMP>;
 		#TODO: do a proper conversion
-		$file =~ s/\^@//g;
-		$file =~ s/\$+$//mg;
+		#$file =~ s/\^@//g;
+		#$file =~ s/\$+$//;
 		#TODO END
-		next if ($file =~ /Invalid Lnk file header/ );
-		print FOUT $file;
+		while (<FDUMP>){
+		next if ($_ =~ /Invalid Lnk file header/ );
+		#next if ($file =~ /Invalid Lnk file header/ );
+		#print FOUT $file;
+		print FOUT $_;
+		}
 	}
 	close FOUT;
 	

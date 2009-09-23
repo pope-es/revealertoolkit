@@ -433,16 +433,16 @@ sub RVT_script_report_lnk
 	my @file_names = map {(split /;/)[7] } @file;
 
 	foreach my $i (keys %videos){
-		 $videos{$i}+= scalar grep (/\.$i/i,@file_names);
+		 $videos{$i}+= scalar grep (/\.$i$/i,@file_names);
 	}
 	foreach my $i (keys %documents){
-		 $documents{$i}+= scalar grep (/\.$i/i,@file_names) ;
+		 $documents{$i}+= scalar grep (/\.$i$/i,@file_names) ;
 	}
 	foreach my $i (keys %images){
-		 $images{$i}+= scalar grep (/\.$i/i,@file_names) ;
+		 $images{$i}+= scalar grep (/\.$i$/i,@file_names) ;
 	}
 	foreach my $i (keys %audios){
-		 $audios{$i}+= scalar grep (/\.$i/i,@file_names) ;
+		 $audios{$i}+= scalar grep (/\.$i$/i,@file_names) ;
 	}
 
 	foreach my $i (keys %videos){
