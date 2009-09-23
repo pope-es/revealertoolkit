@@ -46,15 +46,10 @@ my $RVT_moduleName = "RVT_lnk";
 my $RVT_moduleVersion = "1.0";
 my $RVT_moduleAuthor = "saritar";
 
-#my @videos=("mpeg", "avi", "mpg", "mp4", "mov", "mkv", "asf", "div", "divx", "qt", "rpm", "ogm", "vcd", "svcd");
-#my @documentos=("doc", "docx", "xls", "xlsx", "csv", "pdf", "ppt", "pptx");
-#my @imagenes=("png","jpg","jpeg","gif","bmp");
-#my @audio=("mp3","wav", "mp1","mp2", "ogg", "cda", "mid", "midi", "aif", "ra", "voc", "wma", "ac3", "au", "mcf", "mka");
 
 my $script="/usr/local/bin/recursos.pl";
 my $DUMPLNK="dumplnk.pl";
 
-my @pathusers=("Documents and Settings","Users");
 my $morguepath;
 sub constructor {
    
@@ -76,9 +71,6 @@ sub constructor {
    $main::RVT_functions{RVT_script_lnk_generate } = 
    "generates a file (csv) with the information of all lnk files allocated in a disk\n
    script lnk generate";
-   #$main::RVT_functions{RVT_script_lnk_statistics } = 
-   #"generates a statistics file with the information of the files\n
-   #   script lnk statistics";
 }
 
 
@@ -129,58 +121,6 @@ sub RVT_script_lnk_generate
 		print FOUT $file;
 	}
 	close FOUT;
-	
-	return 1;
-}
-
-
-sub RVT_script_lnk_statistics
-{
-    # not ready yet
-    return;
-    
-	my ( $disk ) = @_;
-
-	$disk = $main::RVT_level->{tag} unless $disk;
-	if (RVT_check_format($disk) ne 'disk') { print "ERR: that is not a disk\n\n"; return 0; }
-	$morguepath = RVT_get_morguepath($disk);
-	if (! $morguepath) { print "ERR: there is no path to the morgue!\n\n"; return 0};
-
-	my $lnkpath= "$morguepath/output/lnk";
-	if (! -e $lnkpath){
-	        my @args = ('mkdir', $lnkpath);
-		system (@args);
-	}
-	if (! -e $script  ){
-	        print "El programa $script no existe\n";
-		return 0;
-	}
-	if(! -X $script) {
-		print "El programa $script no tiene permisos de ejecución\n";
-		return 0;
-	}	
-	my $mntpath= "$morguepath/mnt";
-        if (! -e $mntpath){
-		print "Error la partición no está montada\n";
-		return 0;
-        }
-	my $ad = RVT_split_diskname($disk);
-	my %parts = %{$main::RVT_cases->{case}{$ad->{case}}{device}{$ad->{device}}{disk}{$ad->{disk}}{partition}};
-	my $partition;
-	my $mydocs;
-	foreach $partition ( keys %parts)
-	{
-		if (-e "$mntpath/p$partition/$pathusers[0]"){
-			$mydocs="$pathusers[0]"
-		}elsif (-e "$mntpath/p$partition/$pathusers[1]") {
-			$mydocs="$pathusers[1]"
-		}else{	
-			print "No existe la ruta de $pathusers[0] ni $pathusers[1]\n";
-			next;
-		}
-		
-	}
-	my @lnklist = RVT_get_allocfiles('\.lnk$', $disk) or die "FATAL: $!";
 	
 	return 1;
 }
