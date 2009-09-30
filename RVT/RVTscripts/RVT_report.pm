@@ -601,7 +601,7 @@ sub RVT_script_report_lnk2csv
 	my @dates;my @datesf; my @tm; my $fileout;
 	
 	if (scalar(%lnks) > 0){ 
-		my $fileout=$lpath ."/report" ."_lnk_" . "$ltype" . "_$date".".csv";
+		my $fileout=$lpath ."/". $disk  ."_lnk_" . "$ltype" . "_$date".".csv";
 		if (!open (FREP,">$fileout" )) {RVT_log ("ERR","The file report can not be created"); return 0;}
 		else {print "All results exported to $fileout successfully\n" }
 		if ($ltype =~ /all/i){ #print headers
