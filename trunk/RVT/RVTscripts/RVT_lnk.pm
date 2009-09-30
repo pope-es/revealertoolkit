@@ -111,12 +111,13 @@ sub RVT_script_lnk_generate
 
 	if   (! open (FOUT,">$fout" )) { RVT_log ("ERR", "$!"); return 0; }
 	foreach my $lnk (@lnklist) {
-#		print "$lnk\n";
 #		open (FDUMP, "$DUMPLNK '$lnk' | cat -A |") or die "Error: $!";
 #		open (FDUMP,'$DUMPLNK "$lnk"|' ) or die "Error: $!";
 		#binmode (FDUMP,">:utf8");
 #		my $file=`$DUMPLNK "$lnk"`;		
 		open (FDUMP,"-|", "$DUMPLNK", $lnk) or die "Error: $!";
+		#binmode (FDUMP,":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
+		#binmode (FDUMP,":crlf") || die "Can't binmode to cp1252 encoding\n";
 		#my @file=<FDUMP>;
 		#TODO: do a proper conversion
 		#$file =~ s/\^@//g;

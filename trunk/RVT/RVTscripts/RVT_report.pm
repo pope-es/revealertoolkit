@@ -27,6 +27,10 @@ use File::Temp qw ( tempfile );
 use File::Path qw(mkpath);
 use Time::Local;
 use Time::localtime;
+use Date::Manip;
+#use open "IN" => ":encoding(cp1252)",
+#	"OUT"=> ":utf8";
+use open "IO" => ":encoding(cp1252):utf8";
 #use warnings;
 
    BEGIN {
@@ -38,7 +42,8 @@ use Time::localtime;
        @ISA         = qw(Exporter);
        @EXPORT      = qw(   &constructor
                             &RVT_script_report_search2pdf
-                            &RVT_script_report_lnk
+                            &RVT_script_report_lnkstats
+                            &RVT_script_report_lnk2csv
                         );
        
        
@@ -63,9 +68,11 @@ sub constructor {
 
 
    $main::RVT_functions{RVT_script_report_search2pdf} = "Creates a LaTex and pdf file, removing non-printable characters,for each ibusq-type-file generated from the keyword searches proccess\n   report search2pdf";
-   $main::RVT_functions{RVT_script_report_lnk } =  "generates a statistics file with the information of the files\n
+   $main::RVT_functions{RVT_script_report_lnkstats } =  "generates a statistics file with the information of the files\n
       script lnk statistics";
-
+   $main::RVT_functions{RVT_script_report_lnk2csv } =  "generates a final report based on the lnk file\n
+Arguments: type (usb|net|local|cdrom|all) , date in format YYYY[DDMM]  (optional) \n
+Ex: script report lnk2csv local 200902";
 }
 
 sub RVT_script_report_search2pdf {
@@ -207,7 +214,7 @@ sub RVT_script_report_search2pdf {
 	unlink ( <$reportssearchespath/*.aux>,  <$reportssearchespath/*.out>,  <$reportssearchespath/*.log>, <$reportssearchespath/*.tex> );
 	
 }
-sub RVT_script_report_lnk
+sub RVT_script_report_lnkstats
 {
 
 	my ( $disk ) = @_;
@@ -483,13 +490,144 @@ sub RVT_script_report_lnk
 	
 	return 1;
 }
+
+
+sub RVT_script_report_lnk2csv
+# Arguments: type, date
+## Type: usb,local,cdrom, net, all.
+## Date: YYYY[MMDD] or a date+periof of time. Ex: today -1year, 2009 +6months. It does not accept two periods like: 2009 -6months +2days.
+{
+    	#my ( $ltype, $date, $disk ) =  (@_);
+    	my  $ltype =  shift @_;
+	my ($date, $disk)= (@_);
+	if (!$ltype)  {RVT_log("ERR", "List of arguments invalid"); return 0} 
+	print "Tipo: $ltype, Fecha: $date\n";
+	
+	my $morguepath; my $lpath; my $datef;
+	
+	$disk = $main::RVT_level->{tag} unless $disk;
+	$date="all" unless $date;
+	if ( $ltype !~ /^usb$/i and $ltype !~ /^local$/i and $ltype !~ /^cdrom$/i and $ltype !~ /^net$/i and $ltype !~ /^all$/i)  {RVT_log ("ERR", "Argument must be: usb | local | cdrom | net | all"); return 0 };
+
+	my (@t, $tmin , $tmax, $sep, $interval, $sep);
+	if ($date ne "all"){
+		if ($date =~ /\+/){
+			$sep="+";
+			@t  = split ('\+',$date);
+			if (scalar(@t) > 2) { RVT_log ("ERR","Error in date interval\n"); return 0;  }
+		}elsif ($date =~ /-/){
+			$sep="-";
+			@t  = split ('-',$date);
+			if (scalar(@t) > 2) { RVT_log ("ERR","Error in date interval\n"); return 0;  }
+		}# else there is no interval	
+		if (@t)
+		{	
+	   	#	$tmin = $t[0];
+	   		if (!($tmin=ParseDate($t[0])) ) { RVT_log ("ERR", "Error in date format: " . $t[0]. " Example: YYYY,YYYYMM, YYDD, YYYYMMDD, etc.\n") ; return 0 };
+			if (!(ParseDate($t[1]))){  RVT_log ("ERR", "Error in date format of the interval: " . $t[1]. "\nExample: +2years, -2year, +2yr, +1mon, -8months, -2weeks, -2wk, +8day etc.\nFor more information man see 'Date::Manip'\n") ; return 0
+			}else{	$interval= $sep . $t[1] ;}
+			if ($date =~ /\+/){
+				$tmax = DateCalc($tmin,$interval);
+			}else{ # es -
+				$tmax = $tmin;
+				$tmin = DateCalc ($tmin, $interval);
+			}
+ 			if (!$tmin and !$tmax and ($tmin gt $tmax)){ RVT_log ("ERR", "Error in date interval\n") ; return 0 ;}
+			print "Interval: $interval , Max: $tmax, Min: $tmin\n";
+		}elsif (!ParseDate($date))  { RVT_log ("ERR", "Error in date format: $date\n") ; return 0  ;}
+#		print "date max: $tmax , date min: $tmin\n";
+	}
+	if (RVT_check_format($disk) ne 'disk') { RVT_log("ERR"," that is not a disk\n\n"); return 0; }
+	$morguepath = RVT_get_morguepath($disk);
+	if (! $morguepath) { RVT_log ( "ERR", "there is no path to the morgue!\n\n"); return 0 };
+	$lpath = $morguepath . "/output/reports/lnk";
+	if (! -e $lpath){
+		mkpath ($lpath);
+	}
+	if (!open (FLNK, "<$morguepath/output/lnk/$disk"."_lnk.csv")) { RVT_log ("ERR","The lnk file does not exist\n");  return 0;} 
+	#if (!open (FLNK, "<:encoding(cp1252)","$morguepath/output/lnk/$disk"."_lnk.csv")) { RVT_log ("ERR","The lnk file does not exist\n");  return 0;} 
+#######################	
+	binmode (FLNK,":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";	
+#######################	
+	my @file = <FLNK>;
+	my @list; my @field ; my @line; my $name; 
+	if ($ltype =~ /^local$/i){
+		@list = grep (/;Fixed \(Hard Disk\);/,@file)
+	}elsif ($ltype =~ /^usb$/i ) {
+		@list = grep (/;Removable \(Floppy,Zip,USB,etc.\);/,@file);
+	}elsif ($ltype =~ /^net$/i) {
+		@list = grep (/;Network;/,@file);
+	}elsif ($ltype =~ /^cdrom$/i){
+	 	@list = grep (/;CD-ROM;/,@file);
+	}
+	elsif ($ltype=~ /^all$/i) {@list=@file;} # All devices 
+	my %lnks; my $p; my $basename; my $dateact; my $diffdates; my $err;
+	foreach my $l (@list)
+	{
+       		chomp($l);
+	        @field=split(/;/,$l);
+		$name=$field[7];
+		if ( ( $name  !~ /^$/ ) and  ($date eq "all"  or  ( !($interval)   and  ($field[1] =~ /^$date/) ) or ($interval and Date_Cmp($field[1],$tmin) >= 0   and Date_Cmp($field[1],$tmax) <= 0  )  ) )
+		{ # si el nombre del fichero o directorio no contiene nada (xej: es un acceso directo a E: no aparece
+			$p->{mtime}=convertepochsec ($field[0]);
+			$p->{atime}=convertepochsec ($field[1]);
+			$p->{ctime}=convertepochsec ($field[2]);
+			$p->{device}=$field[3];
+			$p->{volume}=$field[5];
+			$p->{name}=$name;
+			$p->{path}=$field[8];
+			$p->{size}=$field[9];
+			if ($ltype !~ /^all$/i){ # if all types are listed there is another column: Device Type
+				$basename=$name.";".$p->{volume}.";".$p->{path}.";".$p->{size};
+			}else { $basename=$name.";" . $p->{volume}. ";" . $p->{path} . ";" . $p->{device}.";". $p->{size}; }
+
+			if (! exists $lnks{$basename})	{
+				$lnks{$basename}=$p->{mtime}.";".$p->{atime}.";". $p->{ctime} ;
+			}else
+			{
+				my @fexists=split (/;/,$lnks{$basename});
+				if ($fexists[0] < $p->{mtime}){
+					$lnks{$basename}=$p->{mtime}.";".$p->{atime}.";". $p->{ctime} ;
+				}
+				elsif ($fexists[1] < $p->{atime} ){
+					$lnks{$basename}=$p->{mtime}.";".$p->{atime}.";". $p->{ctime} ;
+				}
+				elsif ($fexists[2] < $p->{ctime} ){
+					$lnks{$basename}=$p->{mtime}.";".$p->{atime}.";". $p->{ctime} ;
+				}
+			}
+		}
+	}
+	my @dates;my @datesf; my @tm; my $fileout;
+	
+	if (scalar(%lnks) > 0){ 
+		my $fileout=$lpath ."/report" ."_lnk_" . "$ltype" . "_$date".".csv";
+		if (!open (FREP,">$fileout" )) {RVT_log ("ERR","The file report can not be created"); return 0;}
+		else {print "All results exported to $fileout successfully\n" }
+		if ($ltype =~ /all/i){ #print headers
+                  	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Dispositivo;Tamaño
+\n";            }else{
+                     	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Tamaño\n";
+                }
+		foreach my $ln (keys %lnks)
+		{
+			@dates = split(/;/,$lnks{$ln});
+			for (my $i=0;$i<3;$i++){
+				$tm[$i] = localtime ($dates[$i]);
+			}
+			printf FREP ("%02d/%02d/%04d %02d:%02d:%02d;%02d/%02d/%04d %02d:%02d:%02d;%02d/%02d/%04d %02d:%02d:%02d;$ln\n", $tm[0]->mday, $tm[0]->mon +1, $tm[0]->year + 1900,$tm[0]->hour, $tm[0]->min, $tm[0]->sec, $tm[1]->mday, $tm[1]->mon +1, $tm[1]->year + 1900,$tm[1]->hour, $tm[1]->min, $tm[1]->sec, $tm[2]->mday, $tm[2]->mon +1, $tm[2]->year + 1900, $tm[2]->hour, $tm[2]->min, $tm[2]->sec) ;
+	
+		}
+	}else {print "There is no results for the arguments given\n";}
+
+}
 sub convertepoch 
 {
 	my $epoch; my $yyyy; my $mm; my $dd; my $date;
-#	if ($_ !~ /1\d[0-6]\d{5}/) #descartamos las fechas que anteriores a 1970
+#	if ($_ !~ /1\d[0-6]\d{5}/) #descartamos las fechas anteriores a 1970
 	if ($_ !~ /1\d[0-8]\d{5}/ || $_ !~ /19\d[0-6]\d[0-9]/ ) #descartamos las fechas anteriores a 1970
 	{
-		($yyyy, $mm, $dd) = ( $_[0] =~ /(\d{4})(\d{2})(\d{2})/) ; #date is YYYYMMDD HH:MM:SS form
+		($yyyy, $mm, $dd) = ( $_[0] =~ /(\d{4})(\d{2})(\d{2})/) ; #date is YYYYMMDD the rest is ignored
 		$epoch = eval {timelocal(0,0,0,$dd, $mm-1, $yyyy)};
 		$epoch = 0 if ($@);
 	}else{ 
@@ -499,5 +637,19 @@ sub convertepoch
 
 }
 
+sub convertepochsec
+{
+	my $epoch; my $yyyy; my $mm; my $dd; my $hh; my $min; my $sec; my $date;
+#	if ($_ !~ /1\d[0-6]\d{5}/) #descartamos las fechas anteriores a 1970
+	if ($_ !~ /1\d[0-8]\d{5}/ || $_ !~ /19\d[0-6]\d[0-9]/ ) #descartamos las fechas anteriores a 1970
+	{
+		($yyyy, $mm, $dd,$hh, $min, $sec ) = ( $_[0] =~ /(\d{4})(\d{2})(\d{2}) ?(\d{2}):(\d{2}):(\d{2})/) ; #date is YYYYMMDD HH:MM:SS form or YYYYMMDDHH:MM:SS 
+		$epoch = eval {timelocal($sec,$min,$hh,$dd, $mm-1, $yyyy)};
+		$epoch = 0 if ($@);
+	}else{ 
+		$epoch = 0 
+	}
+	return $epoch;
 
+}
 1; 
