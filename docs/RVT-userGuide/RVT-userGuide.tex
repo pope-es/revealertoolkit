@@ -1383,14 +1383,31 @@ output/reports/searches/ibusq_<search>.pdf
 
 Each pdf file contains all search terms highlighted and non printeble charachters are been replaced by dots (.).
 
-\subsection{\emph{script report lnk}}
+\subsection{\emph{script report lnkstats}}
 
 Generates statistics from the list of link files (.lnk) allocated at:
 \begin{verbatim}
 output/lnk/<disk>_lnk.csv
 \end{verbatim}
 
-Results are stored under \emph{output/reports/lnk/<disk>\_lnkstats.txt} and contains information about lnk files divided in three sections: Users, Devices and File types.
+Results are stored under \emph{output/reports/lnk/$<$disk$>$\_lnkstats.txt} and contains information about lnk files divided in three sections: Users, Devices and File types.
+
+\subsection{\emph{script report lnk2csv}}
+
+Generates a report (csv) filtering by device and date from the list of link files (.lnk) allocated at
+\begin{verbatim}
+output/lnk/<disk>_lnk.csv
+\end{verbatim}
+
+The parameters are:
+\begin{verbatim}
+script report lnk2csv <device> <date>
+\end{verbatim}
+where $<$device$>$ must be one of these: \emph{local}, \emph{usb}, \emph{net}, \emph{cdrom}, \emph{all}\\
+and $<$date$>$ is a date in format YYYYMMDD, YYYYMM, YYYY or a date interval (date addition or substraction) without blank spaces. 
+For example: 2008+1year, today-6months, 2007+2years, 200502-15day. For more information  see 'man Date::Manip'.
+
+Results are stored under \emph{output/reports/lnk/$<$disk$>$\_lnk\_$<$device$>$\_$<$date$>$.csv}.
 \chapter{Operational guides and tricks}
 
 
