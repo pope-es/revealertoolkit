@@ -4,8 +4,13 @@
 // given certain filters.
 // Also there is a class implementation for a generic command
 
+define('NOT_EXECUTED',0);
+define('WORKING',1);
+define('SUCCESS',2);
+
+
 class command{
-	var $filled = false; //gets if the command object has been filled
+	var $filled = false; //gets whether this command object has been filled (assigned)
 
 	var $name;
 	var $alias;
@@ -19,6 +24,9 @@ class command{
 	var $files;		//null = no files created
 	var $icon;		//null = no graphical representation (internal)
 	var $advanced;
+	var $expansion;
+	var $multiple;
+	var $viewer;	//null = no need to change current view
 
 	// CAN_EXECUTE checks for all required preconditions to accomplish
 	function can_execute (){
@@ -45,31 +53,7 @@ class command{
 			$perl->eval("use lib '" . RVT_PATH . "';");
 			$perl->eval("use $this->module;");
 			$perl->eval("use XML::Simple;");
-			$perl->eval('
-				my $configFileName;
-
-				$configFileName = \'/etc/rvt/rvt.cfg\' if (-e \'/etc/rvt/rvt.cfg\');
-				$configFileName = \'~/rvt.cfg\' if (-e \'~/rvt.cfg\');
-				$configFileName = \'rvt.cfg\' if (-e \'rvt.cfg\');
-				$configFileName = $RVT_optConfigFileName if ($RVT_optConfigFileName);
-
-				our $RVT_cfg = eval { XMLin ($configFileName, ForceArray => 1) };
-				if (!$RVT_cfg or $@) {
-					#default configuration
-					
-					$RVT_cfg->{paths}[0] = {
-						morgues => [\'/media/morgue\']    ,
-						images => [\'/media/morgue/images\']  ,
-						tmp => \'/tmp\'
-					};
-
-					$RVT_cfg->{tsk_path} = "/usr/local/bin";
-					$RVT_cfg->{morgueInfoXML} = "/media/morgue/RVTmorgueInfo.xml";
-					$RVT_cfg->{mount_umask} = "007";
-					$RVT_cfg->{mount_gid} = "1010";
-					$RVT_cfg->{log_level} = "0";
-				}
-			');
+			$perl->eval("require '" . INIT_MODULE . "'");
 			ob_start();
 			$perl->eval("$this->function(" . $this->proc_args() . ");");
 			$retVal = ob_get_contents();
@@ -77,6 +61,26 @@ class command{
 		}
 		return $retVal;
 	}
+
+	//ISEXECUTED returns a constant that specifies whether this command has
+	//performed any operation over a certain object
+	//Possible results are:
+	//	- NOT_EXECUTED
+	//	- WORKING
+	//	- SUCCESS
+	function isExecuted($object){
+		chdir(RVT_PATH);
+		$perl = new Perl();
+		$perl->eval("use lib '" . RVT_PATH . "';");
+		$perl->eval("use RVTbase::RVT_core;");
+		$perl->eval("use XML::Simple;");
+		$perl->eval("require '" . INIT_MODULE . "'");
+		ob_start();
+		$perl->eval(RVT_CHECK_EXECUTION . "(" . $this->proc_args() . ");");
+		$retVal = ob_get_contents();
+		ob_end_clean();
+	}
+	
 }
 
 require_once 'globals.php';
@@ -137,6 +141,9 @@ function map_command($command){
 	$c->files = ((bool)$command->files) ? load_files($command) : null;
 	$c->icon = ((bool)$command->icon) ? $command->icon : null;
 	$c->advanced = (bool)$command->advanced;
+	$c->expansion = (bool)$command->expansion;
+	$c->multiple = $command->multiple;
+	$c->viewer = ((bool)$command->viewer) ? $command->viewer : null;
 	
 	$c->filled = true;
 	return $c;

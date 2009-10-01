@@ -32,6 +32,8 @@ input
 	outline: none;
 }
 
+.clearlog { background: url(../img/era_small.png); }
+
 /* END PAGE-WIDE */
 
 /* BEGIN LAYOUT */
@@ -44,7 +46,7 @@ span.title
 
 div.header
 {
-	background-image: url(  '../img/header.png' );
+	background-image: url('../img/header.png' );
 	background-repeat: repeat-x;
 	color: white;
 	font-size: 8pt;
@@ -55,20 +57,20 @@ div.header
 
 div.init
 {
-	background-image: url(  '../img/back.png' );
+	background-image: url('../img/back.png' );
 	background-repeat: repeat-x;
 }
 
 td.msgleft
 {
-	background-image: url(  '../img/msgleft.png' );
+	background-image: url('../img/msgleft.png' );
 	background-repeat: no-repeat;
 	height: 24px;
 	width: 12px;
 }
 td.msgright
 {
-	background-image: url(  '../img/msgright.png' );
+	background-image: url('../img/msgright.png' );
 	background-repeat: no-repeat;
 	height: 24px;
 	width: 12px;
@@ -81,7 +83,7 @@ td.msg
 }
 div.msg
 {
-	background-image: url(  '../img/info.png' );
+	background-image: url('../img/info.png' );
 	float: left;
 	height: 16px;
 	margin-right: 5px;
@@ -91,14 +93,14 @@ div.msg
 
 td.errleft
 {
-	background-image: url(  '../img/errleft.png' );
+	background-image: url('../img/errleft.png' );
 	background-repeat: no-repeat;
 	height: 24px;
 	width: 12px;
 }
 td.errright
 {
-	background-image: url(  '../img/errright.png' );
+	background-image: url('../img/errright.png' );
 	background-repeat: no-repeat;
 	height: 24px;
 	width: 12px;
@@ -111,7 +113,7 @@ td.err
 }
 div.err
 {
-	background-image: url(  '../img/error.png' );
+	background-image: url('../img/error.png' );
 	float: left;
 	height: 16px;
 	margin-right: 5px;
@@ -141,9 +143,15 @@ label.command:hover
 label.disabled
 {
 	cursor: default;
-	color: Gray;
+	color: Silver;
 	text-decoration: none;
 	line-height: 25px;
+}
+input.disabled
+{
+	cursor: default;
+	filter: alpha(opacity=40);
+	opacity: 0.4;
 }
 
 /* END COMMANDS */
