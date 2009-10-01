@@ -56,13 +56,14 @@ function add_disks($text, $pattern){
 
 function add_partitions($text, $pattern){
 	global $children;
-	echo "<pre>$text</pre>";
 	if(preg_match_all($pattern, $text, $matches) > 0)
 	{
 		$i = 0; $max = count($matches[0]);
+		//sort results
+		sort($matches[1]);
 		//walk across the array and fill the children
 		while ($i < $max ){
-			$children[$_POST['dir']. '-p' . $matches[1][$i]] = PARTITION . ' ' . $matches[1][$i]; //return entry
+			$children[$_POST['dir'] . '-p' . $matches[1][$i]] = PARTITION . ' ' . $matches[1][$i]; //return entry
 			$i++;
 		}
 	}
@@ -130,27 +131,5 @@ if (count($children) > 0){
 	}
 	echo "</ul>";
 }
-
-/*
-	$files = scandir($root . $_POST['dir']);
-	natcasesort($files);
-	if( count($files) > 2 ) {
-		
-		// All dirs
-		foreach( $files as $file ) {
-			if( file_exists($root . $_POST['dir'] . $file) && $file != '.' && $file != '..' && is_dir($root . $_POST['dir'] . $file) ) {
-				echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . htmlentities($_POST['dir'] . $file) . "/\">" . htmlentities($file) . "</a></li>";
-			}
-		}
-		// All files
-		foreach( $files as $file ) {
-			if( file_exists($root . $_POST['dir'] . $file) && $file != '.' && $file != '..' && !is_dir($root . $_POST['dir'] . $file) ) {
-				$ext = preg_replace('/^.*\./', '', $file);
-				echo "<li class=\"file ext_$ext\"><a href=\"#\" rel=\"" . htmlentities($_POST['dir'] . $file) . "\">" . htmlentities($file) . "</a></li>";
-			}
-		}
-			
-	}
-*/
 
 ?>

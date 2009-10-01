@@ -24,8 +24,30 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
 
     <script type="text/javascript">
 	
+		function clearLOG(){
+			if (confirm("<?php echo ALERT_CLEAR_LOG ?>")) $('#LOG').empty();
+		}
+	
+		function writeLOG(msg){
+			var d = new Date()
+			$('#LOG').prepend('<span><b>['+ d.getDate() +'/'+ (d.getMonth()+1) +'/'+ d.getYear() + ' ' + d.toLocaleTimeString() + ']</b>: ' + msg + '</span><br/>');
+			if($('#LOG SPAN').length > 10) $('#LOG > *:gt(<?php echo MAX_LOG_ENTRIES ?>)').remove();
+		}
+	
+		function startTree(){
+			writeLOG('Building Navigation Tree...');
+			$('#casetree').fileTree({root: 'morgue'}, function(f) { /*$('#contentheader').html('Text Viewer');  $('.contentplaceholder').textViewer({file: f}); */});
+			writeLOG('Finished building Navigation Tree!');
+		}
+	
+		function startTextViewer(){
+            $('#contentheader').html('<?php echo TEXT_VIEWER ?>');
+            $('.contentplaceholder').textViewer({file: '/var/www/rwa/master.php'});
+		}
+	
         $(document).ready( function() {
-            $('body').layout({ 
+			writeLOG('Building layout...');
+			$('body').layout({ 
                 applyDefaultStyles: true,
                 north__applyDefaultStyles: false,
                 north__resizable: false,
@@ -33,18 +55,16 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
                 north__spacing_open: 0,
                 north__size: 65,
                 south__initClosed: true,
-                south__size: 150,
+                south__size: 155,
                 west__resizable: true,
                 west__border: 4,
                 west__maxSize: 300,
 				center__onresize: "adapt"
             });
-            
-            $('#casetree').fileTree({root: 'morgue'}, function(f) { /*$('#contentheader').html('Text Viewer');  $('.contentplaceholder').textViewer({file: f}); */});
-
-            $('#contentheader').html(<?php echo "'" . TEXT_VIEWER . "'" ?>);
-            $('.contentplaceholder').textViewer({file: '/home/rwa/revealertoolkit/docs/RVT-userGuide/100103-01-1-disk_TL.txt'});
-            
+			writeLOG('Finished building layout!');
+            startTree();
+			startTextViewer();
+            writeLOG('<span style="color:#00C000">Finished starting up!</span> RWA is ready.');
         });
     </script>
 
@@ -60,15 +80,15 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
 		<span class="title"><?php echo TITLE ?></span>
     </div>
     <div class="ui-layout-west">
-        <div class="header"><?php echo NAVIGATION ?></div>
-        <div style="min-height: 55%; max-height: 55%; overflow-y: auto; overflow-x: none; margin: 2px">
+        <div class="header"><?php echo NAVIGATION ?><div title="<?php echo REFRESH_TREE ?>" class="headerbutton reftree" id="reftree"></div></div>
+        <div style="min-height: 55%; max-height: 55%; overflow-y: auto; overflow-x: hidden; margin: 2px">
             <div id="casetree">
             </div>
         </div>
         <div class="header"><?php echo COMMANDS ?></div>
         <div id="commands">
-            <input type="image" src="img/partition-list.png" id="command1" style="vertical-align: text-top" />
-            <label for="command1" class="command">
+            <input type="image" src="img/partition-list.png" id="command1" style="vertical-align: text-top" class="disabled" disabled="disabled" />
+            <label for="command1" class="disabled">
                 Partition list</label><br />
             <input type="image" src="img/partition-info.png" id="command2" style="vertical-align: text-top" />
             <label for="command2" class="command">
@@ -88,8 +108,9 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
         </div>
     </div>
     <div class="ui-layout-south">
-        <div class="header"><?php echo LOG ?></div>
+        <div class="header"><?php echo LOG ?><div title="<?php echo CLEAR_LOG ?>" class="headerbutton clearlog" onclick="clearLOG()" ></div></div>
         <div>
+		<div id="LOG" style="max-height: 130px;overflow:auto"></div>
         </div>
     </div>
 </body>

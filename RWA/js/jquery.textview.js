@@ -33,19 +33,24 @@ if(jQuery) (function($){
 
 				$(this).each(function(){
 
+				var d = document.getElementById;
+				
 					function loadSearchArgs(){
 						o.search = document.getElementById('jquerytextviewq') ? document.getElementById('jquerytextviewq').value : '';
 						o.regexp = document.getElementById('jquerytextviewregexp') ? document.getElementById('jquerytextviewregexp').value : 0;
 						o.highlight = document.getElementById('jquerytextviewhighlight') ? document.getElementById('jquerytextviewhighlight').value : 'highlight';
+						if (o.search != '') writeLOG('<b>[TEXTVIEW]</b> Search parameters sent: <b>QUERY</b>: <em>' + o.search + '</em>&nbsp; <b>REGEXP</b>: '+ (o.regexp==0?'NO':'YES') + '&nbsp; <b>HIGHLIGHT</b>: ' + (o.highlight=='highlight'?'YES':'NO'));
 					}
 				
 					function nextMatch(){
 						o.direction = 1;
+						writeLOG('<b>[TEXTVIEW]</b> Searching next match...');
 						nextPage();
 					}
 					
 					function previousMatch(){
 						o.direction = -1;
+						writeLOG('<b>[TEXTVIEW]</b> Searching previous match...');
 						goToPage(Math.ceil((document.getElementById('jquerytextviewlastline').value) / o.lines));
 					}
 					
@@ -55,12 +60,16 @@ if(jQuery) (function($){
 					}
 					
 					function search(){
-						document.getElementById('jquerytextviewq').value = document.getElementById('jquerytextviewquery').value;
+						var q = document.getElementById('jquerytextviewquery').value;
+						if (q=='') {document.getElementById('jquerytextviewregexp').value = 0; return;}
+						writeLOG('<b>[TEXTVIEW]</b> Entering search mode...');
+						document.getElementById('jquerytextviewq').value = q;
 						o.direction = 1;
 						toIndex();
 					}
 					
 					function cancelSearch(){
+						writeLOG('<b>[TEXTVIEW]</b> Leaving search mode...');
 						document.getElementById('jquerytextviewregexp').value = 0;
 						document.getElementById('jquerytextviewq').value = document.getElementById('jquerytextviewquery').value = '';
 						toIndex();
@@ -68,21 +77,22 @@ if(jQuery) (function($){
 					
 					function highlight(){
 						var bef = document.getElementById('jquerytextviewhighlight').value;
+						writeLOG('<b>[TEXTVIEW]</b> '+(bef=='highlight'?'Disabling':'Enabling')+' highlight...');
 						var aft = (bef == 'highlight' ? 'nohighlight' : 'highlight');
 						$('#jquerytextviewhigh').removeClass(bef == 'highlight' ? 'btncentpressed' : 'btncent').addClass(bef == 'highlight' ? 'btncent' : 'btncentpressed');
 						$('.' + bef).removeClass(bef).addClass(aft);
 						document.getElementById('jquerytextviewhighlight').value = aft;
 					}
 				
-					function nextPage(){ goToPage((document.getElementById('jquerytextviewoffset').value - 1) / o.lines + 2); }
+					function nextPage(){ if (o.direction==0)writeLOG('<b>[TEXTVIEW]</b> Going to next page...'); goToPage((document.getElementById('jquerytextviewoffset').value - 1) / o.lines + 2); }
 
-					function previousPage(){ goToPage((document.getElementById('jquerytextviewoffset').value - 1) / o.lines); }
+					function previousPage(){ if (o.direction==0)writeLOG('<b>[TEXTVIEW]</b> Going to previous page...'); goToPage((document.getElementById('jquerytextviewoffset').value - 1) / o.lines); }
 
-					function firstPage(){ goToPage(1); }
+					function firstPage(){ writeLOG('<b>[TEXTVIEW]</b> Going to first page...'); goToPage(1); }
 
-					function lastPage(){ goToPage(99999999); }
+					function lastPage(){ writeLOG('<b>[TEXTVIEW]</b> Going to last page...'); goToPage(99999999); }
 
-					function toIndex() { goToPage(parseInt(document.getElementById('jquerytextviewindex').value)); }
+					function toIndex() { writeLOG('<b>[TEXTVIEW]</b> Going to page #'+document.getElementById('jquerytextviewindex').value+'...'); goToPage(parseInt(document.getElementById('jquerytextviewindex').value)); }
 					
 					function goToPage(n)
 					{
@@ -102,6 +112,7 @@ if(jQuery) (function($){
 									$('#jquerytextviewdown').bind('click', nextMatch);
 									$('#jquerytextviewhigh').bind('click', highlight);
 									$('#jquerytextviewcancel').bind('click', cancelSearch);
+									writeLOG('<b>[TEXTVIEW]</b> Page #'+$('#jquerytextviewindex')[0].value+' retrieved successfully!');
 								}
 							}
 						);

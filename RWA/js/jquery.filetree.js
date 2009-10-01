@@ -49,6 +49,8 @@ if(jQuery) (function($){
 			$(this).each( function() {
 				
 				function showTree(c, t) {
+					writeLOG('Expanding <em>'+t+'</em>...');
+					$("#reftree").unbind('click',startTree);
 					$(c).addClass('wait');
 					$(".jqueryFileTree.start").remove();
 					$.post(o.script, { dir: t }, function(data) {
@@ -79,14 +81,16 @@ if(jQuery) (function($){
 								$(this).parent().find('UL').slideUp({ duration: o.collapseSpeed, easing: o.collapseEasing });
 								$(this).parent().removeClass('expanded').addClass('collapsed');
 							}
-							$('.selected').removeClass('selected');
-							$(this).addClass('selected');
 						}
+						$('.selected').removeClass('selected');
+						$(this).addClass('selected');
 						h($(this).attr('rel'));
 						return false;
 					});
 					// Prevent A from triggering the # on non-click events
 					if( o.folderEvent.toLowerCase != 'click' ) $(t).find('LI A').bind('click', function() { return false; });
+					$("#reftree").bind('click',startTree);
+					writeLOG('Finished expanding <em>'+ ($(t).parent()[0].tagName=='DIV'?o.root:$(t).parent().find('LI A')[0].rel)+'</em>!');
 				}
 				// Loading message
 				$(this).html('<ul class="jqueryFileTree start"><li class="wait">' + o.loadMessage + '<li></ul>');

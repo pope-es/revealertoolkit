@@ -35,3 +35,15 @@ UL.jqueryFileTree A:hover {
 .jqueryFileTree LI.disk { background: url(../img/disk.png) left top no-repeat; }
 .jqueryFileTree LI.partition { background: url(../img/partition.png) left top no-repeat; }
 .jqueryFileTree LI.wait { background: url(../img/spinner.gif) left top no-repeat; }
+
+.headerbutton
+{
+	cursor: pointer;
+	float: right;
+	height: 14px;
+	position: relative;
+	top: -1px;
+	width: 14px;
+}
+
+.reftree{background: url(../img/ref_small.png);}

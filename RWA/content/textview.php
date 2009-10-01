@@ -23,19 +23,17 @@ function customError($errno, $errstr)
 	return true;
 } 
 
-function rsum($v, $w)
-{
-    //$v += $w;
-    //return $v;
-	return $v+=$w;
-}
+function rsum($v, $w){ return $v+=$w; }
 
-function replaceSearch($needle, $haystack, $regexp, $highlight){
+function specialEncode($txt,$high){ return strtr(htmlspecialchars($txt),array(''=>"<em class=\"$high\">",''=>'</em>')); }
+
+function replaceSearch($needle, $haystack, $regexp){
 	global $found;
+	$haystack = rtrim($haystack,"\r\n");
 	if ($regexp)
-		$res = preg_replace("/($needle)/","<em class=\"$highlight\">$1</em>",$haystack,-1,$f);
+		$res = preg_replace("/($needle)/","$1",$haystack,-1,$f);
 	else
-		$res = str_replace($needle,"<em class=\"$highlight\">$needle</em>",$haystack,$f);
+		$res = str_replace($needle,"$needle",$haystack,$f);
 	if ($res == '' && $haystack != '') $res = $haystack; //in case of an error
 	$found+=$f;
 	return $res;
@@ -60,9 +58,10 @@ function takeLines($f,$start,$length,$search,$regexp,$highlight){
 		}
 		$tmp = fgets($fid);
 		if ($search != '') //for efficiency purposes, not really necessary
-			$tmp = replaceSearch($search, ($tmp), $regexp, $highlight);
-		else
-			$tmp = ($tmp);
+			$tmp = replaceSearch($search, $tmp, $regexp);
+		$tmp = specialEncode($tmp, $highlight);
+		//else
+		//	$tmp = ($tmp);
 		array_push($lines, $tmp);
 		array_push($founds, $found);
 		if ($found) $lastLineFound = $cnt;
@@ -82,9 +81,10 @@ function takeLines($f,$start,$length,$search,$regexp,$highlight){
 			{
 				$tmp = fgets($fid);
 				if ($search != '')
-					$tmp = replaceSearch($search, ($tmp), $regexp, $highlight);
-				else
-					$tmp = ($tmp);
+					$tmp = replaceSearch($search, $tmp, $regexp);
+				$tmp = specialEncode($tmp,$highlight);
+				//else
+				//	$tmp = ($tmp);
 				array_push($lines, $tmp);
 				array_push($founds, $found);
 				$cnt++;
@@ -101,7 +101,7 @@ function takeLines($f,$start,$length,$search,$regexp,$highlight){
 				$founds = array();
 				$cnt = $max = 0;
 			}
-			array_push($lines, replaceSearch($search, (fgets($fid)), $regexp, $highlight));
+			array_push($lines, specialEncode(replaceSearch($search, fgets($fid), $regexp), $highlight));
 			array_push($founds, $found);
 			$max++;
 			$cnt++;
@@ -145,14 +145,14 @@ if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 	//form??
 	echo '<input type="hidden" id="jquerytextviewoffset" value="'.$offset.'" />';
 	echo '<input type="hidden" id="jquerytextviewcnt" value="'.$cnt.'" />';
-	echo '<input type="hidden" id="jquerytextviewq" value="'.$term.'" />';
+	echo '<input type="hidden" id="jquerytextviewq" value="'.htmlspecialchars($term).'" />';
 	echo '<input type="hidden" id="jquerytextviewregexp" value="'.($error_triggered != '' ? '0' : $_POST['regexp']).'" />';
 	echo '<input type="hidden" id="jquerytextviewhighlight" value="' . $_POST['highlight'] . '" />';
 	echo '<input type="hidden" id="jquerytextviewlastline" value="' . $lastLineFound . '" />';
 	echo '<div style="text-align: right;margin: 30px 30px 0 30px"><table cellpadding="0" cellspacing="0"><tr>';
 	//search box
 	echo '<td class="txtleft"></td>';
-	echo '<td style="width: ' . ($term == '' || $error_triggered != '' ? '250' : '202') . 'px"><input type="text" id="jquerytextviewquery" class="txtcent" value="' . $term . '" ' . ($term == ''  || $error_triggered != ''? '' : 'readonly="readonly"') . ' /></td>';
+	echo '<td style="width: ' . ($term == '' || $error_triggered != '' ? '250' : '202') . 'px"><input type="text" id="jquerytextviewquery" class="txtcent" value="' . htmlspecialchars($term) . '" ' . ($term == ''  || $error_triggered != ''? '' : 'readonly="readonly"') . ' /></td>';
 	echo '<td class="txtright"></td>';
 	if($term == '' || $error_triggered != ''){
 		echo sprintf($base,'search','cent','search',TIP_SEARCH);
@@ -191,6 +191,8 @@ if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 		echo '<li' . (($alt = !$alt) ? ' class="alt" ' : '') . "><pre>$line</pre></li>"; //print each line
 	echo '</ol></div>';
 	echo "<script type=\"text/javascript\">function adapt(){document.getElementById('jquerytextviewframe').style.height=(parseInt(document.getElementById('mainframe').style.height.replace(/px/,''))-120) + 'px';document.getElementById('jquerytextviewframe').style.width=(parseInt(document.getElementById('mainframe').style.width.replace(/px/,''))-60) + 'px';} adapt();</script>";
+}else{
+	echo "<h1>The file '".$_POST['file']."' was not found!</h1>";
 }
 
 restore_error_handler();
