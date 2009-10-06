@@ -102,7 +102,7 @@ sub RVT_script_lnk_generate
 		RVT_log ('WARNING', 'No lnk file has been founded in allocfiles');
 		return 0;
 	}
-	printf ("kk: hay scalar %2d archivos de lnk",scalar (@lnklist));
+	printf ("Se han encontrado %2d archivos de lnk",scalar (@lnklist));
 	
 	if (-e $fout){
 		RVT_log ('WARNING', "File $fout already exists. It\'s gonna be overwritten");

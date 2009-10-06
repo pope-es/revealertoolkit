@@ -71,8 +71,11 @@ sub constructor {
    $main::RVT_functions{RVT_script_report_lnkstats } =  "generates a statistics file with the information of the files\n
       script lnk statistics";
    $main::RVT_functions{RVT_script_report_lnk2csv } =  "generates a final report based on the lnk file\n
-Arguments: type (usb|net|local|cdrom|all) , date in format YYYY[DDMM]  (optional) \n
-Ex: script report lnk2csv local 200902";
+Arguments: type (usb|net|local|cdrom|all) , date in format YYYY[DDMM] or a date(+|-) a periof of time\n. 
+Ex: script report lnk2csv local 2009\n
+Ex: script report lnk2csv usb 2009+2year\n
+Ex: script report lnk2csv all today-6months\n
+For more information see 'man Date::Manip'";
 }
 
 sub RVT_script_report_search2pdf {
@@ -500,7 +503,7 @@ sub RVT_script_report_lnk2csv
     	#my ( $ltype, $date, $disk ) =  (@_);
     	my  $ltype =  shift @_;
 	my ($date, $disk)= (@_);
-	if (!$ltype)  {RVT_log("ERR", "List of arguments invalid"); return 0} 
+	if (!$ltype)  {RVT_log("ERR", "List of arguments invalid."); print_usage_lnk2csv(); return 0}
 	print "Tipo: $ltype, Fecha: $date\n";
 	
 	my $morguepath; my $lpath; my $datef;
@@ -651,5 +654,10 @@ sub convertepochsec
 	}
 	return $epoch;
 
+}
+
+sub print_usage_lnk2csv 
+{
+	print "script report lnk2csv [device] {date}\n\tdevice\t\tmust be one the following values: usb, net, local, cdrom or all\n\tdate\t\toptional. Must be in format YYYY[DDMM] or a date (+|-) a periof of time without blank spaces.\n\nExamples:\n\tscript report lnk2csv local 2009\n\tscript report lnk2csv usb 2009+2year\n\tscript report lnk2csv all today-6months\n\tscript report lnk2csv all 20090520+15day\n\tscript report lnk2csv cdrom 200805\n\nFor more information see 'man Date::Manip'\n";
 }
 1; 
