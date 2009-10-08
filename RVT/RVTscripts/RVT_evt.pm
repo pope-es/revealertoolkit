@@ -35,6 +35,7 @@ use strict;
        @EXPORT      = qw(   &constructor
                             &RVT_script_evt_stats
                             &RVT_script_evt_generate
+                            &RVT_script_evt_report
                         );
        
        
@@ -73,6 +74,10 @@ sub constructor {
    $main::RVT_functions{RVT_script_evt_generate } =
    "generates each folder with the information of all evt files allocated in a disk\n
    script evt generate";
+   
+   $main::RVT_functions{RVT_script_evt_report } =
+   "generates a report of all evt files allocated in a disk\n
+   script evt report";
 
 
 }
@@ -98,13 +103,13 @@ sub RVT_script_evt_generate {
 		print "opening file $f\n";
         	my $fpath = RVT_create_folder($evtpath, 'evt');
 
-        	if (!mkdir ("$fpath/contents")) { RVT_log("ERR","Failed to create output directories."); return 0};
+        	if (!mkdir ("$fpath")) { RVT_log("ERR","Failed to create output directories."); return 0};
         	if (!open (META, ">$fpath/RVT_metadata.txt") ) {RVT_log ("ERR", "Failed to create metadata files."); return 0};
             	print META "Source file: $f\n";
             	print META "Parsed by RVT module $RVT_moduleName version $RVT_moduleVersion\n";
         	close (META);
 
-        	$fpath="$fpath/contents";
+#        	$fpath="$fpath/contents";
         	#my @args = ('readpst', '-S', '-q', '-cv', '-o', $fpath, $f);
 		#if (!open (PEVT, "$parsevt $f |") ) {RVT_log ('ERR',"Error encountered while parsing $f\n"); return 0;
 		#}else{
@@ -126,7 +131,37 @@ sub RVT_script_evt_generate {
     	}
 
 }
+sub RVT_script_evt_report {
 
+        my $morguepath;
+        my ( $disk ) = @_;
+        $disk = $main::RVT_level->{tag} unless $disk;
+        if (RVT_check_format($disk) ne 'disk') { RVT_log ('WARNING', 'that is not a disk'); return 0; }
+
+        $morguepath = RVT_get_morguepath($disk);
+        if (! $morguepath) { RVT_log ('WARNING', 'there is no path to the morgue!'); return 0};
+        my $evtpath= "$morguepath/output/evt";
+        if (! -e $evtpath){
+            my @args = ('mkdir', $evtpath);
+            system (@args);
+        }
+        my $reportevt = "evtrpt.pl";
+
+	my @evtlist = RVT_get_allocfiles('evt$', $disk);
+        my $line;
+        foreach my $f (@evtlist) {
+                print "opening file $f\n";
+		open (PEVT,"-|", "$reportevt", $f) or die "Error: $!";
+                binmode (PEVT, ":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
+                #open (FOUT,">$evtpath/eport.csv") or die "Error: $!";
+		while (<PEVT>)
+                {	
+			print $_;
+		}
+	}
+}
 
 1;  
+
+
 
