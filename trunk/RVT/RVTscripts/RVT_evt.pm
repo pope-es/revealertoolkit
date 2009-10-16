@@ -100,10 +100,10 @@ sub RVT_script_evt_generate {
     	my @evtlist = RVT_get_allocfiles('evt$', $disk);
 	my $line;
     	foreach my $f (@evtlist) {
-		print "opening file $f\n";
+		print "Opening file $f\n";
         	my $fpath = RVT_create_folder($evtpath, 'evt');
-
-        	if (!mkdir ("$fpath")) { RVT_log("ERR","Failed to create output directories."); return 0};
+		print "Results stored on: $fpath\n\n";
+        	if (!($fpath)) { RVT_log("ERR","Failed to create output directories."); return 0};
         	if (!open (META, ">$fpath/RVT_metadata.txt") ) {RVT_log ("ERR", "Failed to create metadata files."); return 0};
             	print META "Source file: $f\n";
             	print META "Parsed by RVT module $RVT_moduleName version $RVT_moduleVersion\n";
@@ -121,7 +121,7 @@ sub RVT_script_evt_generate {
 		print FOUT "Fecha#Tipo#Usuario#Id. evento#Descripción\n";
 		while (<PEVT>)
 		{
-		#print Dumper @list;	
+			#print Dumper @list;	
 			chomp ($_);
 			my @field= split ('\|',$_ ) ;
 			my $time=ParseDateString("epoch $field[0]");
