@@ -121,7 +121,6 @@ apt-get install openssh-server unzip sudo vim dosfstools gcc g++ make
 apt-get install libxml-simple-perl libdate-manip-perl 
 
 adduser analyst
-addgroup forensics
 groupadd -g 1010 forensics
 adduser analyst forensics
 adduser analyst disk
@@ -136,8 +135,8 @@ echo -e "\n\numask 002" >> /etc/profile
 Download and install lastest The SleuthKit version. Code can be downloaded from \emph{http:// www.sleuthkit.org/ sleuthkit/ download.php}. For version 3.0.1, as root:
 
 \begin{verbatim}
-cd
-http://puzzle.dl.sourceforge.net/sourceforge/sleuthkit/sleuthkit-3.0.1.tar.gz
+cd /usr/local/src
+wget http://puzzle.dl.sourceforge.net/sourceforge/sleuthkit/sleuthkit-3.0.1.tar.gz
 tar -zxf sleuthkit-3.0.1.tar.gz
 cd sleuthkit-3.0.1
 ./configure
@@ -147,7 +146,9 @@ make install
 
 
 
-Also, adding additional loop devices is recommended. Modify your kernel boot to include the option \emph{max\_loop=32} to increase the number of loop devices to 32. Additionaly, these commands should be executed after every boot (so can be included in debian's /etc /init.d /bootmisc.sh).
+Also, adding additional loop devices is recommended. Modify your kernel boot to include the option \emph{max\_loop=32} to increase the number of loop devices to 32 (for example, modifying /boot/grub/menu.lst, if you are using grub, of course).
+
+Additionaly, these commands should be executed after every boot (so can be included in debian's /etc /init.d /bootmisc.sh).
 
 \begin{verbatim}
 for i in $(seq 8 31) ; do mknod /dev/loop$i b 7 $i ; done
@@ -177,13 +178,11 @@ chmod a+x RVT/RVT.pl
 
 \end{verbatim}
 
-while a proper perl package is prepared, this trick should be done to take RVT inside the path (if you know something better, please, let me know). Create \emph{/usr/local/bin/rvt} with the following content:
+
+Make a symbolic link in /usr/local/bin for easier use:
 
 \begin{verbatim}
-#!/bin/bash
-cd /usr/local/src/revealer/RVT
-perl RVT.pl $*
-cd - > /dev/null
+ln -s /usr/local/src/revealer/RVT.pl /usr/local/bin/rvt
 \end{verbatim}
 
 and give it proper permissions:
@@ -206,7 +205,7 @@ RVT is not able yet to create new image and case folders, so you must do it manu
 
 \begin{verbatim}
 mkdir /media/morgue/images/100101-ghost
-mkdir -p /media/morgue/100101-ghost/100101-01-1/{mnt/output}
+mkdir -p /media/morgue/100101-ghost/100101-01-1/{mnt,output}
 \end{verbatim}
 
 
@@ -223,6 +222,30 @@ mv 1-extend-part/ext-part-test-2.dd 100101-01-1.dd
 
 You can also create a image from scratch. See appendix \ref{anx:scratch} for an example.
 
+
+
+\section{Configuration file}
+
+RVT uses a text file to store the configuration of your system and morgues, named \emph{rvt.cfg}. Update this configuration before launching RVT. This file is an XML file with the following content:
+
+\begin{verbatim}
+<RVTcfg 
+	log_level	=	"0" 
+	morgueInfoXML	=	"/media/morgue/RVTmorgueInfo.xml" 
+	mount_gid	=	"1010" 
+	mount_umask	=	"007" 
+	tsk_path	=	"/usr/local/bin"
+	history_limit   =   "100"
+	>
+	
+	<paths 
+		tmp	=	"/tmp"
+		>
+    		<images>/media/morgue/images</images>
+    		<morgues>/media/morgue</morgues>
+  	</paths>
+</RVTcfg>
+\end{verbatim}
 
 
 \section{First test}
@@ -257,7 +280,7 @@ You can check that the directory \emph{/media/morgue/100101-ghost/100101-01-1/ou
 The same can be achieved creating a file with the commands and piping it to the RVT Shell using the \emph{-b} argument:
 
 \begin{verbatim}
-cat preforensics.rvt | RVT -b
+cat preforensics.rvt | rvt -b
 \end{verbatim}
 
 
@@ -1896,9 +1919,9 @@ At this time, these are the tools included:
 \begin{itemize}
 \item \emph{dumplnk.pl:} code adapted from Jacob Cunningham's lnk-parse, which parses the contents of Microsoft Windows LNK files and output it in CSV format
 \item \emph{csv2latex.pl:} useful script to fill \LaTeX tables with the content of a csv file
-\item \emph{guess_csv.pl:} guesses the separator character of a value-separated file
-\item \emph{plot_bars.pl:} using \emph{gnuplot}, generates bar plots from csv files
-\item \emph{plot_time.pl:} useful script for graphical representation of values versus time
+\item \emph{guess\_csv.pl:} guesses the separator character of a value-separated file
+\item \emph{plot\_bars.pl:} using \emph{gnuplot}, generates bar plots from csv files
+\item \emph{plot\_time.pl:} useful script for graphical representation of values versus time
 \end{itemize}
 
 

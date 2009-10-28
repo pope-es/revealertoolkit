@@ -31,6 +31,7 @@ my $configFileName;
 $configFileName = '/etc/rvt/rvt.cfg' if (-e '/etc/rvt/rvt.cfg');
 $configFileName = '~/rvt.cfg' if (-e '~/rvt.cfg');
 $configFileName = 'rvt.cfg' if (-e 'rvt.cfg');
+$configFileName = $RVT_realPath . '/rvt.cfg' if (-e $RVT_realPath . '/rvt.cfg');
 $configFileName = $RVT_optConfigFileName if ($RVT_optConfigFileName);
 
 RVT_defaultCfg();
