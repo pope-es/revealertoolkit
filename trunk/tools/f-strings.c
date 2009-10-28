@@ -1,6 +1,6 @@
 /*
 #
-#  Revealer Tools - fstrings
+#  Revealer Tools - f-strings
 #
 #    Copyright (C) 2009 Jose Navarro a.k.a. Dervitx
 #
