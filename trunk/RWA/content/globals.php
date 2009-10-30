@@ -6,6 +6,8 @@
 // provide human-readable/editable data
 //
 // There is also a section for the literals displayed across the web
+//
+// The function that stays in the bottom is the one used to initialize the calls to the RVT framework
 
 	/****************************
 	 *   GLOBAL CONFIGURATION   *
@@ -33,7 +35,10 @@
 	 ****************************/
 
 	define('TEXTVIEW_DEFAULT_LINEOFFSET' , 1);	//the default value if 'lineOffset' is not specified
-	define('TEXTVIEW_DEFAULT_LINES' , 20);		//the default value if 'lines' is not specified
+	define('TEXTVIEW_DEFAULT_LINES' , 25);		//the default value if 'lines' is not specified
+
+	define('TIMELINEVIEW_DEFAULT_LINEOFFSET' , 1);	//the default value if 'lineOffset' is not specified
+	define('TIMELINEVIEW_DEFAULT_LINES' , 25);		//the default value if 'lines' is not specified
 
 	
 	/****************************
@@ -54,13 +59,14 @@
 	//NOTE: for command literals, see the commands.xml file
 
 	//GENERAL INTERFACE
-	define('PAGE_TITLE', 'Revealer Toolkit Web Access - Pilot v0.1');
-	define('TITLE', 'Revealer Toolkit Web Access v0.1');
-	define('NAVIGATION', 'Navigation');
-	define('COMMANDS', 'Commands');
-	define('RESULTS', 'Results');
-	define('LOG', 'Console LOG');
-	define('TEXT_VIEWER', 'Text Viewer');
+	define('PAGE_TITLE' , 'Revealer Toolkit Web Access - Alpha');
+	define('TITLE' , 'Revealer Toolkit Web Access v.&alpha;lpha');
+	define('NAVIGATION' , 'Navigation');
+	define('COMMANDS' , 'Commands');
+	define('RESULTS' , 'Results');
+	define('LOG' , 'Console LOG');
+	define('TEXT_VIEWER' , 'Text Viewer');
+	define('TIMELINE_VIEWER', 'Timeline Viewer');
 	
 	//OBJECT TREE PLUGIN
 	define('DEVICE' , 'device');
@@ -71,12 +77,13 @@
 	//LOG MANAGEMENT
 	define('CLEAR_LOG' , 'Clear');
 	define('ALERT_CLEAR_LOG' , 'Do you really want to clear the log window?');
-	define('MAX_LOG_ENTRIES','100'); // *2!
+	define('MAX_LOG_ENTRIES',100);
 	
 	//COMMAND BOX
-	define('EMPTY_COMMAND_BOX','<em style="text-align:center">Select an object from the navigation tree to see the available commands here.');
+	define('EMPTY_COMMAND_BOX','<div style="text-align:center;margin-right:5px"><em>Select an object from the navigation tree to see the available commands here.</em></div>');
+	define('COMMAND_TEMPLATE','<input type="image" src="img/{icon}" id="{id}" onclick="launchCommand(this)" style="vertical-align: text-top" class="{class}" {disabled} /> <label for="{id}" class="{lbclass}">{alias}</label><br />');
 	
-	//TEXTVIEW PLUGIN
+	//COMMON PLUGIN LITERALS
 	define('MSG_SEARCH_NOT_FOUND', 'No more matches found in this direction.');
 	define('TIP_SEARCH', 'Search simple text');
 	define('TIP_SEARCH_REGEXP', 'Search using regular expressions');
@@ -89,4 +96,24 @@
 	define('TIP_JUMP_PAGE', 'Jump to specified page');
 	define('TIP_NEXT_PAGE', 'Go to next page');
 	define('TIP_LAST_PAGE', 'Go to last page');
+	define('TIP_NUM_LIN', 'Number of lines per page');
+	
+	//RVT-RWA initialization routine
+	//Returns the Perl object ready to use
+	$INIT_RVT = 0;
+	function InitRVT(){
+		if ($INIT_RVT == 1) return;
+		ob_start();
+		chdir(RVT_PATH);
+		$p = new Perl();
+		$p->eval("use lib '" . RVT_PATH . "';");
+		$p->eval("use XML::Simple;");
+		$p->eval("require '" . INIT_MODULE . "';");
+		$p->eval("RVT_images_loadconfig();");
+		ob_end_clean();
+		$INIT_RVT = 1;
+		return $p;
+	}
+	
+	
 ?>

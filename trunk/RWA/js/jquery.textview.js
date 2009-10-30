@@ -9,7 +9,7 @@
 //
 // Options:  file       - file to be opened; quit if not provided
 //           lineOffset - initial position in pages; default = 1
-//           lines      - length of the page in bytes; default = 25
+//           lines      - length of the page in bytes -- now replaced by the value of '#lines'
 //           script     - server script used to return file data
 //
 // History:
@@ -25,15 +25,13 @@ if(jQuery) (function($){
 			if (o.file != undefined) //only enter if 'file' is provided
 			{
 				if (o.script == undefined) o.script = 'content/textview.php';
-				if (o.lines == undefined) o.lines = 20;
+				//if (o.lines == undefined) o.lines = document.getElementById('jquerytextviewlinnum') ? document.getElementById('jquerytextviewlinnum').value : 0;
 				if (o.lineOffset == undefined) o.lineOffset = 1;
 				o.direction = 0;
 				
 				$sel = this.selector;
 
 				$(this).each(function(){
-
-				var d = document.getElementById;
 				
 					function loadSearchArgs(){
 						o.search = document.getElementById('jquerytextviewq') ? document.getElementById('jquerytextviewq').value : '';
@@ -51,7 +49,7 @@ if(jQuery) (function($){
 					function previousMatch(){
 						o.direction = -1;
 						writeLOG('<b>[TEXTVIEW]</b> Searching previous match...');
-						goToPage(Math.ceil((document.getElementById('jquerytextviewlastline').value) / o.lines));
+						goToPage(Math.ceil((document.getElementById('jquerytextviewlastline').value) / document.getElementById('jquerytextviewlinnum').value/*o.lines*/));
 					}
 					
 					function searchRegexp(){
@@ -84,9 +82,9 @@ if(jQuery) (function($){
 						document.getElementById('jquerytextviewhighlight').value = aft;
 					}
 				
-					function nextPage(){ if (o.direction==0)writeLOG('<b>[TEXTVIEW]</b> Going to next page...'); goToPage((document.getElementById('jquerytextviewoffset').value - 1) / o.lines + 2); }
+					function nextPage(){ if (o.direction==0)writeLOG('<b>[TEXTVIEW]</b> Going to next page...'); goToPage((document.getElementById('jquerytextviewoffset').value - 1) / document.getElementById('jquerytextviewlinnum').value/*o.lines*/ + 2); }
 
-					function previousPage(){ if (o.direction==0)writeLOG('<b>[TEXTVIEW]</b> Going to previous page...'); goToPage((document.getElementById('jquerytextviewoffset').value - 1) / o.lines); }
+					function previousPage(){ if (o.direction==0)writeLOG('<b>[TEXTVIEW]</b> Going to previous page...'); goToPage((document.getElementById('jquerytextviewoffset').value - 1) / document.getElementById('jquerytextviewlinnum').value/*o.lines*/); }
 
 					function firstPage(){ writeLOG('<b>[TEXTVIEW]</b> Going to first page...'); goToPage(1); }
 
@@ -97,7 +95,7 @@ if(jQuery) (function($){
 					function goToPage(n)
 					{
 						loadSearchArgs();
-						$.post(o.script, { file: o.file, lineOffset: (n - 1) * o.lines + 1, lines: o.lines, search: o.search, direction: o.direction, regexp: o.regexp, highlight: o.highlight },
+						$.post(o.script, { file: o.file, lineOffset: (n - 1) * (document.getElementById('jquerytextviewlinnum')?document.getElementById('jquerytextviewlinnum').value:0) + 1, lines: document.getElementById('jquerytextviewlinnum')?document.getElementById('jquerytextviewlinnum').value:0/*o.lines*/, search: o.search, direction: o.direction, regexp: o.regexp, highlight: o.highlight },
 							function(data) {
 								if(data != ''){
 									$($sel).html(data);

@@ -24,7 +24,6 @@ class command{
 	var $files;		//null = no files created
 	var $icon;		//null = no graphical representation (internal)
 	var $advanced;
-	var $expansion;
 	var $multiple;
 	var $viewer;	//null = no need to change current view
 
@@ -48,14 +47,10 @@ class command{
 	// and returns the bunch of text lines printed in the stdout, if so
 	function execute (){
 		if ($this->can_execute()){
-			chdir(RVT_PATH);
-			$perl = new Perl();
-			$perl->eval("use lib '" . RVT_PATH . "';");
-			$perl->eval("use $this->module;");
-			$perl->eval("use XML::Simple;");
-			$perl->eval("require '" . INIT_MODULE . "'");
+			$p = InitRVT();
+			$p->eval("use $this->module;");
 			ob_start();
-			$perl->eval("$this->function(" . $this->proc_args() . ");");
+			$p->eval("$this->function(" . $this->proc_args() . ");");
 			$retVal = ob_get_contents();
 			ob_end_clean();
 		}
@@ -70,13 +65,10 @@ class command{
 	//	- SUCCESS
 	function isExecuted($object){
 		chdir(RVT_PATH);
-		$perl = new Perl();
-		$perl->eval("use lib '" . RVT_PATH . "';");
-		$perl->eval("use RVTbase::RVT_core;");
-		$perl->eval("use XML::Simple;");
-		$perl->eval("require '" . INIT_MODULE . "'");
+		$p = InitRVT();
+		$p->eval("use RVTbase::RVT_core;");
 		ob_start();
-		$perl->eval(RVT_CHECK_EXECUTION . "(" . $this->proc_args() . ");");
+		$p->eval(RVT_CHECK_EXECUTION . "(" . $this->proc_args() . ");");
 		$retVal = ob_get_contents();
 		ob_end_clean();
 	}
@@ -100,8 +92,8 @@ function load_xml(){
 // returns an array with the set of applicable objects for this command
 function load_objects($command){
 	$retVal = array();
-	foreach($command->objects->object as $object)
-		$retVal[] = (string)$object;
+	foreach($command->objects as $object)
+		$retVal[] = (string)$object->object;
 	return $retVal;
 }
 
@@ -137,12 +129,11 @@ function map_command($command){
 	$c->function = (string)$command->function;
 	$c->args = ((bool)$command->args) ? load_args($command) : null;
 	$c->pre = NULL; //((bool)$command->pre) ? load_pre($command) : null;
-	$c->standard = ((bool)$command->standard) ? $command->standard : null;
+	$c->standard = ((bool)$command->standard) ? (string)$command->standard : null;
 	$c->files = ((bool)$command->files) ? load_files($command) : null;
-	$c->icon = ((bool)$command->icon) ? $command->icon : null;
+	$c->icon = ((bool)$command->icon) ? (string)$command->icon : null;
 	$c->advanced = (bool)$command->advanced;
-	$c->expansion = (bool)$command->expansion;
-	$c->multiple = $command->multiple;
+	$c->multiple = (bool)$command->multiple;
 	$c->viewer = ((bool)$command->viewer) ? $command->viewer : null;
 	
 	$c->filled = true;
@@ -153,7 +144,7 @@ function map_command($command){
 function command_by_name($name){
 	$tmp = load_xml();
 	foreach ($tmp->command as $command)
-		if((string) $command->name == $name)
+		if((string)$command->name == $name)
 			return map_command($command);
 	return null;
 }
@@ -163,7 +154,7 @@ function commands_by_object($object){
 	$retVal = array();
 	$tmp = load_xml();
 	foreach ($tmp->command as $command)
-		if((load_objects($command) === null) || (in_array($object, load_objects($command))))
+		if((in_array($object, load_objects($command))) || (count(load_objects($command))==0))
 			$retVal[] = map_command($command);
 	return $retVal;
 }

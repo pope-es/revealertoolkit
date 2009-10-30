@@ -39,17 +39,16 @@ if(jQuery) (function($){
 			if( o.root == undefined ) o.root = 'morgue';
 			if( o.script == undefined ) o.script = 'content/filetree.php';
 			if( o.folderEvent == undefined ) o.folderEvent = 'click';
-			if( o.expandSpeed == undefined ) o.expandSpeed= 500;
-			if( o.collapseSpeed == undefined ) o.collapseSpeed= 500;
+			if( o.expandSpeed == undefined ) o.expandSpeed = 500;
+			if( o.collapseSpeed == undefined ) o.collapseSpeed = 500;
 			if( o.expandEasing == undefined ) o.expandEasing = null;
 			if( o.collapseEasing == undefined ) o.collapseEasing = null;
-			if( o.multiFolder == undefined ) o.multiFolder = true;
 			if( o.loadMessage == undefined ) o.loadMessage = 'Loading...';
 			
 			$(this).each( function() {
 				
 				function showTree(c, t) {
-					writeLOG('Expanding <em>'+t+'</em>...');
+					writeLOG('Expanding <em><b>'+t+'</b></em>...');
 					$("#reftree").unbind('click',startTree);
 					$(c).addClass('wait');
 					$(".jqueryFileTree.start").remove();
@@ -69,10 +68,6 @@ if(jQuery) (function($){
 						if( c || d || k ) {
 							if( $(this).parent().hasClass('collapsed') ) {
 								// Expand
-								if( !o.multiFolder ) {
-									$(this).parent().parent().find('UL').slideUp({ duration: o.collapseSpeed, easing: o.collapseEasing });
-									$(this).parent().parent().find('LI.' (c ? 'case' : (d ? 'device' : 'disk')) ).removeClass('expanded').addClass('collapsed');
-								}
 								$(this).parent().find('UL').remove(); // cleanup
 								showTree( $(this).parent(), escape($(this).attr('rel').match( /.*/ )) );
 								$(this).parent().removeClass('collapsed').addClass('expanded');
@@ -90,7 +85,7 @@ if(jQuery) (function($){
 					// Prevent A from triggering the # on non-click events
 					if( o.folderEvent.toLowerCase != 'click' ) $(t).find('LI A').bind('click', function() { return false; });
 					$("#reftree").bind('click',startTree);
-					writeLOG('Finished expanding <em>'+ ($(t).parent()[0].tagName=='DIV'?o.root:$(t).parent().find('LI A')[0].rel)+'</em>!');
+					writeLOG('Finished expanding <em><b>'+ ($(t).parent()[0].tagName=='DIV'?o.root:$(t).parent().find('LI A')[0].rel)+'</b></em>!');
 				}
 				// Loading message
 				$(this).html('<ul class="jqueryFileTree start"><li class="wait">' + o.loadMessage + '<li></ul>');
@@ -101,3 +96,27 @@ if(jQuery) (function($){
 	});
 	
 })(jQuery);
+
+function loadCommands(obj){
+	$.post('content/cmdbox.php', { name: obj },
+		function(data) {
+			if(data != ''){
+				$('#commands').html(data);
+				writeLOG('Commands loaded successfully!');
+			}
+		}
+	);
+}
+
+function launchCommand(src){
+	alert(src.id);
+	// $.post('content/cmdexec.php', { name: src.id, target: ........, ¿extra: .....? },
+		// function(data) {
+			// if(data != ''){
+
+				// writeLOG('Command <em>' + src.id + '</em> launched!');
+			// }
+		// }
+	// );
+	
+}
