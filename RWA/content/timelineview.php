@@ -1,17 +1,17 @@
 <?php
 //
-// jQuery Text Dump PHP Connector
+// jQuery Timeline Dump
 //
 // Version 1.00
 //
 // Emili García Almazán
-// 17 July 2009
+// 15 October 2009
 //
 // History:
 //
 // 1.00 - released
 //
-// Returns a stream of text formated in a OL
+// Parses and formats timelines in a table
 //
 
 function dev($str){echo "$str     ";}
@@ -39,7 +39,7 @@ function replaceSearch($needle, $haystack, $regexp){
 	return $res;
 }
 
-function takeLines($f,$start,$length,$search,$regexp,$highlight){
+function takeLines($f,$start,$length,$search,$regexp,$highlight,$headers){
 	global $offset, $cnt, $found, $lastLineFound;
 
 	$fid = fopen($f,"r");
@@ -48,20 +48,22 @@ function takeLines($f,$start,$length,$search,$regexp,$highlight){
 	$lines = array();
 	$founds = array();
 	
+	//if 'headers' is not specified, read the first line and return it at the beginning
+	if ($headers == '') $headers = fgets($fid);
+	$max++;
+	
 	//omit heading offset, but buffer it
 	while($cnt < $start && !feof($fid))
 	{
 		if ($max == $length){
 			$lines = array();
+			array_push($lines,$headers); //restore the headers
 			$founds = array();
 			$max = 0;
 		}
 		$tmp = fgets($fid);
 		if ($search != '') //for efficiency purposes, not really necessary
 			$tmp = replaceSearch($search, $tmp, $regexp);
-		$tmp = specialEncode($tmp, $highlight);
-		//else
-		//	$tmp = ($tmp);
 		array_push($lines, $tmp);
 		array_push($founds, $found);
 		if ($found) $lastLineFound = $cnt;
@@ -75,6 +77,7 @@ function takeLines($f,$start,$length,$search,$regexp,$highlight){
 		if(!feof($fid))
 		{
 			$lines = array();
+			array_push($lines,$headers); //restore the headers
 			$founds = array();
 			$cnt = 0;
 			while($cnt < $length && !feof($fid))
@@ -82,9 +85,6 @@ function takeLines($f,$start,$length,$search,$regexp,$highlight){
 				$tmp = fgets($fid);
 				if ($search != '')
 					$tmp = replaceSearch($search, $tmp, $regexp);
-				$tmp = specialEncode($tmp,$highlight);
-				//else
-				//	$tmp = ($tmp);
 				array_push($lines, $tmp);
 				array_push($founds, $found);
 				$cnt++;
@@ -92,40 +92,93 @@ function takeLines($f,$start,$length,$search,$regexp,$highlight){
 			$offset += $cnt; //to beat the substraction that will be done later
 		}
 	}else{
+		if ($start == 1) array_push($lines,$headers); //restore the headers
 		$founds = array();
 		while(!feof($fid))
 		{
 			if ($max == $length){
 				if (array_reduce($founds,"rsum") > 0) break;
 				$lines = array();
+				array_push($lines,$headers); //restore the headers
 				$founds = array();
 				$cnt = $max = 0;
 			}
-			array_push($lines, specialEncode(replaceSearch($search, fgets($fid), $regexp), $highlight));
+			array_push($lines, replaceSearch($search, fgets($fid), $regexp));
 			array_push($founds, $found);
 			$max++;
 			$cnt++;
 			$offset++;
 		}
 	}
-	$offset -= ($cnt = count($lines));
+	$offset -= ($cnt = count($lines)-1); //-1 because of the headers!!
 	fclose($fid);
 	$found = array_reduce($founds, "rsum");
 	return $lines;
 }
 
+if (!function_exists('str_getcsv')) { 
+    function str_getcsv($input, $delimiter = ",", $enclosure = '"', $escape = "\\") { 
+        $fiveMBs = 5 * 1024 * 1024; 
+        $fp = fopen("php://temp/maxmemory:$fiveMBs", 'r+'); 
+        fputs($fp, $input); 
+        rewind($fp); 
+        $data = fgetcsv($fp, 1000, $delimiter, $enclosure); //  $escape only got added in 5.3.0 
+        fclose($fp); 
+        return $data; 
+    } 
+} 
+
+function parseLines($lines,$start,$columns,$expression,$delimiter,$highlight){
+	$newLines = array();
+	$first = true;
+	$newColumns = str_getcsv($columns);
+	foreach($lines as $line){
+		if (trim($line)=='') continue; //WARNING!
+		if ($expression=='') //use the delimiter
+			$chunks = str_getcsv($line,$delimiter);
+		else{ //use the expression
+			preg_match_all($expression,$line,$chunks,PREG_SET_ORDER);
+			$chunks = $chunks[0];
+			array_shift($chunks);
+		}
+		//render row header
+		if ($first)
+			$buffer="<th>#</th>";
+		else
+			$buffer = "<td class=\"rowHeader\">$start</td>";
+		$col = 0;
+		//render content cells
+		foreach($chunks as $chunk){
+			if (!(empty($newColumns) || in_array(++$col, $newColumns))) continue;
+			//check if we matched the search term inside the chunk
+			if (preg_match('/.*.+.*/',$chunk) > 0)
+				$chunk = specialencode($chunk,$highlight);
+			else
+				$chunk = str_replace('','',$chunk); //search term was between two chunks
+			$buffer = $buffer . ($first ? "<th>$chunk</th>" : "<td>$chunk</td>");
+		}
+		array_push($newLines,$buffer);
+		if(!$first) $start+=1;
+		$first = false;
+	}
+	return $newLines;
+}
+
 require_once 'globals.php';
 
-set_error_handler("customError");
+//set_error_handler("customError");
 
 $_POST['file'] = $root . urldecode($_POST['file']);
-$_POST['lineOffset'] = urldecode($_POST['lineOffset']);
+$_POST['lineOffset'] = urldecode($_POST['lineOffset']);	//add 1 if 'headers' is not specified
 $_POST['lines'] = urldecode($_POST['lines']);
 $term = $_POST['search']; //search term
 $_POST['direction'] = urldecode($_POST['direction']);
 $_POST['regexp'] = urldecode($_POST['regexp']);
 $_POST['highlight'] = urldecode($_POST['highlight']);
-
+$_POST['headers'] = urldecode($_POST['headers']); 		//if == '' then the values of the first line are used
+$_POST['columns'] = urldecode($_POST['columns']); 		//comma-separated zero-based indices of the displayed columns
+$_POST['expression'] = urldecode($_POST['expression']);	//regexp to perform preg_replace
+$_POST['delimiter'] = urldecode($_POST['delimiter']);	//only valid if 'expression' is not specified
 
 $offset = 1;		//counter to lineOffset
 $cnt = 0;			//counter of returned lines
@@ -136,24 +189,26 @@ eval ("\$term = \"$term\";");
 
 if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 
-	if ($_POST['lineOffset'] < 1) $_POST['lineOffset'] = TEXTVIEW_DEFAULT_LINEOFFSET;
-	if ($_POST['lines'] < 1) $_POST['lines'] = TEXTVIEW_DEFAULT_LINES;
+	if ($_POST['lineOffset'] < 1) $_POST['lineOffset'] = TIMELINEVIEW_DEFAULT_LINEOFFSET;
+	if ($_POST['lines'] < 1) $_POST['lines'] = TIMELINEVIEW_DEFAULT_LINES;
 
-	$lines = takeLines($_POST['file'], $_POST['lineOffset'], $_POST['lines'], $term, $_POST['regexp'], $_POST['highlight']); //read the lines in the range	
-	$base = '<td><input type="image" id="jquerytextview%s" class="btn%s" src="img/%s.png" title="%s" /></td>';
+	if ($_POST['delimiter'] == '' && $_POST['expression'] == '') $_POST['delimiter'] = ',';
+	$lines = takeLines($_POST['file'], $_POST['lineOffset'], $_POST['lines'], $term, $_POST['regexp'], $_POST['highlight'], $_POST['headers']); //read the lines in the range
+	$lines = parseLines($lines, $offset,$_POST['columns'], $_POST['expression'], $_POST['delimiter'], $_POST['highlight']);
 	
-	//<form>??
-	echo '<input type="hidden" id="jquerytextviewoffset" value="'.$offset.'" />';
-	echo '<input type="hidden" id="jquerytextviewcnt" value="'.$cnt.'" />';
-	echo '<input type="hidden" id="jquerytextviewq" value="'.htmlspecialchars($term).'" />';
-	echo '<input type="hidden" id="jquerytextviewregexp" value="'.($error_triggered != '' ? '0' : $_POST['regexp']).'" />';
-	echo '<input type="hidden" id="jquerytextviewhighlight" value="' . $_POST['highlight'] . '" />';
-	echo '<input type="hidden" id="jquerytextviewlastline" value="' . $lastLineFound . '" />';
+	$base = '<td><input type="image" id="jquerytimelineview%s" class="btn%s" src="img/%s.png" title="%s" /></td>';
+	
+	echo '<input type="hidden" id="jquerytimelineviewoffset" value="'.$offset.'" />';
+	echo '<input type="hidden" id="jquerytimelineviewcnt" value="'.$cnt.'" />';
+	echo '<input type="hidden" id="jquerytimelineviewq" value="'.htmlspecialchars($term).'" />';
+	echo '<input type="hidden" id="jquerytimelineviewregexp" value="'.($error_triggered != '' ? '0' : $_POST['regexp']).'" />';
+	echo '<input type="hidden" id="jquerytimelineviewhighlight" value="' . $_POST['highlight'] . '" />';
+	echo '<input type="hidden" id="jquerytimelineviewlastline" value="' . $lastLineFound . '" />';
 	echo '<div style="text-align: right;margin: 30px 30px 0 30px"><table cellpadding="0" cellspacing="0"><tr>';
 	//BEGIN SEARCH BOX
 	//textbox
 	echo '<td class="txtleft"></td>';
-	echo '<td style="width: ' . ($term == '' || $error_triggered != '' ? '250' : '202') . 'px"><input type="text" id="jquerytextviewquery" class="txtcent" value="' . htmlspecialchars($term) . '" ' . ($term == ''  || $error_triggered != ''? '' : 'readonly="readonly"') . ' /></td>';
+	echo '<td style="width: ' . ($term == '' || $error_triggered != '' ? '250' : '202') . 'px"><input type="text" id="jquerytimelineviewquery" class="txtcent" value="' . htmlspecialchars($term) . '" ' . ($term == ''  || $error_triggered != ''? '' : 'readonly="readonly"') . ' /></td>';
 	//buttons
 	if($term == '' || $error_triggered != ''){ //NOT in search mode
 		echo sprintf($base,'search','cent','search',TIP_SEARCH);
@@ -170,7 +225,7 @@ if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 	echo sprintf($base,'first','left','nav_first',TIP_FIRST_PAGE);
 	echo sprintf($base,'prev','cent','nav_prev',TIP_PREV_PAGE);
 	echo '<td class="txtleft"></td>';
-	echo '<td><input type="text" id="jquerytextviewindex" class="txtcent" value="' . (ceil($offset / $_POST['lines']) + ((($offset - 1) % $_POST['lines'] == 0) ? 0 : 1)) . '" style="font-weight: bold; text-align:right; width: 51px" /></td>';
+	echo '<td><input type="timeline" id="jquerytimelineviewindex" class="txtcent" value="' . (ceil($offset / $_POST['lines']) + ((($offset - 1) % $_POST['lines'] == 0) ? 0 : 1)) . '" style="font-weight: bold; timeline-align:right; width: 51px" /></td>';
 	echo sprintf($base,'go','cent','nav_jump',TIP_JUMP_PAGE);
 	echo sprintf($base,'next','cent','nav_next',TIP_NEXT_PAGE);
 	echo sprintf($base,'last','right','nav_last',TIP_LAST_PAGE);
@@ -179,7 +234,7 @@ if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 	echo '<td style="width: 15px"></td>';
 	echo '<td class="lblleft"><img src="img/numlin.png" title="'.TIP_NUM_LIN.'" /></td>';
 	echo '<td class="txtleft"></td>';
-	echo '<td><input type="text" id="jquerytextviewlinnum" class="txtcent" value="' . $_POST['lines'] . '" style="font-weight: bold; width: 51px" /></td>';
+	echo '<td><input type="timeline" id="jquerytimelineviewlinnum" class="txtcent" value="' . $_POST['lines'] . '" style="font-weight: bold; width: 51px" /></td>';
 	echo '<td class="edgeright"></td>';
 	//END #LINES/PAGE
 	echo '</tr></table></div>';
@@ -193,14 +248,14 @@ if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 			echo '<table id="msg" cellpadding="0" cellspacing="0" style="margin: 5px 30px"><tr><td class="msgleft"><td class="msg"><div class="msg" alt="Notice"></div><span id="msgtxt" style="line-height: 16px">' . MSG_SEARCH_NOT_FOUND . '</span></td><td class="msgright"></td></tr></table>';
 	}
 	//END NOTIFICATION MESSAGES
-	//BEGIN LINE LIST
+	//BEGIN LINE TABLE
 	echo '<div id="jqueryviewframe">';
-	echo "<ol class=\"jqueryTextView\" start=\"$offset\">";
+	echo '<table class="jqueryTimelineView" cellspacing="0">';
 	$alt = true;
 	foreach($lines as $line)
-		echo '<li' . (($alt = !$alt) ? ' class="alt" ' : '') . "><pre>$line</pre></li>"; //print each line
-	echo '</ol></div>';
-	//END LINE LIST
+		echo '<tr' . (($alt = !$alt) ? ' class="alt" ' : '') . ">$line</tr>"; //print each line
+	echo '</table></div>';
+	//END LINE TABLE
 	echo "<script type=\"text/javascript\">function adapt(){document.getElementById('jqueryviewframe').style.height=(parseInt(document.getElementById('mainframe').style.height.replace(/px/,''))-120) + 'px';document.getElementById('jqueryviewframe').style.width=(parseInt(document.getElementById('mainframe').style.width.replace(/px/,''))-60) + 'px';} adapt();</script>";
 }else{
 	echo "<h1>The file '".$_POST['file']."' was not found!</h1>";

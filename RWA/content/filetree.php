@@ -109,14 +109,23 @@ if ($_POST['dir'] == 'morgue'){//init root
 			break;
 		case 2: //clicked disk
 			//list partitions
+
+			/* // PLAN A
 			$c = command_by_name('images_partition_table');
 			if ($c != null)
 			{
 				global $OBJECT;
 				$OBJECT = $_POST['dir'];
 				add_partitions($c->execute(),$c->standard);
-				$class = 'partition';
-			}
+			}*/
+			
+			//PLAN B
+			$p = InitRVT();
+			$p->eval("use RVTbase::RVT_core;");
+			$lst = $p->array->RVT_exploit_diskname('partition',$_POST['dir']);
+			add_partitions(implode("\n",$lst),'/.*p(\d+)\s?/');
+
+			$class = 'partition';
 			break;
 	}
 }

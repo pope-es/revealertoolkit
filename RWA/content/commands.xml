@@ -30,6 +30,7 @@
 			<arg>object</arg>
 		</args>
 		<standard>/.*:[ ]*(.*)\s?/</standard>
+		<icon>partition_info.png</icon>
 	</command>
 	<command>
 		<name>images_partition_table</name>
@@ -47,8 +48,8 @@
 	</command>
 	<command>
 		<name>mount_assign</name>
-		<alias>Mount case</alias>
-		<description>Mounts the partitions of a case</description>
+		<alias>Mount</alias>
+		<description>Mounts the partitions</description>
 		<objects>
 			<object>case</object>
 		</objects>
@@ -61,8 +62,8 @@
 	</command>
 	<command>
 		<name>mount_delete</name>
-		<alias>Unmount case</alias>
-		<description>Unmounts the partitions of a case</description>
+		<alias>Unmount</alias>
+		<description>Unmounts the partitions</description>
 		<objects>
 			<object>case</object>
 		</objects>

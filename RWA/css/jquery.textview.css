@@ -1,6 +1,6 @@
 OL.jqueryTextView
 {
-	background-color: #AACCFF;
+	background: #AACCFF;
 	font-weight: bold;
 	margin: 0;
 	padding-left: 50pt;
@@ -8,7 +8,7 @@ OL.jqueryTextView
 
 OL.jqueryTextView LI
 {
-	background-color: White;
+	background: White;
 	border-left: solid 1px #999;
 	color: #000;
 	display:list-item; /*IE7 hack*/
@@ -20,7 +20,7 @@ OL.jqueryTextView LI
 
 OL.jqueryTextView LI.alt
 {
-	background-color: #CCEEFF;
+	background: #CCEEFF;
 }
 
 OL.jqueryTextView PRE
@@ -28,82 +28,4 @@ OL.jqueryTextView PRE
 	font-weight: normal;
 	margin: 0;
 	white-space: pre-wrap;
-}
-
-.btnleft
-{
-	background-image: url(   '../img/navbtnleft.png' );
-	height: 24px;
-	width: 24px;
-}
-
-.btncent
-{
-	background-image: url(   '../img/navbtncent.png' );
-	height: 24px;
-	width: 24px;
-}
-
-.btncentpressed
-{
-	background-image: url(   '../img/navbtncentpress.png' );
-	height: 24px;
-	width: 24px;
-}
-
-.btnright
-{
-	background-image: url(   '../img/navbtnright.png' );
-	height: 24px;
-	width: 24px;
-}
-
-.txtleft
-{
-	background-image: url(   '../img/txtleft.png' );
-	background-repeat: no-repeat;
-	width: 2px;
-}
-
-.txtcent
-{
-	background-image: url(   '../img/txtcent.png' );
-	background-color: Transparent;
-	background-repeat: repeat-x;
-	border-width: 0;
-	font-family: Verdana, Arial, Helvetica, sans-serif;
-	font-size: 9pt;
-	height: 22px;
-	line-height: 20px;
-	margin-top: -2px;
-	width: 100%;
-}
-
-.txtright
-{
-	background-image: url(   '../img/txtright.png' );
-	background-repeat: no-repeat;
-	width: 2px;
-}
-
-#jquerytextviewframe
-{
-	border: solid 1px #999;
-	margin: 1em 30px 0 30px;
-	overflow: auto;
-	position: absolute;
-}
-
-em.highlight
-{
-	background-color: #3399FF;
-	color: White;
-	font-style: normal;
-	font-weight: bold;
-	margin-left: 1px;
-}
-
-em.nohighlight
-{
-	font-style: normal;
 }

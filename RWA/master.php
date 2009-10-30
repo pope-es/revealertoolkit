@@ -6,6 +6,7 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
 <head>
     <link href="css/jquery.filetree.css" rel="Stylesheet" type="text/css" media="screen" />
     <link href="css/jquery.textview.css" rel="Stylesheet" type="text/css" media="screen" />
+	<link href="css/jquery.timelineview.css" rel="Stylesheet" type="text/css" media="screen" />
     <link href="css/rwa.css" rel="stylesheet" type="text/css" media="screen" />
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
     <meta http-equiv="Encoding" content="" />
@@ -13,38 +14,41 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
 
     <script type="text/javascript" src="js/jquery.js"></script>
-
     <script type="text/javascript" src="js/jquery-ui.js"></script>
-
     <script type="text/javascript" src="js/jquery.layout.js"></script>
-
     <script type="text/javascript" src="js/jquery.filetree.js"></script>
-
     <script type="text/javascript" src="js/jquery.textview.js"></script>
+	<script type="text/javascript" src="js/jquery.timelineview.js"></script>
 
     <script type="text/javascript">
-	
+
 		function clearLOG(){
 			if (confirm("<?php echo ALERT_CLEAR_LOG ?>")) $('#LOG').empty();
 		}
-	
+
 		function writeLOG(msg){
 			var d = new Date()
-			$('#LOG').prepend('<span><b>['+ d.getDate() +'/'+ (d.getMonth()+1) +'/'+ d.getYear() + ' ' + d.toLocaleTimeString() + ']</b>: ' + msg + '</span><br/>');
-			if($('#LOG SPAN').length > 10) $('#LOG > *:gt(<?php echo MAX_LOG_ENTRIES ?>)').remove();
+			$('#LOG').prepend('<span><b>['+ d.getDate() +'/'+ (d.getMonth()+1) +'/'+ d.getFullYear() + ' ' + d.toLocaleTimeString() + ']</b>: ' + msg + '</span><br/>');
+			if($('#LOG SPAN').length > 10) $('#LOG > *:gt(<?php echo MAX_LOG_ENTRIES*2 ?>)').remove();
 		}
-	
+
 		function startTree(){
 			writeLOG('Building Navigation Tree...');
-			$('#casetree').fileTree({root: 'morgue'}, function(f) { /*$('#contentheader').html('Text Viewer');  $('.contentplaceholder').textViewer({file: f}); */});
+			$('#casetree').fileTree({root: 'morgue'}, loadCommands/*function(f) { $('#contentheader').html('Text Viewer');  $('.contentplaceholder').textViewer({file: f}); }*/);
+			loadCommands('morgue');
 			writeLOG('Finished building Navigation Tree!');
 		}
-	
+
 		function startTextViewer(){
             $('#contentheader').html('<?php echo TEXT_VIEWER ?>');
             $('.contentplaceholder').textViewer({file: '/var/www/rwa/master.php'});
 		}
-	
+
+		function startTimelineViewer(){
+            $('#contentheader').html('<?php echo TIMELINE_VIEWER ?>');
+            $('.contentplaceholder').timelineViewer({file: '/var/www/100103-01-1-disk_TL.csv',expression:'/(.*),(.*),(.*),(.*),(.*),(.*),(.*),(.*)/'});
+		}
+		
         $(document).ready( function() {
 			writeLOG('Building layout...');
 			$('body').layout({ 
@@ -63,8 +67,8 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
             });
 			writeLOG('Finished building layout!');
             startTree();
-			startTextViewer();
-            writeLOG('<span style="color:#00C000">Finished starting up!</span> RWA is ready.');
+			startTimelineViewer();
+            writeLOG('<span style="color:#00A000">Finished starting up!</span> RWA is ready.');
         });
     </script>
 
@@ -87,24 +91,11 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
         </div>
         <div class="header"><?php echo COMMANDS ?></div>
         <div id="commands">
-            <input type="image" src="img/partition-list.png" id="command1" style="vertical-align: text-top" class="disabled" disabled="disabled" />
-            <label for="command1" class="disabled">
-                Partition list</label><br />
-            <input type="image" src="img/partition-info.png" id="command2" style="vertical-align: text-top" />
-            <label for="command2" class="command">
-                Partition info</label><br />
-            <input type="image" src="img/cluster-status.png" id="command3" style="vertical-align: text-top" />
-            <label for="command3" class="command">
-                Cluster status</label><br />
-            <input type="image" src="img/cluster-toinode.png" id="command4" style="vertical-align: text-top" />
-            <label for="command4" class="command">
-                Cluster to Inode</label><br />
+			<?php echo EMPTY_COMMAND_BOX ?>
         </div>
 		<div class="header"><?php echo RESULTS ?></div>
-        <div id="commands">
-            <input type="image" src="img/partition-list.png" id="command1" style="vertical-align: text-top" />
-            <label for="command1" class="command">
-                Partition list</label><br />
+        <div id="results">
+
         </div>
     </div>
     <div class="ui-layout-south">

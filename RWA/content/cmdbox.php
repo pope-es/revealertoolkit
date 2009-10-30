@@ -14,6 +14,12 @@
 require_once 'globals.php';
 require_once 'cmdparse.php';
 
+function comFormat($accum, $com){
+	if ($accum=='0') $accum='';
+	$old = array('{id}', '{alias}', '{class}', '{icon}', '{disabled}', '{lbclass}');
+	$new = array($com->name, $com->alias, '', $com->icon, '', 'command');
+	return $accum . str_replace($old, $new, COMMAND_TEMPLATE);
+}
 
 function isVisible($com){ return $com->icon != null; }
 
@@ -21,29 +27,52 @@ function isExpandable($com) { global $t; return true; }
 
 function canExecute($com) { global $n; return true; }
 
-$t = urldecode($_POST['type']);	//contains the type of the object
+function getCommands($obj,$arr){
+	$tmp = commands_by_object($obj);
+	$tmp = array_filter($tmp, "isVisible");
+	$tmp = array_filter($tmp,"canExecute");
+	foreach($tmp as $k=>$v){
+		//print_r($v);
+		if (!in_array($v,$arr)) array_push($arr,$v);
+	}
+	return $arr;
+}
+
 $n = urldecode($_POST['name']);	//contains the name of the object
+
+if($n == 'morgue'){
+	echo EMPTY_COMMAND_BOX;
+	return;
+}
+
+//check the type of the object
+ob_start();
+$p = InitRVT();
+$p->eval("use RVTbase::RVT_core;");
+$t = $p->RVT_check_format($n);
+ob_end_clean();
 
 $commands = array();
 
 switch ($t){
-	case 'morgue':	echo EMPTY_COMMAND_BOX;
-					return;
-	case 'case':	$commands = commands_by_object('case');
-					$commands = array_filter($commands, "isVisible");
-					$commands = array_filter($commands, "canExecute");
-	case 'device':	$tmp = commands_by_object('device')
-					$tmp = array_filter($tmp, "isVisible");
-					$tmp = array_filter($tmp,"canExecute");
-					$commands = $commands + $tmp;
-	case 'disk':	$tmp = commands_by_object('disk')
-					$tmp = array_filter($tmp, "isVisible");
-					$tmp = array_filter($tmp,"canExecute");
-					$commands = $commands + $tmp;
-	case 'partition':$tmp = commands_by_object('partition')
-					$tmp = array_filter($tmp, "isVisible");
-					$tmp = array_filter($tmp,"canExecute");
-					$commands = $commands + $tmp;
+	case 'partition':	$commands = getCommands('partition',$commands);
+	//print_r($commands);
+	//print('<br/>');
+	case 'disk':		$commands = getCommands('disk',$commands);
+	//print_r($commands);
+	//print('<br/>');
+	case 'device':		$commands = getCommands('device',$commands);
+	//print_r($commands);
+	//print('<br/>');
+	case 'case code':
+	case 'case number':	$commands = getCommands('case',$commands);
+	//print_r($commands);
+	//print('<br/>');
 }
+//at this point we have the available commands
+//let's format them
+$result = array_reduce($commands,'comFormat',"");
+
+echo $result;
 
 ?>
