@@ -91,7 +91,7 @@ sub RVT_script_evt_generate {
 
         $morguepath = RVT_get_morguepath($disk);
         if (! $morguepath) { RVT_log ('WARNING', 'there is no path to the morgue!'); return 0};
-        my $evtpath= "$morguepath/output/evt";
+        my $evtpath= "$morguepath/output/evt/";
         if (! -e $evtpath){
             my @args = ('mkdir', $evtpath);
             system (@args);

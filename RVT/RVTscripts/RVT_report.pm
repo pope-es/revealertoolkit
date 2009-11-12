@@ -30,7 +30,7 @@ use Time::localtime;
 use Date::Manip;
 #use open "IN" => ":encoding(cp1252)",
 #	"OUT"=> ":utf8";
-use open "IO" => ":encoding(cp1252):utf8";
+#use open "IO" => ":encoding(cp1252):utf8";
 #use warnings;
 
    BEGIN {
@@ -220,6 +220,7 @@ sub RVT_script_report_search2pdf {
 sub RVT_script_report_lnkstats
 {
 
+	use open "IO" => ":encoding(cp1252):utf8";
 	my ( $disk ) = @_;
 	my $morguepath;
 	my @log;
@@ -500,6 +501,7 @@ sub RVT_script_report_lnk2csv
 ## Type: usb,local,cdrom, net, all.
 ## Date: YYYY[MMDD] or a date+periof of time. Ex: today -1year, 2009 +6months. It does not accept two periods like: 2009 -6months +2days.
 {
+	use open "IO" => ":encoding(cp1252):utf8";
     	#my ( $ltype, $date, $disk ) =  (@_);
     	my  $ltype =  shift @_;
 	my ($date, $disk)= (@_);
