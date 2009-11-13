@@ -101,12 +101,7 @@ int main(int argc, char **argv) {
             return -1;
           }
 
-    if ( optind != (argc -1) ) {
-        print_usage();
-        return -1;
-    }    
-    
-    filename = argv[optind];
+
 
 	unsigned int *buf =  (unsigned int *)  malloc (sizeof (unsigned int) * (strmin +1)  );		
 	FILE *fich;
@@ -328,9 +323,18 @@ int main(int argc, char **argv) {
 	m[433] = 110;	
 	
 	
-	
+	if ( optind != (argc -1) ) {
+		fich = stdin;
+    } else {    
+		filename = argv[optind];
 
-	fich = file_open( filename, "rb" );
+		fich = file_open( filename, "rb" );
+		if ( fich == NULL ) { 
+			fprintf (stderr, "JARL! Couldn't open file\n");
+			return -1; 
+		}
+	}	
+		
 	offset = ftello(fich);
 	
 	while ( 1 ) { 	
