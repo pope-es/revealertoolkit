@@ -62,12 +62,12 @@ sub constructor {
 #
    if (!$reportevt) {
         RVT_log ('ERR', 'RVT_evt not loaded (couldn\'t find evtrpt.pl)');
-        return 0;
    }
    if (!$parsevt) {
         RVT_log ('ERR', 'RVT_evt not loaded (couldn\'t find evtparse.pl)');
-        return 0;
    }
+   return 0 if (!$reportevt || !$parsevt);
+   
    $main::RVT_requirements{'evtparse'} = $parsevt;
    $main::RVT_requirements{'evtreport'} = $reportevt;
 
