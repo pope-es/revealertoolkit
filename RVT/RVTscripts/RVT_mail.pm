@@ -76,7 +76,9 @@ sub RVT_script_mail_parsepsts {
     my $opath = RVT_get_morguepath($disk) . '/output/mail';
     mkdir $opath unless (-d $opath);
     
-    my @pstlist = RVT_get_allocfiles('pst$', $disk);
+    my $sdisk = RVT_split_diskname($part);
+    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
+    my @pstlist = grep {/$repath/} RVT_get_allocfiles('pst$', $disk);
     
     foreach my $f (@pstlist) {
         my $fpath = RVT_create_folder($opath, 'pst');

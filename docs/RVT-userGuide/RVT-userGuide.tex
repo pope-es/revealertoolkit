@@ -65,13 +65,13 @@
 
 \begin{itemize}
      \item INCIDE (Investigacion Digital S.L., www.incide.es)
-       where developers and testers work
+       where some developers and testers work
      \item Manu Ginés aka xkulio 
        creator of the original Chanchullos Revealer
      \item Generalitat de Catalunya
        for partial funding of the project
        
-     \item People that have collaborated to (and suffered) the project:  Jose Navarro, Luis Gómez, Sara Rincón, Abraham Pasamar, Julián Sotos, Helena Fuentes, ... 
+     \item People that have collaborated to (and suffered) the project:  Jose Navarro, Luis Gómez, Sara Rincón, Abraham Pasamar, Julián Sotos, Helena Fuentes, Emili García, Harlan Carvey, ... 
 \end{itemize}
 
 
@@ -91,7 +91,7 @@ You can find additional information, packages and all the source code at http://
 
 The current state of the project can be described as a `\emph{proof of concept}', that is, RVT version 0.2 proofs that the objectives we are looking for are reachable, but further work is necessary in order to have a stable version.
 
-Therefore, RVT v0.2 can be used to automate computer forensic tasks on a group of several digital forensic images, but the code is still buggy, some tasks have to be run manually, and the interface has to be improved. A complete working RVT system has been installed and is free (like in beer \emph{and} in freedom) for download at  http://revealertoolkit.googlecode.com/files/RVT\_v0.2.zip .
+Therefore, RVT v0.2 can be used to automate computer forensic tasks on a group of several digital forensic images, but the code is still buggy, some tasks have to be run manually, and the interface has to be improved. A complete working RVT system has been installed and is free (like in beer \emph{and} in freedom) for download at  http://revealertoolkit.googlecode.com/files/RVT\_v0.2.1.zip .
 
 The objective of next version (0.3) will be to clean the code, solve bugs and ease the interaction. At the same time, more scripts and modules will be developed. For version 0.3, a \emph{RVT Developer Manual} is planned, as well as a automated reporting engine.
 
@@ -172,8 +172,8 @@ Download and install last stable version of RVT. As root:
 mkdir /usr/local/src/revealer
 cd /usr/local/src/revealer
 
-wget revealertoolkit.googlecode.com/files/RVT_v0.2.zip
-unzip RVT_v0.2.zip
+wget revealertoolkit.googlecode.com/files/RVT_v0.2.1.zip
+unzip RVT_v0.2.1.zip
 chmod a+x RVT/RVT.pl
 
 \end{verbatim}
@@ -422,7 +422,7 @@ RVT Shell is a Perl script that, when executed, performs a scan of the morgue an
 \end{itemize}
 
 \begin{verbatim}
-Welcome to Revealer Tools Shell (v0.2):
+Welcome to Revealer Tools Shell (v0.2.1):
 
  RVT  > 
         case
@@ -1343,7 +1343,7 @@ The first line of each results file have the path to the hive file on which RegR
 
 \section{\emph{script mail}}
 
-Module for extract emails in text format from Microsoft Outlook mailboxes (PST) using \emph{libpst} (www.five-ten-sg.com/libpst).
+Module for extracting emails in text format from Microsoft Outlook mailboxes (PST) using \emph{libpst} (www.five-ten-sg.com/libpst).
 
 \subsection{\emph{script mail parsepsts}}
 
@@ -1353,10 +1353,36 @@ Search all Microsoft Outlook mailboxes (PST extension) and parse them with \emph
 script mail parsepsts <partition>
 \end{verbatim}
 
-Results are stored under \emph{output/mail}, where a folder is created for each PST file with the format:
+Results are stored under \emph{output/mail}, where a folder is created for each PST file with the format:  \emph{output/mail/pst-n}. Inside these folders, one folder \emph{contents} contains all emails and attachments, and one file name \emph{RVT\_metadata.txt} with the path to the original PST file on the morgue:
 
 \begin{verbatim}
-output/mail/pst-n
+morgue/output/mail/pst-n/contents
+morgue/output/mail/pst-n/RVT_metadata.txt
+\end{verbatim}
+
+where \emph{n} is a increasing integer number.
+
+
+
+
+
+\section{\emph{script evt }}
+
+Module for extracting information from Microsoft Windows log files (EVT files) in text format using Harlan Carvey tools for EVT parsing, \emph{evtparse.pl} and \emph{evtrpt.pl}, and available for the community as open source RVT tools (thanks Harlan!). 
+
+\subsection{\emph{script evt generate}}
+
+Search all Microsoft Windows log files (EVT files) and parse them with  \emph{evtparse.pl}.
+
+\begin{verbatim}
+script evt generate <disk>
+\end{verbatim}
+
+Results are stored under \emph{output/evt}, where a folder is created for each EVT file with the format:  \emph{output/evt/evt-n}. Inside these folders, one \emph{report.csv} file contains the output for \emph{evtparse.pl}, and a \emph{RVT\_metadata.txt} file contains the path to the original EVT file on the morgue:
+
+\begin{verbatim}
+morgue/output/evt/evt-n/report.csv
+morgue/output/evt/evt-n/RVT_metadata.txt
 \end{verbatim}
 
 where \emph{n} is a increasing integer number.
@@ -1526,7 +1552,7 @@ Scanning morgues. Please wait ...
 
 
 
-Welcome to Revealer Tools Shell (v0.2):
+Welcome to Revealer Tools Shell (v0.2.1):
 
 
  new format: disk
@@ -1641,7 +1667,7 @@ images list
 $
 $ cat commands.rvt | rvt -b
 
-Welcome to Revealer Tools Shell (v0.2):
+Welcome to Revealer Tools Shell (v0.2.1):
 
  RVT  > case list
 
@@ -1670,7 +1696,7 @@ and, of course:
  
 $ echo "case list; images list" |  rvt -b
 
-Welcome to Revealer Tools Shell (v0.2):
+Welcome to Revealer Tools Shell (v0.2.1):
 
  RVT  > case list
 
@@ -1922,6 +1948,9 @@ At this time, these are the tools included:
 \item \emph{guess\_csv.pl:} guesses the separator character of a value-separated file
 \item \emph{plot\_bars.pl:} using \emph{gnuplot}, generates bar plots from csv files
 \item \emph{plot\_time.pl:} useful script for graphical representation of values versus time
+\item \emph{f-strings.c:} extracts strings from a file like Binutils \emph{strings}  command, but from a digital forensics point of view
+\item \emph{evtparse.pl:} Microsoft EVT file parser developed by Harlan Carvey
+\item \emph{evtrpt.pl:} Microsoft EVT file parser developed by Harlan Carvey that reports on the contents of these files
 \end{itemize}
 
 
