@@ -73,11 +73,11 @@ sub constructor {
 
    $main::RVT_functions{RVT_script_evt_generate } =
    "generates each folder with the information of all evt files allocated in a disk\n
-   script evt generate";
+   script evt generate <disk>";
    
    $main::RVT_functions{RVT_script_evt_report } =
    "generates a report of all evt files allocated in a disk\n
-   script evt report";
+   script evt report <disk>";
 
 
 }
