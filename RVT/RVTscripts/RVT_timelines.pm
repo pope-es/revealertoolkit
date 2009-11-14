@@ -41,7 +41,7 @@ use strict;
    }
 
 
-my $RVT_moduleName = "RVT_timelines";
+my $RVT_moduleName = "RVT_xx";
 my $RVT_moduleVersion = "1.0";
 my $RVT_moduleAuthor = "dervitx";
 

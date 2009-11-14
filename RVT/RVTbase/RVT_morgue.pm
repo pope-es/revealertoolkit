@@ -37,16 +37,18 @@ use Date::Manip;
        @EXPORT      = qw(   &constructor
                             &RVT_case_list
                             &RVT_images_list
+                            &RVT_losetup_list
+                            &RVT_losetup_delete
+                            &RVT_losetup_assign
                             &RVT_losetup_recheck
                             &RVT_mount_list
                             &RVT_mount_delete
                             &RVT_mount_assign
                             &RVT_mount_recheck
-                            &RVT_images_scan
+                            &RVT_images_scanall
                             &RVT_images_loadconfig
                             &RVT_images_partition_table
                             &RVT_images_partition_info
-                            &RVT_mount_isMounted
                         );
    }
 
@@ -72,16 +74,19 @@ sub constructor {
    
    $main::RVT_functions{RVT_case_list } = "Cases in the morgue\n\t--size (-s)\twith sizes";
    $main::RVT_functions{RVT_images_list } = "Images in the morgue\n\t--size (-s)\twith sizes";
+   $main::RVT_functions{RVT_losetup_list } = "List loop devices and assigned partition (if any)";
+   $main::RVT_functions{RVT_losetup_delete } = "RVT_losetup_delete <case>\n
+                                 Deassign partitions from loop devices";
+   $main::RVT_functions{RVT_losetup_assign } = "RVT_losetup_assign <case> \n
+                                Assign partitions to the next free loop device";
    $main::RVT_functions{RVT_losetup_recheck } = "Recheck all loop associations";
    $main::RVT_functions{RVT_mount_list } = "List mounted partitions (if any)";
    $main::RVT_functions{RVT_mount_delete } = "RVT_mount_delete <case>\n
                                  Umount partitions from loop devices";
    $main::RVT_functions{RVT_mount_assign } = "RVT_mount_assign <case> \n
                                 Mount partitions to the next free loop device";
-   $main::RVT_functions{RVT_mount_recheck } = "Rechecks all mount associations";
-   $main::RVT_functions{RVT_images_scan } = "RVT_images_scan <case|all>\n
-   								Scans the morgue for the specified case. If 'all' is passed as argument, \n
-   								scans the entire morgue.";
+   $main::RVT_functions{RVT_mount_recheck } = "Recheck all mount associations";
+   $main::RVT_functions{RVT_images_scanall } = "Scan the whole morgue for cases";
    $main::RVT_functions{RVT_images_loadconfig } = "Loads the morgue config from XML file";
    $main::RVT_functions{RVT_images_partition_table } = "List partitions with information from the partition table \n
                                 image partition_table <case-device-disk>";
@@ -199,6 +204,25 @@ sub RVT_images_partition_info  {
 
 
 
+sub RVT_losetup_list {
+
+    my @loopdev;
+    opendir (DEV, '/dev') or RVT_log('CRIT', "FATAL: couldn't open /dev: $!");
+    while (defined(my $d=readdir(DEV))) { push(@loopdev, $d) if ($d=~/^loop\d{1,3}$/ && -b "/dev/$d"); }
+    closedir (DEV);
+    
+    print "Loop devices: \n";
+    for my $images ( @{$main::RVT_cfg->{paths}[0]{images}} )  {
+	    for my $d (@loopdev) {
+		my $r = `sudo losetup /dev/$d 2> /dev/null`;   # TODO glups!
+		my $rr = '\/dev\/'.$d.': \S* \(' . $images . '\/\d{6}-\w+\/(\d{6}-\d\d-\d\d?\.dd)\)\D+(\d+)$'; 
+		next unless ($r=~/$rr/);
+		print "\t$d\t$1\t$2\n";
+	    }
+    }
+}
+
+
 
 sub RVT_mount_list {
 
@@ -250,6 +274,63 @@ sub RVT_losetup_recheck {
 
 
 
+
+
+sub RVT_losetup_delete  {
+
+    my $object = shift(@_);
+    my ($case, $device, $disk, $part);
+
+	RVT_fill_level(\$object);
+	return 0 unless ($object);
+	my @parts = RVT_exploit_diskname ('partition', $object);
+	return 0 unless (@parts);
+	
+	foreach my $p (@parts) {
+        my $r = RVT_split_diskname($p);
+        $case = $r->{case};
+        $device = $r->{device};
+        $disk = $r->{disk};
+        $part = $r->{partition};
+        
+        my @args = ("sudo", "losetup", "-d", 
+       "/dev/$main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$part}{loop}", );
+        print "\n" . join (" ", @args) . "\n";
+        system(@args) == 0 or  RVT_log ('ERR', "losetup failed: $?\n");
+    }
+    RVT_losetup_recheck;
+}
+
+
+
+sub RVT_losetup_assign  {
+
+    my $object = shift(@_);
+    my ($case, $device, $disk, $part);
+
+	RVT_fill_level(\$object);
+	return 0 unless ($object);
+	my @parts = RVT_exploit_diskname ('partition', $object);
+	return 0 unless (@parts);
+	
+	foreach my $p (@parts) {
+        my $r = RVT_split_diskname($p);
+        $case = $r->{case};
+        $device = $r->{device};
+        $disk = $r->{disk};
+        $part = $r->{partition};
+        
+        my @args = ("sudo", "losetup", "-f", 
+        $main::RVT_cases->{case}{$case}{imagepath}."/$case-$main::RVT_cases->{case}{$case}{code}/$case-$device-$disk.dd", 
+        "-o $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$part}{obytes}" );
+        print "\n" . join (" ", @args) . "\n";
+        system(@args) == 0 or  RVT_log ('ERR', "losetup failed: $?");
+    }
+    RVT_losetup_recheck;
+}
+
+
+
 sub RVT_mount_delete () {
 
     my $object = shift(@_);
@@ -261,12 +342,6 @@ sub RVT_mount_delete () {
 	return 0 unless (@parts);
 	
 	foreach my $p (@parts) {
-	
-		if (!RVT_mount_isMounted($p)) {
-			RVT_log ('ERR', "partition $p not mounted");
-			next;
-		}
-	
         my $r = RVT_split_diskname($p);
         $case = $r->{case};
         $device = $r->{device};
@@ -298,12 +373,6 @@ sub RVT_mount_assign () {
 	return 0 unless (@parts);
 	
 	foreach my $p (@parts) {
-	
-		if (RVT_mount_isMounted($p)) {
-			RVT_log ('ERR', "partition $p already mounted");
-			next;
-		}
-	
         my $r = RVT_split_diskname($p);
         $case = $r->{case};
         $device = $r->{device};
@@ -329,106 +398,45 @@ sub RVT_mount_assign () {
 }
 
 
-sub RVT_mount_isMounted  {
-	# takes an object, expands to partition level, and returns the partitions
-	# that are mounted.
-	
-	my $object = shift(@_);
-	my @parts = RVT_exploit_diskname('partition', $object);
-	return 0 unless (@parts);
-	
-	RVT_losetup_recheck;
-	
-	my @results;
-	foreach my $p (@parts) {
-		my $r = RVT_split_diskname($p);
-		push (@results, $p) if ( $main::RVT_cases->{case}{$r->{case}}{device}{$r->{device}}{disk}{$r->{disk}}{partition}{$r->{partition}}{loop} );
-	}
-
-	return @results;
-}
-
-
-
 sub RVT_images_loadconfig {
 
+    my $lockFile = $main::RVT_cfg->{morgueInfoXML} . ".lock";
     my $cc = 0;
+    while ( -e $lockFile ) { sleep 1; if (++$cc > 5) { RVT_log('CRIT', 'Waited 5 seconds for unlocking of morgue info xml file') } }
     return 0 unless ( -e $main::RVT_cfg->{morgueInfoXML} );
 
-	open (F, $main::RVT_cfg->{morgueInfoXML}) or return 0;
-	flock (F, 1);
-	my $RVTconfig = join ('', <F>);
-	close F;
-
     $main::RVT_cases = {};
-    $main::RVT_cases = eval { XMLin( $RVTconfig, ForceArray => 1 ) };
+    $main::RVT_cases = eval { XMLin( $main::RVT_cfg->{morgueInfoXML}, ForceArray => 1 ) };
 
     if ($@) {
         RVT_log('ERR', 'failed to import XML morgue configuration');
         return 0;
     };
     
-    # XML Simple creates an array when ForceArray is active and there are no
-    # devices in a case, for example, and that's not good because there should be
-    # a hash there, not an array.  Removing empty arrays in $main::RVT_cases
-    for my $case (keys %{$main::RVT_cases->{case}}) {
-       if  ( ref($main::RVT_cases->{case}{$case}{device}) eq 'ARRAY' ) {
-       		$main::RVT_cases->{case}{$case}{device} = {};
-       }
-       for my $device (keys %{$main::RVT_cases->{case}{$case}{device}}) {
-       	  if  ( ref($main::RVT_cases->{case}{$case}{device}{$device}{disk}) eq 'ARRAY' ) {
-       	  	 $main::RVT_cases->{case}{$case}{device}{$device}{disk} = {};
-       	  }
-          for my $disk (keys %{$main::RVT_cases->{case}{$case}{device}{$device}{disk}}) {
-       		  if  ( ref($main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}) eq 'ARRAY' ) {
-       	  		 $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition} = {};
-       	  	  }
-          }
-       }
-    } 
-    
     RVT_log ('INFO', "Morgue XML configuration loaded. Last updated: ".$main::RVT_cases->{thisConfig}[0]{updated});
     RVT_log ('INFO', "Run 'images scanall' command to update");
 }
 
 
-sub RVT_images_scan {
-	# detects and scan all cases in the morgue
+sub RVT_images_scanall {
 
-  my $object = shift;
-  my $acase;
-  my $case;
+  my $lockFile = $main::RVT_cfg->{morgueInfoXML} . ".lock";
   my $cc = 0;
-  
-  my $all = 0;
-  
-  if ($object eq 'all') {
-  	  $all = 1;
-	  $main::RVT_cases = {};
-	  $main::RVT_cases->{thisConfig}[0]{updated} = ParseDate ("today");  	  
-	  print "Scanning morgues. Please wait ...\n\n";	  
-  } else {
-	  RVT_fill_level(\$object);
-	  $acase = RVT_chop_diskname ('case', $object);
-	  if ( RVT_check_format($acase) ne 'case number' ) {
-			RVT_log ('ERR', 'RVT_images_scan expected a case');
-			return 0;
-	  }
-	  # deleting what we knew about this case
-  	  undef $main::RVT_cases->{case}{$acase} if ($main::RVT_cases->{case}{$acase}); 	  
-	  print "Scanning morgues for case $acase. Please wait ...\n\n";  	  
-  }
+  while ( -e $lockFile ) { sleep 1; if (++$cc > 5) { RVT_log('CRIT', 'Waited 5 seconds for unlocking of morgue info xml file') } }
+  open (LOCK, ">$lockFile") or die "JARL! could not create lock file";
+  close LOCK;
 
+  print "Scanning morgues. Please wait ...\n\n";
 
-
+  $main::RVT_cases = {};
+  $main::RVT_cases->{thisConfig}[0]{updated} = ParseDate ("today");
   for my $images ( @{$main::RVT_cfg->{paths}[0]{images}} )  {
 
     opendir( IMAGES, $images) or RVT_log ('CRIT', "couldn't open morgue: $!");
      
     while (defined(my $f=readdir(IMAGES))) {
         next unless ($f=~/^(\d{6})-(\w+)$/ && -d $images . "/" . $f);
-        $case = $1;
-        next if ((!$all) && ($case ne $acase));
+        my $case = $1;
         my $code = $2;
         $main::RVT_cases->{case}{$case}{code} = $code;
 	    $main::RVT_cases->{case}{$case}{imagepath}=$images;
@@ -465,25 +473,26 @@ sub RVT_images_scan {
                 
             }
             close(PA);
-
-			# morgue
-  	    	for my $morgue ( @{$main::RVT_cfg->{paths}[0]{morgues}} )  {
-	    		next unless ( -d "$morgue/$case-$code" );  
-	    		$main::RVT_cases->{case}{$case}{morguepath}=$morgue; 	    	 
-	    	}        
         }
         closedir(CASE);
-  
+
+	    # morgue
+  	    for my $morgue ( @{$main::RVT_cfg->{paths}[0]{morgues}} )  {
+	    	next unless ( -d "$morgue/$case-$code" );  
+	    	$main::RVT_cases->{case}{$case}{morguepath}=$morgue; 
+	    	 
+	    }
     }
     closedir( MORGUE ); 
   }
-
+  
   RVT_losetup_recheck;
   
   open (my $XMLFile, ">" . $main::RVT_cfg->{morgueInfoXML}) or RVT_log('CRIT', "could not create XML file");
-  flock ($XMLFile, 2);
   XMLout($main::RVT_cases, Rootname => "RVTmorgueInfo", OutputFile => $XMLFile);
-  close $XMLFile;
+  close XMLFile;
+  
+  unlink($lockFile) or die RVT_log('CRIT', "could not delete lock file");
   
 }
 

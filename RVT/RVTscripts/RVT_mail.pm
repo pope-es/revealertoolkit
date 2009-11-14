@@ -76,20 +76,10 @@ sub RVT_script_mail_parsepsts {
     my $opath = RVT_get_morguepath($disk) . '/output/mail';
     mkdir $opath unless (-d $opath);
     
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    my @pstlist = grep {/$repath/} RVT_get_allocfiles('pst$', $disk);
+    my @pstlist = RVT_get_allocfiles('pst$', $disk);
     
     foreach my $f (@pstlist) {
         my $fpath = RVT_create_folder($opath, 'pst');
-        
-        mkdir ("$fpath/contents") or die ("ERR: failed to create output directories.");
-        open (META, ">$fpath/RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
-            print META "Source file: $f\n";
-            print META "Parsed by RVT module $RVT_moduleName version $RVT_moduleVersion\n";
-        close (META);
-        
-        $fpath="$fpath/contents";
         my @args = ('readpst', '-S', '-q', '-cv', '-o', $fpath, $f);
         if (system (@args)) {
             RVT_log ('NOTICE', "PST parsed: $f\n");
@@ -97,8 +87,7 @@ sub RVT_script_mail_parsepsts {
             RVT_log ('ERR', "Error encountered while parsing $f\n");
         }
     }
-    
-    return 1;
+
 }
 
 

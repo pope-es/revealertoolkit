@@ -123,8 +123,6 @@ sub RVT_script_regripper_execmodule {
         print "\n";
         last unless ($hivetype eq "ntuser");
     } 
-    
-    return 1;
 }
 
 
@@ -173,8 +171,6 @@ sub RVT_script_regripper_execallmodules {
             print "regripped: $files[$f]\n";
         } 
     }
-    
-    return 1;
 }
 
 

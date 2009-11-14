@@ -164,8 +164,8 @@ sub RVT_script_search_file_edit  {
     
     system ('vim', $searchfile_path . '/' . $filename);
 
-#    return 0 if ($? == -1);
-#    return 1;
+    return 0 if ($? == -1);
+    return 1;
 }
 
 sub RVT_script_search_file_delete  {
@@ -338,7 +338,7 @@ sub RVT_script_search_launch  {
         `grep -H "$b" $stringspath/*strings* | tee $searchespath/$f`; #*/ 
     }
 
-#    return 1;
+    return 1;
 }
 
 
@@ -442,7 +442,7 @@ sub RVT_script_search_clusters  {
     close (F);
     
     print "\n\nScanning morgues ...\n";
-    RVT_images_scan('all');
+    RVT_images_scanall();
     
     my %fnh;  # $fnh {$searchespath/$f-$part} = filehandler for writing in the file
               # one for every busq-partition couple (with results)
@@ -501,7 +501,7 @@ sub RVT_script_search_clusters  {
      
     for my $fn (keys %fnh) { close($fnh{$fn}); }
 
-#    return 1;      
+    return 1;      
 }    
    
 

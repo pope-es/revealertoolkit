@@ -213,6 +213,7 @@ sub RVT_cluster_extract_raw {
     print @results;   
     print "\n\n";
 
+    return 1;
 }
 
 
@@ -238,6 +239,7 @@ sub RVT_cluster_extract_ascii {
     }
     print "\n\n";
     
+    return 1;
 }
 
 

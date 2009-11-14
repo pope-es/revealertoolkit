@@ -36,8 +36,6 @@ use Sys::Syslog;
        @ISA         = qw(Exporter);
        @EXPORT      = qw(   &constructor
                             &RVT_log
-                            &RVT_cmd_log
-                            &RVT_cmd_isExecuted
                             &RVT_du
                             &RVT_check_format 
                             &RVT_get_morguepath
@@ -146,86 +144,6 @@ sub RVT_log ($$) {
 }
 
 
-sub RVT_cmd_log ($$$$) {
-	# when a command is executed successfully within the scope of a case,
-	# this function logs that command in a file text in the case.
-	#
-	# args:
-	#		current level tag at execution
-	# 		command last argument (usualy, the level)
-	#		full command with arguments
-	#		'STARTED' or 'SUCCESS' or 'FAILURE'
-
-	# TODO: repasar todas las funciones para ver cuáles devuelven un 1 (que serán las que se loguen)
-	# TODO: crear una función tipo RVT_cmd_isExecuted ($level, $cmd) 
-
-	my ($tag, $lastarg, $cmd, $action) = @_;
-	my $executionLevel;
-	my $logLine;
-	my $case;
-
-	$executionLevel = RVT_check_format($lastarg);
-	$executionLevel = $tag unless ($executionLevel);
-
-	$case = RVT_get_casenumber($executionLevel);
-	return 0 unless $case;	
-	
-	$logLine = $executionLevel . ':' . $cmd;
-
-	if ($action eq 'STARTED') {
-		open (F, '>>' . RVT_get_morguepath($case) . "/$case" . "_cmdLog.txt") or RVT_log('CRIT', "Couldn't open 	case log for logging $cmd");
-		flock (F, 2);
-		print F $logLine . ":STARTED\n";	
-		close F;
-		
-		return 1;
-	}
-
-	open (F, '<' . RVT_get_morguepath($case) . "/$case" . "_cmdLog.txt") or RVT_log('CRIT', "Couldn't open 	case log for logging $cmd");
-	flock (F, 1);
-	my @logFile = <F>;
-	close F;
-	
-	return 0 unless ( grep (/$logLine:STARTED/, @logFile) );
-	
-	if ($action eq 'SUCCESS') {
-		@logFile = map { s/$logLine:STARTED/$logLine/; $_;} @logFile;
-	} elsif ($action eq 'FAILURE') {
-		@logFile = grep { !/$logLine:STARTED/ } @logFile;
-	} else { return 0; }
-
-	open (F, '>' . RVT_get_morguepath($case) . "/$case" . "_cmdLog.txt") or RVT_log('CRIT', "Couldn't open 	case log for logging $cmd");
-	flock (F, 2);
-	print F @logFile;
-	close F;
-	
-	return 1;
-}
-
-
-sub RVT_cmd_isExecuted {
-	# Checks if a command has been executed on the specified object.
-	# Returns 0 (not executed), STARTED (executing), SUCCESS (executed)
-	#
-	# args:
-	#		full command with arguments
-	#		object
-	
-	my ($cmd, $obj) = @_;
-	
-	my $case = RVT_get_casenumber($obj);
-	return 0 unless $case;		
-	
-	open (F, '<' . RVT_get_morguepath($case) . "/$case" . "_cmdLog.txt") or RVT_log('CRIT', "Couldn't open case $case log");
-	flock (F, 1);
-	my @logFile = <F>;
-	close F;	
-	
-	if ( grep (/^$obj:$cmd\s*$/, @logFile) ) {return 'SUCCESS';} 
-	if ( grep (/^$obj:$cmd\s*:STARTED/, @logFile) ) {return 'STARTED';}
-	return 0;
-}
-
 sub RVT_du {
 
    my $path = shift(@_);
@@ -267,13 +185,12 @@ sub RVT_get_casenumber ($) {
     
     my $value = shift;
     if ($value =~ /^(\d{6})/) { 
-        #$value = $1; 
-        #return $value if ($main::RVT_cases->{case}{$value});
-        #return 0;
-        return $1;
+        $value = $1; 
+        return $value if ($main::RVT_cases->{case}{$value});
+        return 0;
     }
-    #for ( keys %{$main::RVT_cases->{case}} ) { if ($main::RVT_cases->{case}{$_}{code} eq $value) {return $_;} }
-
+    for ( keys %{$main::RVT_cases->{case}} ) { if ($main::RVT_cases->{case}{$_}{code} eq $value) {return $_;} }
+    
     return 0;
 }
 
@@ -630,5 +547,4 @@ sub RVT_create_folder ($$) {
 
 
 1; 
-
 
