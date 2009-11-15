@@ -764,12 +764,16 @@ Gives the partition table of an image.
 \end{verbatim}
 
 
-\subsection{\emph{images scanall}}
+\subsection{\emph{images scan}}
 
-RVT scans the morgue. No output given. 
+RVT scans a case or the whole morgue. It updates morgue configuration and is mandatory when new cases are added.
 
 Necessary when adding a new image to the morgue. You can check what RVT thinks that is in your morgue executing \emph{info debug dumpmorguexml} (see \ref{cmd:info-debug})
 
+\begin{verbatim}
+ RVT  > images scan 100101
+ RVT  > images scan all
+\end{verbatim}
 
 \subsection{\emph{images loadconfig}}
 
