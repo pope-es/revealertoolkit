@@ -578,13 +578,14 @@ sub RVT_script_report_lnk2csv
 			$p->{atime}=convertepochsec ($field[1]);
 			$p->{ctime}=convertepochsec ($field[2]);
 			$p->{device}=$field[3];
+			$p->{volid}=$field[4];
 			$p->{volume}=$field[5];
 			$p->{name}=$name;
 			$p->{path}=$field[8];
 			$p->{size}=$field[9];
 			if ($ltype !~ /^all$/i){ # if all types are listed there is another column: Device Type
-				$basename=$name.";".$p->{volume}.";".$p->{path}.";".$p->{size};
-			}else { $basename=$name.";" . $p->{volume}. ";" . $p->{path} . ";" . $p->{device}.";". $p->{size}; }
+				$basename=$name.";".$p->{volume}.";".$p->{path}.";". $p->{volid}.";". $p->{size};
+			}else { $basename=$name.";" . $p->{volume}. ";" . $p->{path} . ";" . $p->{volid}. ";". $p->{device}.";". $p->{size}; }
 
 			if (! exists $lnks{$basename})	{
 				$lnks{$basename}=$p->{mtime}.";".$p->{atime}.";". $p->{ctime} ;
@@ -610,14 +611,15 @@ sub RVT_script_report_lnk2csv
 		if (!open (FREP,">$fileout" )) {RVT_log ("ERR","The file report can not be created"); return 0;}
 		else {print "All results exported to $fileout successfully\n" }
 		if ($ltype =~ /all/i){ #print headers
-                  	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Dispositivo;Tamaño
+                  	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Identificador de volumen;Dispositivo;Tamaño
 ";            }else{
-                     	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Tamaño
+                     	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Identificador de volumen;Tamaño
 ";
                 }
 		foreach my $ln (keys %lnks)
 		{
 			@dates = split(/;/,$lnks{$ln});
+			print "$ln\n";
 			for (my $i=0;$i<3;$i++){
 				$tm[$i] = localtime ($dates[$i]);
 			}
