@@ -612,7 +612,8 @@ sub RVT_script_report_lnk2csv
 		if ($ltype =~ /all/i){ #print headers
                   	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Dispositivo;Tamaño
 ";            }else{
-                     	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Tamaño";
+                     	print FREP "Fecha de última modificación;Fecha de último acceso;Fecha de creación;Fichero o directorio;Unidad;Ruta;Tamaño
+";
                 }
 		foreach my $ln (keys %lnks)
 		{
