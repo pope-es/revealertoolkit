@@ -619,7 +619,6 @@ sub RVT_script_report_lnk2csv
 		foreach my $ln (keys %lnks)
 		{
 			@dates = split(/;/,$lnks{$ln});
-			print "$ln\n";
 			for (my $i=0;$i<3;$i++){
 				$tm[$i] = localtime ($dates[$i]);
 			}
