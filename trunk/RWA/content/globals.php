@@ -27,7 +27,8 @@
 	define('RVT_LOG_WORKING','STARTED');								//value of the function to indicate that a command has (at least) been launched
 	define('RVT_LOG_SUCCESS','SUCCESS');								//value of the function to indicate that a command has finished successfully
 
-	$OUTPUT_FILE = '';													//full path to the temporary file that contains command outputs
+	//$OUTPUT_FILE = '';													//full path to the temporary file that contains command outputs
+	define('DEFAULT_VIEWER','textViewer');								//plugin for files that do not have a specific viewer assigned
 
 
 	/****************************
@@ -47,9 +48,9 @@
 
 	//WARNING: DO NOT DELETE/MODIFY ENTRIES
 	$CASE = '';		//contains the case code
-	$INPUT = '';	//contains user input
-	$OBJECT = '';	//contains the currently selected object
-	$RESERVED = '';	//contains extra data
+	$INPUT = '';	//contains user input, if any
+	$OBJECT = '';	//contains the code of the currently selected object
+	$RESERVED = '';	//contains extra data for future use
 
 	
 	/****************************
@@ -57,6 +58,7 @@
 	 ****************************/
 
 	//NOTE: for command literals, see the commands.xml file
+	//      for other literals, see each JS file
 
 	//GENERAL INTERFACE
 	define('PAGE_TITLE' , 'Revealer Toolkit Web Access - Alpha');
@@ -66,22 +68,31 @@
 	define('RESULTS' , 'Results');
 	define('LOG' , 'Console LOG');
 	define('TEXT_VIEWER' , 'Text Viewer');
-	define('TIMELINE_VIEWER', 'Timeline Viewer');
+	define('TIMELINE_VIEWER' , 'Timeline Viewer');
+	define('RESULTS_PAGE' , 'Executing command...');
 	
-	//OBJECT TREE PLUGIN
+	//OBJECT TREE PLUGIN (cases & files)
 	define('DEVICE' , 'device');
 	define('DISK' , 'disk');
 	define('PARTITION' , 'partition');
 	define('REFRESH_TREE' , 'Refresh');
+	define('EMPTY_RESULTS_TREE' , '<div id="resultstreeempty" style="text-align:center;margin-right:5px"><em>Select a disk or a partition from the navigation tree to see the produced results here.</em></div>');
 	
 	//LOG MANAGEMENT
 	define('CLEAR_LOG' , 'Clear');
 	define('ALERT_CLEAR_LOG' , 'Do you really want to clear the log window?');
-	define('MAX_LOG_ENTRIES',100);
+	define('MAX_LOG_ENTRIES' , 100);
 	
 	//COMMAND BOX
 	define('EMPTY_COMMAND_BOX','<div style="text-align:center;margin-right:5px"><em>Select an object from the navigation tree to see the available commands here.</em></div>');
 	define('COMMAND_TEMPLATE','<input type="image" src="img/{icon}" id="{id}" onclick="launchCommand(this)" style="vertical-align: text-top" class="{class}" {disabled} /> <label for="{id}" class="{lbclass}">{alias}</label><br />');
+	
+	//RESULTS PAGE
+	define('RESULTS_TITLE','Results');
+	define('RESULTS_FOOTER_OK','Command execution complete.');
+	define('RESULTS_FOOTER_KO','Command execution failed.');
+	define('USER_INPUT_LABEL','User input:');
+	define('USER_INPUT_SEND','Send');
 	
 	//COMMON PLUGIN LITERALS
 	define('MSG_SEARCH_NOT_FOUND', 'No more matches found in this direction.');

@@ -31,7 +31,6 @@ if(jQuery) (function($){
 				if (o.columns == undefined) o.columns = '';
 				if (o.headers == undefined) o.headers = '';
 				o.direction = 0;
-				
 				$sel = this.selector;
 
 				$(this).each(function(){
@@ -97,8 +96,12 @@ if(jQuery) (function($){
 					
 					function goToPage(n)
 					{
+						//check for previous requests (to cancel them)
+						if (typeof(DataRequest)!="undefined") DataRequest.abort();
+						var l = document.getElementById('jquerytimelineviewloading');
+						if (l!=null) l.style.visibility = '';
 						loadSearchArgs();
-						$.post(o.script, { file: o.file, lineOffset: (n - 1) * (document.getElementById('jquerytimelineviewlinnum')?document.getElementById('jquerytimelineviewlinnum').value:0) + 1, lines: document.getElementById('jquerytimelineviewlinnum')?document.getElementById('jquerytimelineviewlinnum').value:0/*o.lines*/, search: o.search, direction: o.direction, regexp: o.regexp, highlight: o.highlight, headers: o.headers, delimiter: o.delimiter, columns: o.columns, expression: o.expression },
+						DataRequest = $.post(o.script, { file: o.file, lineOffset: (n - 1) * (document.getElementById('jquerytimelineviewlinnum')?document.getElementById('jquerytimelineviewlinnum').value:0) + 1, lines: document.getElementById('jquerytimelineviewlinnum')?document.getElementById('jquerytimelineviewlinnum').value:0/*o.lines*/, search: o.search, direction: o.direction, regexp: o.regexp, highlight: o.highlight, headers: o.headers, delimiter: o.delimiter, columns: o.columns, expression: o.expression },
 							function(data) {
 								if(data != ''){
 									$($sel).html(data);

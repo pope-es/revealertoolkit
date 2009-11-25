@@ -16,15 +16,19 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
     <script type="text/javascript" src="js/jquery.js"></script>
     <script type="text/javascript" src="js/jquery-ui.js"></script>
     <script type="text/javascript" src="js/jquery.layout.js"></script>
-    <script type="text/javascript" src="js/jquery.filetree.js"></script>
+    <script type="text/javascript" src="js/jquery.casetree.js"></script>
+	<script type="text/javascript" src="js/jquery.filetree.js"></script>
     <script type="text/javascript" src="js/jquery.textview.js"></script>
 	<script type="text/javascript" src="js/jquery.timelineview.js"></script>
-
+	
     <script type="text/javascript">
-
-		function clearLOG(){
-			if (confirm("<?php echo ALERT_CLEAR_LOG ?>")) $('#LOG').empty();
+	
+		function resize_trees(){
+			$('#resultstree')[0].parent().style.maxHeight = $('.ui-layout-west')[0].clientHeight - $('#commands')[0].clientHeight - $('#commands')[0].offsetTop - 30;
+			$('#resultstree')[0].parent().style.minHeight = $('#resultstree')[0].style.maxHeight;
 		}
+
+		function clearLOG() { if (confirm("<?php echo ALERT_CLEAR_LOG ?>")) $('#LOG').empty(); }
 
 		function writeLOG(msg){
 			var d = new Date()
@@ -34,19 +38,31 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
 
 		function startTree(){
 			writeLOG('Building Navigation Tree...');
-			$('#casetree').fileTree({root: 'morgue'}, loadCommands/*function(f) { $('#contentheader').html('Text Viewer');  $('.contentplaceholder').textViewer({file: f}); }*/);
+			$('#selectedobject')[0].value = '';
+			$('#casetree').caseTree({root: 'morgue'}, function(f) { 
+						$('#selectedobject')[0].value = f;
+						refreshResultsTree();
+						loadCommands(f);
+					});
 			loadCommands('morgue');
+			refreshResultsTree();
 			writeLOG('Finished building Navigation Tree!');
 		}
 
-		function startTextViewer(){
-            $('#contentheader').html('<?php echo TEXT_VIEWER ?>');
-            $('.contentplaceholder').textViewer({file: '/var/www/rwa/master.php'});
-		}
+		function starttextViewer() { $('#contentheader').html('<?php echo TEXT_VIEWER ?>'); }
 
-		function startTimelineViewer(){
-            $('#contentheader').html('<?php echo TIMELINE_VIEWER ?>');
-            $('.contentplaceholder').timelineViewer({file: '/var/www/100103-01-1-disk_TL.csv',expression:'/(.*),(.*),(.*),(.*),(.*),(.*),(.*),(.*)/'});
+		function starttimelineViewer() { $('#contentheader').html('<?php echo TIMELINE_VIEWER ?>'); }
+		
+		function startResultsPage(page){
+			$('#contentheader').html('<?php echo RESULTS_PAGE ?>');
+			$('.contentplaceholder').html(page);
+		}
+		
+		function refreshResultsTree(){
+			var folder = $('#selectedobject')[0].value;
+			writeLOG('Refreshing Results Tree...');
+			$('#resultstree').fileTree({root: folder}, fileSelected);
+			writeLOG('Finished refreshing Results Tree!');
 		}
 		
         $(document).ready( function() {
@@ -63,11 +79,11 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
                 west__resizable: true,
                 west__border: 4,
                 west__maxSize: 300,
-				center__onresize: "adapt"
+				center__onresize: "adapt",
+				west__onresize: "resize_trees"
             });
 			writeLOG('Finished building layout!');
             startTree();
-			startTimelineViewer();
             writeLOG('<span style="color:#00A000">Finished starting up!</span> RWA is ready.');
         });
     </script>
@@ -85,7 +101,8 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
     </div>
     <div class="ui-layout-west">
         <div class="header"><?php echo NAVIGATION ?><div title="<?php echo REFRESH_TREE ?>" class="headerbutton reftree" id="reftree"></div></div>
-        <div style="min-height: 55%; max-height: 55%; overflow-y: auto; overflow-x: hidden; margin: 2px">
+		<input type="hidden" id="selectedobject" />
+        <div style="min-height: 30%; max-height: 30%; overflow-y: auto; overflow-x: hidden; margin: 2px">
             <div id="casetree">
             </div>
         </div>
@@ -93,10 +110,12 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
         <div id="commands">
 			<?php echo EMPTY_COMMAND_BOX ?>
         </div>
-		<div class="header"><?php echo RESULTS ?></div>
-        <div id="results">
-
-        </div>
+		<div class="header"><?php echo RESULTS ?><div title="<?php echo REFRESH_TREE ?>" class="headerbutton reftree" id="refresults"></div></div>
+		<div style="overflow-y: auto; overflow-x: hidden; margin: 2px">
+			<?php echo EMPTY_RESULTS_TREE ?>
+			<div id="resultstree" style="display: none">
+			</div>
+		</div>
     </div>
     <div class="ui-layout-south">
         <div class="header"><?php echo LOG ?><div title="<?php echo CLEAR_LOG ?>" class="headerbutton clearlog" onclick="clearLOG()" ></div></div>

@@ -94,8 +94,12 @@ if(jQuery) (function($){
 					
 					function goToPage(n)
 					{
+						//check for previous requests (to cancel them)
+						if (typeof(DataRequest)!="undefined") DataRequest.abort();
+						var l = document.getElementById('jquerytextviewloading');
+						if (l!=null) l.style.visibility = '';
 						loadSearchArgs();
-						$.post(o.script, { file: o.file, lineOffset: (n - 1) * (document.getElementById('jquerytextviewlinnum')?document.getElementById('jquerytextviewlinnum').value:0) + 1, lines: document.getElementById('jquerytextviewlinnum')?document.getElementById('jquerytextviewlinnum').value:0/*o.lines*/, search: o.search, direction: o.direction, regexp: o.regexp, highlight: o.highlight },
+						DataRequest = $.post(o.script, { file: o.file, lineOffset: (n - 1) * (document.getElementById('jquerytextviewlinnum')?document.getElementById('jquerytextviewlinnum').value:0) + 1, lines: document.getElementById('jquerytextviewlinnum')?document.getElementById('jquerytextviewlinnum').value:0/*o.lines*/, search: o.search, direction: o.direction, regexp: o.regexp, highlight: o.highlight },
 							function(data) {
 								if(data != ''){
 									$($sel).html(data);

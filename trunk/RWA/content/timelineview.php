@@ -155,7 +155,7 @@ function parseLines($lines,$start,$columns,$expression,$delimiter,$highlight){
 				$chunk = specialencode($chunk,$highlight);
 			else
 				$chunk = str_replace('','',$chunk); //search term was between two chunks
-			$buffer = $buffer . ($first ? "<th>$chunk</th>" : "<td>$chunk</td>");
+			$buffer = $buffer . ($first ? "<th>". trim($chunk) ."</th>" : "<td>$chunk</td>");
 		}
 		array_push($newLines,$buffer);
 		if(!$first) $start+=1;
@@ -166,7 +166,7 @@ function parseLines($lines,$start,$columns,$expression,$delimiter,$highlight){
 
 require_once 'globals.php';
 
-//set_error_handler("customError");
+set_error_handler("customError");
 
 $_POST['file'] = $root . urldecode($_POST['file']);
 $_POST['lineOffset'] = urldecode($_POST['lineOffset']);	//add 1 if 'headers' is not specified
@@ -177,7 +177,7 @@ $_POST['regexp'] = urldecode($_POST['regexp']);
 $_POST['highlight'] = urldecode($_POST['highlight']);
 $_POST['headers'] = urldecode($_POST['headers']); 		//if == '' then the values of the first line are used
 $_POST['columns'] = urldecode($_POST['columns']); 		//comma-separated zero-based indices of the displayed columns
-$_POST['expression'] = urldecode($_POST['expression']);	//regexp to perform preg_replace
+//$_POST['expression'] = urldecode($_POST['expression']);	//regexp to perform preg_replace
 $_POST['delimiter'] = urldecode($_POST['delimiter']);	//only valid if 'expression' is not specified
 
 $offset = 1;		//counter to lineOffset
@@ -237,7 +237,11 @@ if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 	echo '<td><input type="timeline" id="jquerytimelineviewlinnum" class="txtcent" value="' . $_POST['lines'] . '" style="font-weight: bold; width: 51px" /></td>';
 	echo '<td class="edgeright"></td>';
 	//END #LINES/PAGE
-	echo '</tr></table></div>';
+	//BEGIN LOADING ICON
+	echo '</tr></table>';
+	echo '<img id="jquerytimelineviewloading" src="img/loader.gif" style="position: relative; top: -25px;float:right;visibility:hidden" />';
+	//END LOADING ICON
+	echo '</div>';
 	//BEGIN NOTIFICATION MESSAGES
 	if ($error_triggered != ''){
 		$error_triggered = strip_tags($error_triggered);
