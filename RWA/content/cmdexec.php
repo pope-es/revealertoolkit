@@ -6,6 +6,8 @@
 require_once 'globals.php';
 require_once 'cmdparse.php';
 
+
+
 function execute_command($name){
 	$cmd = command_by_name($name);
 	//check if specified command exists
@@ -37,6 +39,8 @@ echo "<script type=\"text/javascript\"> writeLOG(\"Command <b>" . $c->function .
 
 //at this point we've got all required data to proceed
 echo execute_command($com);
-echo '<br><br/>' . RESULTS_FOOTER;
+echo '<br><br/>' . RESULTS_FOOTER_OK;
+
+restore_error_handler();
 
 ?>
