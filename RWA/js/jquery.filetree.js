@@ -36,23 +36,24 @@ if(jQuery) (function($){
 		fileTree: function(o, h) {
 			// Defaults
 			if( !o ) var o = {};
-			if( o.root == undefined ) o.root = 'morgue';
+			if( o.root == undefined ) o.root = '/media/morgue/';
 			if( o.script == undefined ) o.script = 'content/filetree.php';
 			if( o.folderEvent == undefined ) o.folderEvent = 'click';
 			if( o.expandSpeed == undefined ) o.expandSpeed = 500;
 			if( o.collapseSpeed == undefined ) o.collapseSpeed = 500;
 			if( o.expandEasing == undefined ) o.expandEasing = null;
 			if( o.collapseEasing == undefined ) o.collapseEasing = null;
+			if( o.multiFolder == undefined ) o.multiFolder = true;
 			if( o.loadMessage == undefined ) o.loadMessage = 'Loading...';
 			
 			$(this).each( function() {
 				
 				function showTree(c, t) {
-					writeLOG('Expanding <em><b>'+t+'</b></em>...');
-					$("#reftree").unbind('click',startTree);
+					if ($(c)[0].style.display != 'none') writeLOG('Expanding results folder <em><b>'+t+'</b></em>...');
+					$("#refresults").unbind('click',refreshResultsTree);
 					$(c).addClass('wait');
 					$(".jqueryFileTree.start").remove();
-					$.post(o.script, { dir: t }, function(data) {
+					$.post(o.script, { root: o.root, dir: t }, function(data) {
 						$(c).find('.start').html('');
 						$(c).removeClass('wait').append(data);
 						if( o.root == t ) $(c).find('UL:hidden').show(); else $(c).find('UL:hidden').slideDown({ duration: o.expandSpeed, easing: o.expandEasing });
@@ -62,30 +63,30 @@ if(jQuery) (function($){
 				
 				function bindTree(t) {
 					$(t).find('LI A').bind(o.folderEvent, function() {
-						var c = $(this).parent().hasClass('case');
-						var d = $(this).parent().hasClass('device');
-						var k = $(this).parent().hasClass('disk');
-						if( c || d || k ) {
+						if( $(this).parent().hasClass('directory') ) {
 							if( $(this).parent().hasClass('collapsed') ) {
 								// Expand
+								if( !o.multiFolder ) {
+									$(this).parent().parent().find('UL').slideUp({ duration: o.collapseSpeed, easing: o.collapseEasing });
+									$(this).parent().parent().find('LI.directory').removeClass('expanded').addClass('collapsed');
+								}
 								$(this).parent().find('UL').remove(); // cleanup
-								showTree( $(this).parent(), escape($(this).attr('rel').match( /.*/ )) );
+								showTree( $(this).parent(), escape($(this).attr('rel').match( /.*\// )) );
 								$(this).parent().removeClass('collapsed').addClass('expanded');
 							} else {
 								// Collapse
 								$(this).parent().find('UL').slideUp({ duration: o.collapseSpeed, easing: o.collapseEasing });
 								$(this).parent().removeClass('expanded').addClass('collapsed');
 							}
+						} else {
+							h($(this).attr('rel'),$(this).attr('viewer'),$(this).attr('params'));
 						}
-						$('.selected').removeClass('selected');
-						$(this).addClass('selected');
-						h($(this).attr('rel'));
 						return false;
 					});
 					// Prevent A from triggering the # on non-click events
 					if( o.folderEvent.toLowerCase != 'click' ) $(t).find('LI A').bind('click', function() { return false; });
-					$("#reftree").bind('click',startTree);
-					writeLOG('Finished expanding <em><b>'+ ($(t).parent()[0].tagName=='DIV'?o.root:$(t).parent().find('LI A')[0].rel)+'</b></em>!');
+					$("#refresults").bind('click',refreshResultsTree);
+					if($(t)[0].style.display != 'none') writeLOG('Finished expanding result folder <em><b>'+ $(t).find('A')[0].rel +'</b></em>!');
 				}
 				// Loading message
 				$(this).html('<ul class="jqueryFileTree start"><li class="wait">' + o.loadMessage + '<li></ul>');
@@ -97,26 +98,10 @@ if(jQuery) (function($){
 	
 })(jQuery);
 
-function loadCommands(obj){
-	$.post('content/cmdbox.php', { name: obj },
-		function(data) {
-			if(data != ''){
-				$('#commands').html(data);
-				writeLOG('Commands loaded successfully!');
-			}
-		}
-	);
-}
-
-function launchCommand(src){
-	alert(src.id);
-	// $.post('content/cmdexec.php', { name: src.id, target: ........, ¿extra: .....? },
-		// function(data) {
-			// if(data != ''){
-
-				// writeLOG('Command <em>' + src.id + '</em> launched!');
-			// }
-		// }
-	// );
-	
+function fileSelected(f,v,p){
+	var func =  "$('.contentplaceholder').";
+	func += v == 'undefined' ? 'textViewer' : v;
+	func += "({file: '" + f + "'" + (p == 'undefined' ? '' : p) + "});";
+	eval(func);
+	eval('start' + (v == 'undefined' ? 'textViewer' : v) + '()');
 }

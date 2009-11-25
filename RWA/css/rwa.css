@@ -89,7 +89,7 @@ div.msg
 
 td.errleft
 {
-	background-image: url('../img/errleft.png') no-repeat;
+	background: url('../img/errleft.png') no-repeat;
 	height: 24px;
 	width: 12px;
 }

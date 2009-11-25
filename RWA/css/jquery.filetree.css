@@ -30,10 +30,20 @@ UL.jqueryFileTree A:hover {
 	background: #BDF;
 }
 
+.jqueryFileTree LI.directory { background: url(../img/folder.png) left top no-repeat; }
+.jqueryFileTree LI.expanded { background: url(../img/folder_open.png) left top no-repeat; }
+.jqueryFileTree LI.file { background: url(../img/file.png) left top no-repeat; }
+.jqueryFileTree LI.ext_asc { background: url(../img/ext_asc.png) left top no-repeat; }
+.jqueryFileTree LI.ext_csv { background: url(../img/ext_csv.png) left top no-repeat; }
+.jqueryFileTree LI.ext_sum { background: url(../img/ext_sum.png) left top no-repeat; }
+.jqueryFileTree LI.ext_txt { background: url(../img/ext_txt.png) left top no-repeat; }
+.jqueryFileTree LI.ext_uni { background: url(../img/ext_uni.png) left top no-repeat; }
+
 .jqueryFileTree LI.case { background: url(../img/case.png) left top no-repeat; }
 .jqueryFileTree LI.device { background: url(../img/device.png) left top no-repeat; }
 .jqueryFileTree LI.disk { background: url(../img/disk.png) left top no-repeat; }
 .jqueryFileTree LI.partition { background: url(../img/partition.png) left top no-repeat; }
+
 .jqueryFileTree LI.wait { background: url(../img/spinner.gif) left top no-repeat; }
 
 .headerbutton
@@ -42,7 +52,6 @@ UL.jqueryFileTree A:hover {
 	float: right;
 	height: 14px;
 	position: relative;
-	top: -1px;
 	width: 14px;
 }
 

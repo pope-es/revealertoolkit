@@ -25,7 +25,6 @@ class command{
 	var $icon;		//null = no graphical representation (internal)
 	var $advanced;
 	var $multiple;
-	var $viewer;	//null = no need to change current view
 
 	// CAN_EXECUTE checks for all required preconditions to accomplish
 	function can_execute (){
@@ -60,17 +59,18 @@ class command{
 	//ISEXECUTED returns a constant that specifies whether this command has
 	//performed any operation over a certain object
 	//Possible results are:
-	//	- NOT_EXECUTED
-	//	- WORKING
-	//	- SUCCESS
+	//	- RVT_LOG_NOT_EXECUTED
+	//	- RVT_LOG_WORKING
+	//	- RVT_LOG_SUCCESS
 	function isExecuted($object){
 		chdir(RVT_PATH);
 		$p = InitRVT();
 		$p->eval("use RVTbase::RVT_core;");
 		ob_start();
-		$p->eval(RVT_CHECK_EXECUTION . "(" . $this->proc_args() . ");");
+		$p->eval(RVT_CHECK_EXECUTION . "('$this->name' , '$object');");
 		$retVal = ob_get_contents();
 		ob_end_clean();
+		return $retVal;
 	}
 	
 }
@@ -134,7 +134,6 @@ function map_command($command){
 	$c->icon = ((bool)$command->icon) ? (string)$command->icon : null;
 	$c->advanced = (bool)$command->advanced;
 	$c->multiple = (bool)$command->multiple;
-	$c->viewer = ((bool)$command->viewer) ? $command->viewer : null;
 	
 	$c->filled = true;
 	return $c;
@@ -159,4 +158,17 @@ function commands_by_object($object){
 	return $retVal;
 }
 
+// returns the name of the default viewer for a given file
+function get_default_viewer($filename){
+	$tmp = load_xml();
+	foreach ($tmp->command as $command)
+		if($command->files)
+			foreach($command->files->file as $file)
+				if (preg_match($file,$filename)==1){
+					$retVal[] = $file['viewer'];
+					$retVal[] = $file['params'];
+					return $retVal;
+				}
+	return null;
+}
 ?>

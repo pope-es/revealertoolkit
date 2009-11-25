@@ -182,7 +182,11 @@ if( file_exists($_POST['file']) && is_file($_POST['file']) ) {
 	echo '<td><input type="text" id="jquerytextviewlinnum" class="txtcent" value="' . $_POST['lines'] . '" style="font-weight: bold; width: 51px" /></td>';
 	echo '<td class="edgeright"></td>';
 	//END #LINES/PAGE
-	echo '</tr></table></div>';
+	//BEGIN LOADING ICON
+	echo '</tr></table>';
+	echo '<img id="jquerytextviewloading" src="img/loader.gif" style="position: relative; top: -25px;float:right;visibility:hidden" />';
+	//END LOADING ICON
+	echo '</div>';
 	//BEGIN NOTIFICATION MESSAGES
 	if ($error_triggered != ''){
 		$error_triggered = strip_tags($error_triggered);
