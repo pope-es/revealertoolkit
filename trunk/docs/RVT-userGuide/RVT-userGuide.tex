@@ -1461,6 +1461,54 @@ and $<$date$>$ is a date in format YYYYMMDD, YYYYMM, YYYY or a date interval (da
 For example: 2008+1year, today-6months, 2007+2years, 200502-15day. For more information  see 'man Date::Manip'.
 
 Results are stored under \emph{output/reports/lnk/$<$disk$>$\_lnk\_$<$device$>$\_$<$date$>$.csv}.
+
+
+
+
+\section{\emph{script carving}}
+
+Runs external PhotoRec tool for file carving.
+
+File carving is raw, signature-based file recovery. It can be done in a filesystem-independant way (and that's how we do it inside RVT, by using PhotoRec with the appropriate parameters).
+
+RVT needs PhotoRec to be in your path. Usually it is installed in \texttt{/usr/sbin} which is not in the path of regular users, so  it might be a good idea to create a softlink by running: \texttt{ln -s /usr/sbin/photorec /usr/local/bin}
+
+\textbf{Known issues:}
+\begin{itemize}
+	\item \texttt{photorec.log} will be created (or appended, if already exists) in the path where RVT is invoked. This seems to be due to a bug with the Linux version of RVT not accepting the \texttt{/logname} option (documented in their wiki).
+\end{itemize}
+
+
+
+\subsection{\emph{script carving default}} 
+
+Runs PhotoRec with the default RVT filetype set. This means:
+{ \footnotesize
+\begin{itemize}
+	\item 	\texttt{accdb:} Access Data Base
+	\item 	\texttt{dat:} IE History, Glavna Knjiga account data
+	\item 	\texttt{doc:} Microsoft Office Document (doc/xls/ppt/vsd/...), 3ds Max, MetaStock
+	\item 	\texttt{evt:} Windows Event Log
+	\item 	\texttt{gz:} gzip compressed data
+	\item 	\texttt{jpg:} JPG picture
+	\item 	\texttt{lnk:} MS Windows Link
+	\item 	\texttt{mdb:} Access Data Base
+	\item 	\texttt{mov:} mov/mp4/3gp/3g2/jp2
+	\item 	\texttt{mpg:} Moving Picture Experts Group video
+	\item 	\texttt{pdf:} Portable Document Format, Adobe Illustrator
+	\item 	\texttt{png:} Portable/JPEG/Multiple-Image Network Graphics
+	\item 	\texttt{pst:} Outlook (pst/wab/dbx)
+	\item 	\texttt{rar:} Rar archive
+	\item 	\texttt{reg:} Windows Registry
+	\item 	\texttt{tar:} tar archive
+	\item 	\texttt{tx?:} Text files with header: rtf,xml,xhtml,imm,pm,ram,reg,sh,slk,stp
+	\item 	\texttt{txt:} Other text files: txt,html,asp,bat,C,jsp,perl,php,py/emlx... scripts
+	\item 	\texttt{zip:} zip archive including OpenOffice and MSOffice 2007
+\end{itemize}
+}
+
+
+
 \chapter{Operational guides and tricks}
 
 
@@ -2020,6 +2068,22 @@ perl rip.pl -l > plugins/plugins
 ln -s /usr/local/src/regripper/rip.pl /usr/local/bin/rip
 chmod a+x /usr/local/src/regripper/rip.pl
 \end{verbatim}
+
+
+
+\section{PhotoRec} \label{anx:photorec}
+
+PhotoRec is available as a package in many Linux distros, use your standard package administration software and look for packages called \texttt{photorec}. If you need (or prefer) to install by hand, do it after downloading from:
+\begin{verbatim}
+http://www.cgsecurity.org/wiki/TestDisk_Download
+\end{verbatim}
+
+Please keep in mind that PhotoRec must be in the path of the same user running RVT. It is recommended to create a soft link in \texttt{/usr/local/bin} to ensure every user in the system will find it in their path; for instance:
+
+\begin{verbatim}
+ln -s /usr/sbin/photorec /usr/local/bin/
+\end{verbatim}
+
 
 
 \end{document}
