@@ -250,7 +250,7 @@ sub RVT_losetup_recheck {
 
 
 
-sub RVT_mount_delete () {
+sub RVT_mount_delete {
 
     my $object = shift(@_);
     my ($case, $device, $disk, $part);
@@ -287,7 +287,7 @@ sub RVT_mount_delete () {
 
 
 
-sub RVT_mount_assign () {
+sub RVT_mount_assign {
 
     my $object = shift(@_);
     my ($case, $device, $disk, $part);

@@ -54,15 +54,9 @@ my $morguepath;
 sub constructor {
    
    my $dumplnk = `dumplnk.pl -V`;
-   my $fstrings = `f-strings -h`;   
    
    if (!$dumplnk) {
         RVT_log ('ERR', 'RVT_lnk not loaded (couldn\'t find dumplnk)');
-        return;
-   }
-   
-   if (!$fstrings) {
-        RVT_log ('ERR', 'RVT_lnk not loaded (couldn\'t find f-strings)');
         return;
    }
    
