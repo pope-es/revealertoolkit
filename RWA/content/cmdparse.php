@@ -28,7 +28,7 @@ class command{
 
 	// CAN_EXECUTE checks for all required preconditions to accomplish
 	function can_execute (){
-		if (!filled) return false;
+		if (!$this->filled) return false;
 		/*FUNCION DE DEPENDENCIAS*/
 		return true;
 	}
@@ -45,6 +45,7 @@ class command{
 	// EXECUTE calls the specified function with the required arguments
 	// and returns the bunch of text lines printed in the stdout, if so
 	function execute (){
+		$retVal = '';
 		if ($this->can_execute()){
 			$p = InitRVT();
 			$p->eval("use $this->module;");
@@ -56,12 +57,12 @@ class command{
 		return $retVal;
 	}
 
-	//ISEXECUTED returns a constant that specifies whether this command has
-	//performed any operation over a certain object
-	//Possible results are:
-	//	- RVT_LOG_NOT_EXECUTED
-	//	- RVT_LOG_WORKING
-	//	- RVT_LOG_SUCCESS
+	// ISEXECUTED returns a constant that specifies whether this command has
+	// performed any operation over a certain object
+	// Possible results are:
+	//	 - RVT_LOG_NOT_EXECUTED
+	//	 - RVT_LOG_WORKING
+	//	 - RVT_LOG_SUCCESS
 	function isExecuted($object){
 		chdir(RVT_PATH);
 		$p = InitRVT();
@@ -171,4 +172,21 @@ function get_default_viewer($filename){
 				}
 	return null;
 }
+
+// wrapper for the RVT function "exploit_diskname"
+function expand_object($object, $level){
+	chdir(RVT_PATH);
+	$p = InitRVT();
+	$p->eval("use RVTbase::RVT_core;");
+	return $p->array->RVT_exploit_diskname($level,$object);
+}
+
+// wrapper for the RVT function "cmd_log"
+function log_execution($command_line,$last_arg,$action){
+	chdir(RVT_PATH);
+	$p = InitRVT();
+	$p->eval("use RVTbase::RVT_core;");
+	$p->RVT_cmd_log('',$last_arg,$command_line,$action);
+}
+
 ?>
