@@ -24,13 +24,13 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
     <script type="text/javascript">
 	
 		function resize_trees(){
-			var Val = (($('.ui-layout-west')[0].clientHeight - 78) / 3)+'px';
+			var Val = (($('.ui-layout-west')[0].clientHeight - 80) / 3)+'px';
 			if ($('#resultstree').length > 0){
 				$('#resultstree').parent()[0].style.height = Val;
-				$('#resultstree').parent()[0].style.width = $('.ui-layout-west')[0].clientWidth - 5;
+				$('#resultstree').parent()[0].style.width = ($('.ui-layout-west')[0].clientWidth - 5) + 'px';
 			}
 			$('#casetree').parent()[0].style.height = Val;
-			$('#casetree').parent()[0].style.width = $('.ui-layout-west')[0].clientWidth - 5
+			$('#casetree').parent()[0].style.width = ($('.ui-layout-west')[0].clientWidth - 5) + 'px';
 			$('#commands')[0].style.height = Val;
 		}
 
