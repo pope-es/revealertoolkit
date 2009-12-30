@@ -24,8 +24,14 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
     <script type="text/javascript">
 	
 		function resize_trees(){
-			$('#resultstree')[0].parent().style.maxHeight = $('.ui-layout-west')[0].clientHeight - $('#commands')[0].clientHeight - $('#commands')[0].offsetTop - 30;
-			$('#resultstree')[0].parent().style.minHeight = $('#resultstree')[0].style.maxHeight;
+			var Val = (($('.ui-layout-west')[0].clientHeight - 78) / 3)+'px';
+			if ($('#resultstree').length > 0){
+				$('#resultstree').parent()[0].style.height = Val;
+				$('#resultstree').parent()[0].style.width = $('.ui-layout-west')[0].clientWidth - 5;
+			}
+			$('#casetree').parent()[0].style.height = Val;
+			$('#casetree').parent()[0].style.width = $('.ui-layout-west')[0].clientWidth - 5
+			$('#commands')[0].style.height = Val;
 		}
 
 		function clearLOG() { if (confirm("<?php echo ALERT_CLEAR_LOG ?>")) $('#LOG').empty(); }
@@ -82,6 +88,7 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
 				center__onresize: "adapt",
 				west__onresize: "resize_trees"
             });
+			resize_trees();
 			writeLOG('Finished building layout!');
             startTree();
             writeLOG('<span style="color:#00A000">Finished starting up!</span> RWA is ready.');
@@ -100,22 +107,36 @@ echo '<?xml version="1.0" encoding="UTF-8" ?>' ?>
 		<span class="title"><?php echo TITLE ?></span>
     </div>
     <div class="ui-layout-west">
-        <div class="header"><?php echo NAVIGATION ?><div title="<?php echo REFRESH_TREE ?>" class="headerbutton reftree" id="reftree"></div></div>
-		<input type="hidden" id="selectedobject" />
-        <div style="min-height: 30%; max-height: 30%; overflow-y: auto; overflow-x: hidden; margin: 2px">
-            <div id="casetree">
-            </div>
-        </div>
-        <div class="header"><?php echo COMMANDS ?></div>
-        <div id="commands">
-			<?php echo EMPTY_COMMAND_BOX ?>
-        </div>
-		<div class="header"><?php echo RESULTS ?><div title="<?php echo REFRESH_TREE ?>" class="headerbutton reftree" id="refresults"></div></div>
-		<div style="overflow-y: auto; overflow-x: hidden; margin: 2px">
-			<?php echo EMPTY_RESULTS_TREE ?>
-			<div id="resultstree" style="display: none">
-			</div>
-		</div>
+	<table style="width:100%" cellpadding="0" cellspacing="0">
+		<tr>
+			<td>
+				<div class="header"><?php echo NAVIGATION ?><div title="<?php echo REFRESH_TREE ?>" class="headerbutton reftree" id="reftree"></div></div>
+				<input type="hidden" id="selectedobject" />
+				<div style="overflow-y: auto; overflow-x: hidden; padding: 2px">
+					<div id="casetree">
+					</div>
+				</div>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<div class="header"><?php echo COMMANDS ?></div>
+				<div id="commands">
+					<?php echo EMPTY_COMMAND_BOX ?>
+				</div>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<div class="header"><?php echo RESULTS ?><div title="<?php echo REFRESH_TREE ?>" class="headerbutton reftree" id="refresults"></div></div>
+				<div style="overflow-y: auto; overflow-x: hidden; padding: 2px">
+					<?php echo EMPTY_RESULTS_TREE ?>
+					<div id="resultstree" style="display: none">
+					</div>
+				</div>
+			</td>
+		</tr>
+	</table>
     </div>
     <div class="ui-layout-south">
         <div class="header"><?php echo LOG ?><div title="<?php echo CLEAR_LOG ?>" class="headerbutton clearlog" onclick="clearLOG()" ></div></div>

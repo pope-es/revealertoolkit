@@ -67,9 +67,6 @@
 		<name>info_list</name>
 		<alias>Info list</alias>
 		<description>Gives RVT shell configuration information</description>
-		<objects>
-			<object>partition</object>
-		</objects>
 		<module>RVTbase::RVT_info</module>
 		<function>RVT_info_list</function>
 		<standard>/.*/</standard>
@@ -79,9 +76,6 @@
 		<name>info_debug_dumpmorguexml</name>
 		<alias>Info - dump RVTmorgueInfo</alias>
 		<description>Dumps content of RVTmorgueInfo.xml as imported by RVT</description>
-		<objects>
-			<object>partition</object>
-		</objects>
 		<module>RVTbase::RVT_info</module>
 		<function>RVT_info_debug_dumpmorguexml</function>
 		<standard>/.*/</standard>
@@ -92,9 +86,6 @@
 		<name>info_debug_dumprvtcases</name>
 		<alias>Info - dump RVT_cases</alias>
 		<description>Dumps content of internal variable RVT_cases</description>
-		<objects>
-			<object>partition</object>
-		</objects>
 		<module>RVTbase::RVT_info</module>
 		<function>RVT_info_debug_dumprvtcases</function>
 		<standard>/.*/</standard>
@@ -105,9 +96,6 @@
 		<name>info_debug_dumprvtcfg</name>
 		<alias>Info - dump RVT config</alias>
 		<description>Dumps content of current RVT configuration</description>
-		<objects>
-			<object>partition</object>
-		</objects>
 		<module>RVTbase::RVT_info</module>
 		<function>RVT_info_debug_dumprvtcfg</function>
 		<standard>/.*/</standard>
