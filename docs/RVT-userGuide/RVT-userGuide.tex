@@ -1516,24 +1516,55 @@ Runs PhotoRec with the default RVT filetype set. This means:
 
 Processes several complex file types to turn them into plain text.
 
-Output is sent to \texttt{output/parser}. Each output file or folder has a prefix indicating the filetype it came from (PST, PDF...) and a numerical suffix.
+Output is sent to \texttt{output/parser}. Each output file or folder has a prefix indicating the plugin that generated it (PST, PDF, ZIP, text...) and a numerical suffix.
 
-For each file or folder, you will also have another one with `RVT\_metadata' appended to its name. This special file indicates the source file the data came from. Example:
+Plugins that generate one output file per input file, will append a header with metadata, indicating the source file and RVT module that generated this result. Basically like this:
 \begin{verbatim}
-Source file: /media/morgue/100103-w2k/(...)/GuestSDK_Terms_and_Conditions.pdf
-Parsed by RVT module RVT_parse version 1.0
+# BEGIN RVT METADATA
+# Source file: /media/morgue/100123-helloworld/100123-01-1/mnt/p02/autoexec.bat
+# Parsed by: RVT_parse v1.0
+# END RVT METADATA
 \end{verbatim}
 
+Plugins that generate one folder with many files for each input file (for instance PST or ZIP parsing), will put only these two things inside that output folder:
+\begin{itemize}
+	\item A file named \texttt{RVT\_metadata} which will contain the metadata header mentioned above.
+	\item A folder named \texttt{contents} where they will actually put the contents of the file parsing.
+\end{itemize}
 
 
-\subsection{\emph{script parse pdf}}
 
-Uses \texttt{pdftotext} to extract text from PDF files.
-% XX_FIXME: falta incluir una referencia al anexo que explica la instalación del software.
+\subsection{A note about recursion}
+
+After running, each plugins ensures that \texttt{mnt/p00} contains a symlink to its output folder; otherwise, it creates it, and runs \texttt{RVT\_files\_allocfiles ()} to update the \texttt{alloc\_files} index.
+
+Thus, further plugin executions will take as input, not only the content of the mounted filesystem (\texttt{/mnt/@partitions}) but also the output of previous plugin executions.
+
+For instance, a smart way to process an image would be:
 \begin{verbatim}
-script parse pdf <partition>
+set level 100123-01-1
+mount assign
+script files allocfiles
+script evt parse
+script lnk generate
+script parse pst @partitions
+script parse zip @partitions
+script parse rar @partitions
+script parse zip 100123-01-1-p00
+script parse rar 100123-01-1-p00
+script parse pdf @partitions
+script parse pdf 100123-01-1-p00
+script parse text 100123-01-1-p00
+script parse text @partitions
 \end{verbatim}
 
+This would cover most cases, such as finding text strings hits in:
+\begin{itemize}
+	\item A PST, which contains an e-mail, with a ZIP attachment, which contains a RAR file, which contains a PDF.
+	\item A PST contains a RAR or ZIP file which contain a DOCX or ODT file.
+	\item A text string which appears only inside EVT files.
+	\item A text string which appears only inside an LNK. 
+\end{itemize}
 
 
 
@@ -1577,6 +1608,33 @@ This module depends on the \texttt{unrar} command.
 \begin{verbatim}
 script parse rar <partition>
 \end{verbatim}
+
+
+
+\subsection{\emph{script parse pdf}}
+
+Uses \texttt{pdftotext} to extract text from PDF files.
+% XX_FIXME: falta incluir una referencia al anexo que explica la instalación del software.
+\begin{verbatim}
+script parse pdf <partition>
+\end{verbatim}
+
+
+
+\subsection{\emph{script parse text}}
+
+This module uses the \texttt{f-strings} tool to extract any raw text strings visible in files.
+
+\begin{itemize}
+	\item It finds suitable ASCII strings as well as UTF-16 ones.
+	\item It converts all output to lowercase, to speed up searching.
+	\item It flattens special characters (\texttt{Barça} becomes \texttt{barca}).
+\end{itemize}
+
+
+
+\textbf{Important note about recursion.} Most plugins are better launched over \texttt{@partitions} and then over \texttt{p00}. However the text parser must be launched first at \texttt{p00} and then at \texttt{@partitions}; the contrary would result in double-parsing some files.
+
 
 
 
