@@ -107,8 +107,8 @@ RVTscripts::RVT_files::constructor;
 use RVTscripts::RVT_regripper;
 RVTscripts::RVT_regripper::constructor;
 
-use RVTscripts::RVT_mail;
-RVTscripts::RVT_mail::constructor;
+#use RVTscripts::RVT_mail;
+#RVTscripts::RVT_mail::constructor;
 
 use RVTscripts::RVT_filelist;
 RVTscripts::RVT_filelist::constructor;		
@@ -125,6 +125,8 @@ RVTscripts::RVT_evt::constructor;
 use RVTscripts::RVT_carving;
 RVTscripts::RVT_carving::constructor;
 
+use RVTscripts::RVT_parse;
+RVTscripts::RVT_parse::constructor;
 
 
 #######################################################################

@@ -84,11 +84,13 @@ sub RVT_script_files_allocfiles  {
     mkdir $infopath unless (-e $infopath);
     if (! -d $infopath) { RVT_log ('ERR', "there is no path to the morgue/info!"); return 0};
 
-    my $command = "find $morguepath/mnt > $infopath/alloc_files.txt";
-    
+    my $command = "find -L $morguepath/mnt > $infopath/alloc_files.txt";
     print "$command\n\n";
     `$command`;
-    
+    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
+    my $command = "ln -s $infopath $morguepath/mnt/p00/output_info";
+    if ( ! -e $morguepath.'/mnt/p00/output_info' ) { `$command` };
+	printf ("Finished updateing alloc_files.\n");
     return 1;
 }
 

@@ -75,12 +75,12 @@ sub RVT_script_lnk_generate
 	$disk = $main::RVT_level->{tag} unless $disk;
 	if (RVT_check_format($disk) ne 'disk') { RVT_log ('WARNING', 'that is not a disk'); return 0; }
 
-	$morguepath = RVT_get_morguepath($disk);
+	my $morguepath = RVT_get_morguepath($disk);
 	if (! $morguepath) { RVT_log ('WARNING', 'there is no path to the morgue!'); return 0};
-	my $lnkpath= "$morguepath/output/lnk";
+	my $lnkpath= "$morguepath/output/lnk/";
 	if (! -e $lnkpath){
 	    my @args = ('mkdir', $lnkpath);
-		system (@args);
+	    system (@args);
 	}
 	
 	my $mntpath= "$morguepath/mnt";
@@ -123,9 +123,15 @@ sub RVT_script_lnk_generate
 		#print FOUT $file;
 		print FOUT $_;
 		}
+		
 	}
 	close FOUT;
-	
+
+    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };	
+	my @args = ('ln', '-s', $lnkpath, $morguepath.'/mnt/p00/output_lnk');
+	system (@args);
+	printf ("Finished parsing LNK files. Updating alloc_files...\n");
+	RVT_script_files_allocfiles();
 	return 1;
 }
 
