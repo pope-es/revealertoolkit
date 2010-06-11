@@ -1349,6 +1349,8 @@ The first line of each results file have the path to the hive file on which RegR
 
 Module for extracting emails in text format from Microsoft Outlook mailboxes (PST) using \emph{libpst} (www.five-ten-sg.com/libpst).
 
+\textbf{PLEASE NOTE:} This code has been moved into \emph{script parse pst}.
+
 \subsection{\emph{script mail parsepsts}}
 
 Search all Microsoft Outlook mailboxes (PST extension) and parse them with \emph{libpst}
@@ -1506,6 +1508,77 @@ Runs PhotoRec with the default RVT filetype set. This means:
 	\item 	\texttt{zip:} zip archive including OpenOffice and MSOffice 2007
 \end{itemize}
 }
+
+
+
+
+\section{\emph{script parse}}
+
+Processes several complex file types to turn them into plain text.
+
+Output is sent to \texttt{output/parser}. Each output file or folder has a prefix indicating the filetype it came from (PST, PDF...) and a numerical suffix.
+
+For each file or folder, you will also have another one with `RVT\_metadata' appended to its name. This special file indicates the source file the data came from. Example:
+\begin{verbatim}
+Source file: /media/morgue/100103-w2k/(...)/GuestSDK_Terms_and_Conditions.pdf
+Parsed by RVT module RVT_parse version 1.0
+\end{verbatim}
+
+
+
+\subsection{\emph{script parse pdf}}
+
+Uses \texttt{pdftotext} to extract text from PDF files.
+% XX_FIXME: falta incluir una referencia al anexo que explica la instalación del software.
+\begin{verbatim}
+script parse pdf <partition>
+\end{verbatim}
+
+
+
+
+\subsection{\emph{script parse pst}}
+
+Module for extracting emails in text format from Microsoft Outlook mailboxes (PST) using \emph{libpst} (www.five-ten-sg.com/libpst).
+% XX_FIXME: falta incluir una referencia al anexo que explica la instalación del software.
+
+This module will search all Microsoft Outlook mailboxes (PST extension) and parse them with \emph{libpst}
+
+\begin{verbatim}
+script parse pst <partition>
+\end{verbatim}
+
+
+
+
+\subsection{\emph{script parse zip}}
+
+This module extracts content from ZIP archives, and collaterally also from OOXML (MS Office 2007) and ODF (OpenOffice).
+
+It dependes on the \texttt{unzip} command which will most probably be already installed in your Linux system.
+
+
+\begin{verbatim}
+script parse zip <partition>
+\end{verbatim}
+
+
+
+
+\subsection{\emph{script parse rar}}
+
+This module extracts content from RAR archives.
+
+This module depends on the \texttt{unrar} command.
+% XX_FIXME: quizá falta escribir el anexo sobre instalación de software.
+\textbf{PLEASE NOTE:} Distros such as Debian provide an \texttt{unrar-free} package. This package \textbf{will fail} to extract some files in RAR 3.0 format. It is highly recommended that you use the \texttt{unrar} package from the \texttt{non-free} repository.
+
+
+\begin{verbatim}
+script parse rar <partition>
+\end{verbatim}
+
+
 
 
 
@@ -2083,6 +2156,19 @@ Please keep in mind that PhotoRec must be in the path of the same user running R
 \begin{verbatim}
 ln -s /usr/sbin/photorec /usr/local/bin/
 \end{verbatim}
+
+
+
+
+\section{pdftotext} \label{anx:pdftotext}
+
+\texttt{pdftotext} is available in most Linux distros, find it using your standard package administration software. In Debian, it is in the \texttt{xpdf-utils} package, you can install it with:
+\begin{verbatim}
+apt-get install xpdf-utils
+\end{verbatim}
+
+
+
 
 
 
