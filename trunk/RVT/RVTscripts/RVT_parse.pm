@@ -19,12 +19,6 @@
 #    For more information, please visit
 #    http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
-
-# KNOWN ISSUES:
-# We are not logging whether parsing was successful. Code for this in PST module was wrong (it always reported error even when it was OK).
-
-
-
 package RVTscripts::RVT_parse;  
 
 use strict;
@@ -43,6 +37,7 @@ use strict;
                             &RVT_script_parse_rar
                             &RVT_script_parse_pdf
                             &RVT_script_parse_lnk
+                            &RVT_script_parse_evt
                             &RVT_script_parse_text
                             &RVT_script_parse_search
                         );
@@ -65,6 +60,7 @@ use File::Copy;
 use File::Path qw(mkpath);
 use File::Basename;
 use Data::Dumper;
+use Date::Manip;
 
 sub constructor {
    
@@ -74,6 +70,7 @@ sub constructor {
    my $unrar = `unrar --help`;
    my $fstrings = `f-strings -h`;
    my $lnkparse = `lnk-parse-1.0.pl`;
+   my $evtparse = `evtparse.pl`;
    
    if (!$pdftotext) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pdftotext)');
@@ -92,11 +89,15 @@ sub constructor {
         return;
    }
       if (!$fstrings) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
+        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, COMPILE (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)');
         return;
    }
       if (!$lnkparse) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
+        return;
+   }
+      if (!$evtparse) {
+        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
         return;
    }
 
@@ -108,6 +109,7 @@ sub constructor {
    $main::RVT_requirements{'unrar'} = $unrar;
    $main::RVT_requirements{'fstrings'} = $fstrings;
    $main::RVT_requirements{'lnkparse'} = $lnkparse;
+   $main::RVT_requirements{'evtparse'} = $evtparse;
 
    $main::RVT_functions{RVT_script_parse_pst } = "Parses all PST's found on the partition using libpst\n
                                                     script parse pst <partition>";
@@ -119,6 +121,8 @@ sub constructor {
                                                     script parse pdf <partition>";
    $main::RVT_functions{RVT_script_parse_lnk } = "Parses Windows LNK files\n
                                                     script parse lnk <partition>";
+   $main::RVT_functions{RVT_script_parse_evt } = "Parses Windows event logs (EVT files)\n
+                                                    script parse evt <partition>";
    $main::RVT_functions{RVT_script_parse_text } = "Extracts raw text strings from suitable files\n
                                                     script parse text <partition>";
    $main::RVT_functions{RVT_script_parse_search } = "Searches indexed (PARSED) files for keywords contained in a search file\n
@@ -126,7 +130,6 @@ sub constructor {
 }
 
 
-# This routine is taken from RVT_mail.pm r102:
 sub RVT_script_parse_pst {
 
     my $part = shift(@_);
@@ -343,6 +346,53 @@ sub RVT_script_parse_lnk {
 		system (@args);
 	}
 	printf ("Finished parsing LNK files. Updating alloc_files...\n");
+	RVT_script_files_allocfiles($disk);
+    return 1;
+}
+
+
+sub RVT_script_parse_evt {
+
+	my $EVTPARSE = "evtparse.pl";
+
+    my $part = shift(@_);
+    
+    $part = RVT_fill_level{$part} unless $part;
+    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
+    
+    my $disk = RVT_chop_diskname('disk', $part);
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/evt';
+    mkpath $opath unless (-d $opath);
+    
+    my $sdisk = RVT_split_diskname($part);
+    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
+    my @filelist = grep {/$repath/} RVT_get_allocfiles('evt$', $disk);
+
+    foreach my $f (@filelist) { 
+        my $fpath = RVT_create_file($opath, 'evt', 'txt');
+        open (FEVT, "-|", "$EVTPARSE", $f) or die "Error: $!";
+        binmode (FEVT, ":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
+        open (FOUT, ">$fpath") or die ("ERR: failed to create output file.");
+		print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+		print FOUT "Date#Type#User#Event ID#Description\n";
+		while (<FEVT>) {
+			chomp ($_);
+			my @field= split ('\|',$_ ) ;
+			my $time=ParseDateString("epoch $field[0]");
+			print FOUT $time."#".$field[1]."#".$field[2]."#".$field[3]."#".$field[4]."\n";
+		}
+		close (FEVT);
+        close (FOUT);
+    }
+
+    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
+	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
+		$opath = RVT_get_morguepath($disk) . '/output/parser';
+		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
+		system (@args);
+	}
+	printf ("Finished parsing EVT files. Updating alloc_files...\n");
 	RVT_script_files_allocfiles($disk);
     return 1;
 }
