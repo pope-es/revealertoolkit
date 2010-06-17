@@ -127,9 +127,6 @@ sub RVT_script_lnk_generate
 	}
 	close FOUT;
 
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };	
-	my @args = ('ln', '-s', $lnkpath, $morguepath.'/mnt/p00/output_lnk');
-	system (@args);
 	printf ("Finished parsing LNK files. Updating alloc_files...\n");
 	RVT_script_files_allocfiles();
 	return 1;
