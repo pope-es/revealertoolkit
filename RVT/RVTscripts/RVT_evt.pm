@@ -130,9 +130,6 @@ sub RVT_script_evt_generate {
 		}
     }
 
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	my @args = ('ln', '-s', $evtpath, $morguepath.'/mnt/p00/output_evt');
-	system (@args);
 	printf ("Finished parsing EVT files. Updating alloc_files...\n");
 	RVT_script_files_allocfiles();
 	return 1;
