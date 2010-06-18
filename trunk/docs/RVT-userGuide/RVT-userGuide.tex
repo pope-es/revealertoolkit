@@ -1636,8 +1636,27 @@ This module uses the \texttt{f-strings} tool to extract any raw text strings vis
 \textbf{Important note about recursion.} Most plugins are better launched over \texttt{@partitions} and then over \texttt{p00}. However the text parser must be launched first at \texttt{p00} and then at \texttt{@partitions}; the contrary would result in double-parsing some files.
 
 
+\section{\emph{script supertl}}
 
+Uses the tool \textbf{log2timeline}, a framework for automatic creation of a super timeline. For accurate information about this tool it is highly recommended to visit \emph{www.log2timeline.net}.
 
+See section \ref{anx:log2timeline} for notes about its installation.
+
+\section{\emph{script supertl generate}}
+
+Generates a super timeline of different source events (see log2timeline -o list) for all partitions of a disk.
+
+\begin{verbatim}
+script supertl generate <disk>
+\end{verbatim}
+
+If file system timelines are already created (see \emph{script timelines generate}), it merges into a super timeline in csv format.  
+
+It creates a file in the morgue with this path and name:
+
+\begin{verbatim}
+output/timelines/<disk>-tl-all.csv
+\end{verbatim}
 
 
 \chapter{Operational guides and tricks}
@@ -2226,8 +2245,32 @@ apt-get install xpdf-utils
 \end{verbatim}
 
 
+\section{Log2timeline} \label{anx:log2timeline}
+\texttt{log2timeline} is a framework for automatic creation of a super timeline. More information is available from the official website \texttt{http://log2timeline.net}.
 
+A beta version of the tool can be downloaded from \texttt{http://log2timeline.net/files/log2timeline\_0.42.tgz}
 
+\texttt{Log2timeline} requires several perl libraries to be installed. In a APT based operating system can be installed the following 
+\begin{verbatim}
+apt-get install libdigest-crc-perl libarchive-zip-perl libglib-perl libgtk2-perl libhtml-scrubber-perl libimage-exiftool-perl libnet-pcap-perl libxml-libxml-common-perl libxml2-dev libdatetime-perl libdatetime-timezone-perl libdbd-sqlite3-perl libcarp-assert-perl
+\end{verbatim}
 
+An the rest of perl libraries using CPAN:
+\begin{verbatim}
+perl -MCPAM -e 'install File::Mork'
+perl -MCPAM -e 'install Data::Hexify'
+perl -MCPAM -e 'install XML::LibXML'
+perl -MCPAM -e 'install NetPacket::Ethernet'
+perl -MCPAM -e 'install NetPacket::IP'
+\end{verbatim}
+
+After installing all the libraries:
+\begin{verbatim}
+tar xfz log2timeline_0.42.tgz
+cd log2timeline/
+perl Makefile.PL
+make
+make install (as root user)
+\end{verbatim}
 
 \end{document}
