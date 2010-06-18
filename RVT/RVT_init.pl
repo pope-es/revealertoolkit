@@ -128,6 +128,8 @@ RVTscripts::RVT_carving::constructor;
 use RVTscripts::RVT_parse;
 RVTscripts::RVT_parse::constructor;
 
+use RVTscripts::RVT_supertl;
+RVTscripts::RVT_supertl::constructor;
 
 #######################################################################
 #
