@@ -124,9 +124,9 @@ sub constructor {
                                                     script parse evt <partition>";
    $main::RVT_functions{RVT_script_parse_text } = "Extracts raw text strings from suitable files\n
                                                     script parse text <partition>";
-   $main::RVT_functions{RVT_script_parse_search_launch } = "Searches indexed (PARSED) files for keywords contained in a search file\n
+   $main::RVT_functions{RVT_script_parse_search_launch } = "Find PARSED files containing keywords from a search file\n
                                                     script parse search launch <search file> <disk>";
-   $main::RVT_functions{RVT_script_parse_search_export } = "Exports search results to disk, output goes to output/searches/parser/\n
+   $main::RVT_functions{RVT_script_parse_search_export } = "Exports search results to disk\n
                                                     script parse search export <search file> <disk>";
 }
 
@@ -141,7 +141,7 @@ sub RVT_script_parse_pst {
     
     my $disk = RVT_chop_diskname('disk', $part);
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/pst';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/pst';
     mkpath $opath unless (-d $opath);
     
     my $sdisk = RVT_split_diskname($part);
@@ -167,7 +167,7 @@ sub RVT_script_parse_pst {
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser';
+		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
 		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 		system (@args);
 	}
@@ -187,7 +187,7 @@ sub RVT_script_parse_zip {
     
     my $disk = RVT_chop_diskname('disk', $part);
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/zip';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/zip';
     mkpath $opath unless (-d $opath);
     
     my $sdisk = RVT_split_diskname($part);
@@ -218,7 +218,7 @@ sub RVT_script_parse_zip {
     }
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	$opath = RVT_get_morguepath($disk) . '/output/parser';
+	$opath = RVT_get_morguepath($disk) . '/output/parser/control';
 	my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { system (@args); }
 	printf ("Finished parsing ZIP files(Bonus: and OOXML and ODF). Updating alloc_files...\n");
@@ -236,7 +236,7 @@ sub RVT_script_parse_rar {
     
     my $disk = RVT_chop_diskname('disk', $part);
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/rar';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/rar';
     mkpath $opath unless (-d $opath);
     
     my $sdisk = RVT_split_diskname($part);
@@ -258,7 +258,7 @@ sub RVT_script_parse_rar {
     }
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	$opath = RVT_get_morguepath($disk) . '/output/parser';
+	$opath = RVT_get_morguepath($disk) . '/output/parser/control';
 	my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { system (@args); }
 	printf ("Finished parsing RAR files. Updating alloc_files...\n");
@@ -279,7 +279,7 @@ sub RVT_script_parse_pdf {
     
     my $disk = RVT_chop_diskname('disk', $part);
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/pdf';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/pdf';
     mkpath $opath unless (-d $opath);
     
     my $sdisk = RVT_split_diskname($part);
@@ -301,7 +301,7 @@ sub RVT_script_parse_pdf {
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser';
+		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
 		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 		system (@args);
 	}
@@ -322,7 +322,7 @@ sub RVT_script_parse_lnk {
     
     my $disk = RVT_chop_diskname('disk', $part);
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/lnk';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/lnk';
     mkpath $opath unless (-d $opath);
     
     my $sdisk = RVT_split_diskname($part);
@@ -343,7 +343,7 @@ sub RVT_script_parse_lnk {
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser';
+		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
 		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 		system (@args);
 	}
@@ -364,7 +364,7 @@ sub RVT_script_parse_evt {
     
     my $disk = RVT_chop_diskname('disk', $part);
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/evt';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/evt';
     mkpath $opath unless (-d $opath);
     
     my $sdisk = RVT_split_diskname($part);
@@ -390,7 +390,7 @@ sub RVT_script_parse_evt {
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser';
+		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
 		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 		system (@args);
 	}
@@ -401,7 +401,7 @@ sub RVT_script_parse_evt {
 
 
 sub RVT_script_parse_text {
-	## XX_FIXME: we should check that files in output/parser/text are NOT taken as input.
+	## XX_FIXME: we should check that files in output/parser/control/text are NOT taken as input.
 
 	my $FSTRINGS = "f-strings";
 
@@ -412,7 +412,7 @@ sub RVT_script_parse_text {
     
     my $disk = RVT_chop_diskname('disk', $part);
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/text';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/text';
     mkpath $opath unless (-d $opath);
     
     my $sdisk = RVT_split_diskname($part);
@@ -451,7 +451,7 @@ sub RVT_script_parse_text {
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser';
+		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
 		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 		system (@args);
 	}
@@ -462,52 +462,77 @@ sub RVT_script_parse_text {
 
 
 sub RVT_script_parse_search_launch  {
-    # launches a search over indexed (PARSEd) files.
+    # launches a search over indexed (PARSEd) files writing results (hits) to a file.
     # takes as arguments:
     #   file with searches: one per line
     #   disk from the morgue
 
     my ( $searchesfilename, $disk ) = @_;
+    my $string;
     
     $disk = $main::RVT_level->{tag} unless $disk;
     print "\t launching $disk\n";
     my $case = RVT_get_casenumber($disk);
     my $diskpath = RVT_get_morguepath($disk);
-    my $parsedfiles = "$diskpath/output/parser/text/";
-    my $searchespath = "$diskpath/output/searches/";
+    my $parsedfiles = "$diskpath/output/parser/control/text/";
+    my $searchespath = "$diskpath/output/parser/";
     return 0 if (! $diskpath);
     return 0 if (! -d $parsedfiles);
+    if (! -e $searchespath) { mkdir $searchespath or return 0; }
 
     open (F, "<".RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
     my @searches = grep {!/^\s*#/} <F>;
     close (F);
     
-    if (! -e $searchespath) { mkdir $searchespath or return 0; }
-    $searchespath = $searchespath.'/parser';
-    if (! -e $searchespath) { mkdir $searchespath or return 0; }
-    print "\n\nLaunching searches:\n\n";
-    
-    for $b ( @searches ) {
-        chomp $b;
-		$b = lc($b);
-        print "-- $b\n";
-		my @matches;
-		open (FMATCH, "-|", "grep", "-Hl", $b, $parsedfiles, "-R"); # aquí me meteré un FOUT
-		while (<FMATCH>) { chomp (); push (@matches, $_ ); }
-		my $opath = "$searchespath/$b";
-		mkdir $opath;
-		foreach my $i (@matches) { RVT_copy_with_source ($i, $opath); }	# ESTA es la linea de exportación.
+    print "\n\nLaunching searches:\n\n";    
+    for $string ( @searches ) {
+        chomp $string;
+		$string = lc($string);
+        print "-- $string\n";
+		open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
+		open (FOUT, ">$searchespath/$string");
+		while (<FMATCH>) { print FOUT $_; }
+		close FMATCH;
+		close FOUT;
     }
     return 1;
 }
 
 sub RVT_script_parse_search_export  {
-    # launches a search over indexed (PARSEd) files.
+    # Exports results (from script parse search launch) to disk.
     # takes as arguments:
     #   file with searches: one per line
     #   disk from the morgue
 
-
+    my ( $searchesfilename, $disk ) = @_;
+    my $string;
+    
+    $disk = $main::RVT_level->{tag} unless $disk;
+    print "\t launching $disk\n";
+    my $case = RVT_get_casenumber($disk);
+    my $diskpath = RVT_get_morguepath($disk);
+    my $searchespath = "$diskpath/output/parser/";
+    my $exportpath = "$searchespath/export/";
+    return 0 if (! $diskpath);
+    if (! -e $exportpath) { mkdir $exportpath or return 0; }
+    
+    open (F, "<".RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
+    my @searches = grep {!/^\s*#/} <F>;
+    close (F);
+    
+    for $string ( @searches ) {
+        chomp $string;
+		$string = lc($string);
+        print "-- $string\n";
+		open (FMATCH, "$searchespath/$string");
+		my $opath = "$exportpath/$string";
+		mkdir $opath;
+		while (<FMATCH>) {
+			chomp ();
+			my $match = $_;
+			RVT_copy_with_source ($match, $opath);
+		}
+	}
 }
 
 sub RVT_copy_with_source  {
@@ -530,7 +555,7 @@ sub RVT_copy_with_source  {
     if ( -s $file > $RVT_parse_Copy_Size_Limit ) { #  EXCEPTION: Size limit
 		my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-Exceeded_Copy_Size_Limit.txt';
      	open (OFILE, ">", $exceptionfile);
-     	print OFILE "# BEGIN RVT METADATA\n# Exception: File skipped for exceeding size limit (\$RVT_parse_Copy_Size_Limit).\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+     	print OFILE "# BEGIN RVT METADATA\n# Exception: File skipped for exceeding size limit (\$RVT_parse_Copy_Size_Limit = $RVT_parse_Copy_Size_Limit).\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
      	close OFILE;
 #     } else if {
 #     
