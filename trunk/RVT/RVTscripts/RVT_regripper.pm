@@ -175,9 +175,9 @@ sub RVT_script_regripper_execallmodules {
         } 
     }
 
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };    
-    my @args = ('ln', '-s', $ofolder , $morguepath.'/mnt/p00/output_regripper');
-	system (@args);
+#     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };    
+#     my @args = ('ln', '-s', $ofolder , $morguepath.'/mnt/p00/output_regripper');
+# 	system (@args);
 	printf ("Finished parsing files with text strings. Updating alloc_files...\n");
 	RVT_script_files_allocfiles();
     return 1;
