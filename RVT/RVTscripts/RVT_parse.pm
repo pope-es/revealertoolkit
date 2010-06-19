@@ -24,26 +24,25 @@ package RVTscripts::RVT_parse;
 use strict;
 #use warnings;
 
-   BEGIN {
-       use Exporter   ();
-       our ($VERSION, @ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+BEGIN {
+   use Exporter   ();
+   our ($VERSION, @ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
 
-       $VERSION     = 1.00;
+   $VERSION     = 1.00;
 
-       @ISA         = qw(Exporter);
-       @EXPORT      = qw(   &constructor
-                            &RVT_script_parse_pst
-                            &RVT_script_parse_zip
-                            &RVT_script_parse_rar
-                            &RVT_script_parse_pdf
-                            &RVT_script_parse_lnk
-                            &RVT_script_parse_evt
-                            &RVT_script_parse_text
-                            &RVT_script_parse_search
-                        );
-       
-       
-   }
+   @ISA         = qw(Exporter);
+   @EXPORT      = qw(   &constructor
+						&RVT_script_parse_pst
+						&RVT_script_parse_zip
+						&RVT_script_parse_rar
+						&RVT_script_parse_pdf
+						&RVT_script_parse_lnk
+						&RVT_script_parse_evt
+						&RVT_script_parse_text
+						&RVT_script_parse_search_launch
+						&RVT_script_parse_search_export
+					);
+}
 
 # XX_TODO:
 # - pdftotext nos ha dicho alguna vez "Error: Incorrect password". Hay que mirar cómo darle un pass y LOG de los PDFs cifrados
@@ -89,11 +88,11 @@ sub constructor {
         return;
    }
       if (!$fstrings) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, COMPILE (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)');
+        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, compile (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)');
         return;
    }
       if (!$lnkparse) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
+        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Jacob Cunningham\'s lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
         return;
    }
       if (!$evtparse) {
@@ -125,9 +124,12 @@ sub constructor {
                                                     script parse evt <partition>";
    $main::RVT_functions{RVT_script_parse_text } = "Extracts raw text strings from suitable files\n
                                                     script parse text <partition>";
-   $main::RVT_functions{RVT_script_parse_search } = "Searches indexed (PARSED) files for keywords contained in a search file\n
-                                                    script parse search <search file> <image or case> <image or case> ...";
+   $main::RVT_functions{RVT_script_parse_search_launch } = "Searches indexed (PARSED) files for keywords contained in a search file\n
+                                                    script parse search launch <search file> <disk>";
+   $main::RVT_functions{RVT_script_parse_search_export } = "Exports search results to disk, output goes to output/searches/parser/\n
+                                                    script parse search export <search file> <disk>";
 }
+
 
 
 sub RVT_script_parse_pst {
@@ -459,14 +461,11 @@ sub RVT_script_parse_text {
 }
 
 
-# RVT_script_search_launch adapted to parsed searches, let's try that!
-sub RVT_script_parse_search  {
+sub RVT_script_parse_search_launch  {
     # launches a search over indexed (PARSEd) files.
     # takes as arguments:
     #   file with searches: one per line
     #   disk from the morgue
-    # returns 1 if OK, 0 if errors
-
 
     my ( $searchesfilename, $disk ) = @_;
     
@@ -493,7 +492,7 @@ sub RVT_script_parse_search  {
 		$b = lc($b);
         print "-- $b\n";
 		my @matches;
-		open (FMATCH, "-|", "grep", "-Hl", $b, $parsedfiles, "-R");
+		open (FMATCH, "-|", "grep", "-Hl", $b, $parsedfiles, "-R"); # aquí me meteré un FOUT
 		while (<FMATCH>) { chomp (); push (@matches, $_ ); }
 		my $opath = "$searchespath/$b";
 		mkdir $opath;
@@ -502,6 +501,14 @@ sub RVT_script_parse_search  {
     return 1;
 }
 
+sub RVT_script_parse_search_export  {
+    # launches a search over indexed (PARSEd) files.
+    # takes as arguments:
+    #   file with searches: one per line
+    #   disk from the morgue
+
+
+}
 
 sub RVT_copy_with_source  {
 #	Copies a file to a directory.
@@ -517,13 +524,11 @@ sub RVT_copy_with_source  {
     chomp ($file);
     print "RVT_copy_with_source ( $file , $opath )\n";
     if ( ! -e $opath ) {mkpath $opath}
-    
-    # en este punto del código se pueden introducir EXCEPCIONES a la gestión.
-    # por ejemplo:
-    #	si estoy copiando un PST de más de X tamaño, no lo copio.
-    #	si estoy copiando un archivo que es parte de un email, copiarlo todo (body+adjuntos).
-    if ( -s $file > $RVT_parse_Copy_Size_Limit ) { # Size limit
-		my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception.txt';
+
+	# Here we can raise EXCEPTIONS based on certain conditions.
+	# for instance: not copying big files, or files of certain types.
+    if ( -s $file > $RVT_parse_Copy_Size_Limit ) { #  EXCEPTION: Size limit
+		my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-Exceeded_Copy_Size_Limit.txt';
      	open (OFILE, ">", $exceptionfile);
      	print OFILE "# BEGIN RVT METADATA\n# Exception: File skipped for exceeding size limit (\$RVT_parse_Copy_Size_Limit).\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
      	close OFILE;
@@ -531,11 +536,23 @@ sub RVT_copy_with_source  {
 #     
 #     } else if {
 #     
-    } else { copy ($file, $opath); }
+    } else { # NORMAL CASE, file is copied.
+    	copy ($file, $opath);
+    }
 
 	unless ( $file =~ /\/mnt\/p0[^0]\// ) {
 	    my $source = RVT_get_source ($file);
-		RVT_copy_with_source ($source, $opath.'/'.basename($file).'_RVT-Source');
+	    if ( $source ) {
+	    	RVT_copy_with_source ($source, $opath.'/'.basename($file).'_RVT-Source');
+	    } else { # If there was no source we create a metafile indicating it.
+	    	printf ("Vale, no tengo SOURCE !!! me doy cuen!!!\n");
+	    	$opath = $opath.'/'.basename($file).'_RVT-Source';
+	    	mkpath $opath;
+			my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-No_Source.txt';
+			open (OFILE, ">", $exceptionfile);
+			print OFILE "# BEGIN RVT METADATA\n# Exception: File does not have a Source header.\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			close OFILE;			
+	    }
 	} 
 	if ( $file =~ /\/mnt\/p0[^0]\// ) { print "--\n"; }
 	return 1;
@@ -547,22 +564,22 @@ sub RVT_get_source () {
 	my $file = shift;
 	my $source;
 	my $control = 0;
-	if ( ! -e $file ) {print "ERROR $file does not exist!!\n"}
+	if ( ! -e $file ) {print "ERROR $file does not exist!!\n"; exit }
 	
-	# Esto hay que ajustarlo para los plugins que generan DIRECTORIOS:
+	# If the file was generated by a one-input-many-output-files plugin (such 
+	# as PST, RAR, ZIP), we have to look for metadata in the output directory:
 	my $aux = $file;
 	$aux =~ s/(.*\/mnt\/p00\/parser\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+-[0-9]+\/).*/\1\/RVT_metadata/;
 	if ( -e $aux ) { $file = $aux; }
-#	$file =~ s/(.*\/mnt\/p00\/parser\/(pst|zip|rar)\/[a-z]+-[0-9]+\/).*/\1\/RVT_metadata/;
 
 	open (FILE, $file);	
 	while ( $source = <FILE>) {
 		if ($source =~ s/# Source file: //) { $control = 1; last; }
 	}
 	close (FILE);
-	if ( $control == 0 ) {print "ERROR, got EOF without finding SOURCE.\n"}
+	if ( $control == 0 ) {print "  RVT_get_source: ERROR, got EOF without finding SOURCE.\n"}
 	chomp ($source);
-	print "RVT_get_source: Source of $file is $source\n";
+#	print "RVT_get_source: Source of $file is $source\n";
 	return $source;
 }
 

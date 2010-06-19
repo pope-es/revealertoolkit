@@ -165,8 +165,8 @@ sub RVT_script_evt_report {
 			print  FOUT $_;
 		}
 	}
-	my @args = ('ln', '-s', $evtpath, $morguepath.'/mnt/p00/output_evt');
-	system (@args);
+#	my @args = ('ln', '-s', $evtpath, $morguepath.'/mnt/p00/output_evt');
+#	system (@args);
 	RVT_script_files_allocfiles();
 }
 
