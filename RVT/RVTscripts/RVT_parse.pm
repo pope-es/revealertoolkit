@@ -33,6 +33,7 @@ BEGIN {
    @ISA         = qw(Exporter);
    @EXPORT      = qw(   &constructor
 						&RVT_script_parse_pst
+						&RVT_script_parse_bkf
 						&RVT_script_parse_zip
 						&RVT_script_parse_rar
 						&RVT_script_parse_pdf
@@ -65,6 +66,7 @@ sub constructor {
    
    my $pdftotext = `pdftotext -v 2>&1`;
    my $readpst = `readpst -V`;
+   my $mtftar = `mtftar 2>&1`;
    my $unzip = `unzip -v`;
    my $unrar = `unrar --help`;
    my $fstrings = `f-strings -h`;
@@ -76,7 +78,11 @@ sub constructor {
         return;
    }
    if (!$readpst) {
-        RVT_log ('ERR', 'RVT_mail not loaded (couldn\'t find libpst)');
+        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find libpst)');
+        return;
+   }
+   if (!$mtftar) {
+        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find mtftar)');
         return;
    }
       if (!$unzip) {
@@ -104,6 +110,7 @@ sub constructor {
 
    $main::RVT_requirements{'readpst'} = $readpst;
    $main::RVT_requirements{'pdftotext'} = $pdftotext;
+   $main::RVT_requirements{'mtftar'} = $mtftar;
    $main::RVT_requirements{'unzip'} = $unzip;
    $main::RVT_requirements{'unrar'} = $unrar;
    $main::RVT_requirements{'fstrings'} = $fstrings;
@@ -112,6 +119,8 @@ sub constructor {
 
    $main::RVT_functions{RVT_script_parse_pst } = "Parses all PST's found on the partition using libpst\n
                                                     script parse pst <partition>";
+   $main::RVT_functions{RVT_script_parse_bkf } = "Extracts contents from Windows backup (.bkf) files\n
+                                                    script parse bkf <partition>";
    $main::RVT_functions{RVT_script_parse_zip } = "Extracts contents from ZIP, ODT and OOXML files\n
                                                     script parse zip <partition>";
    $main::RVT_functions{RVT_script_parse_rar } = "Extracts contents from RAR archives\n
@@ -172,6 +181,47 @@ sub RVT_script_parse_pst {
 		system (@args);
 	}
 	printf ("Finished parsing PST files. Updating alloc_files...\n");
+	RVT_script_files_allocfiles($disk);
+    return 1;
+}
+
+
+
+sub RVT_script_parse_bkf {
+
+    my $part = shift(@_);
+    
+    $part = RVT_fill_level{$part} unless $part;
+    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
+    
+    my $disk = RVT_chop_diskname('disk', $part);
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/bkf';
+    mkpath $opath unless (-d $opath);
+    
+    my $sdisk = RVT_split_diskname($part);
+    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
+    
+    my @listbkf = grep {/$repath/} RVT_get_allocfiles('bkf$', $disk);
+
+    foreach my $f (@listbkf) {
+        my $fpath = RVT_create_folder($opath, 'bkf');
+        
+        mkdir ("$fpath/contents") or die ("ERR: failed to create output directories.");
+        open (META, ">$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+            print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+        close (META);
+        
+        $fpath="$fpath/contents";
+        my $command = "mtftar < $f | tar xv -C $fpath";
+        `$command`;
+    }
+
+    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
+	$opath = RVT_get_morguepath($disk) . '/output/parser/control';
+	my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
+	if ( ! -e $morguepath.'/mnt/p00/parser' ) { system (@args); }
+	printf ("Finished parsing BKF files. Updating alloc_files...\n");
 	RVT_script_files_allocfiles($disk);
     return 1;
 }
@@ -517,8 +567,7 @@ sub RVT_script_parse_search_launch  {
 # 					close OFILE;			
 # 				}
 # 			} # unless
-			
-			# al final del tema, se hacía: print FOUT $_;			
+
 			print FOUT "$line\n";
 		} # while FMATCH
 		close FMATCH;

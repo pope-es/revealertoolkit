@@ -1536,7 +1536,7 @@ Plugins that generate one folder with many files for each input file (for instan
 
 \subsection{A note about recursion}
 
-After running, each plugins ensures that \texttt{mnt/p00} contains a symlink to its output folder; otherwise, it creates it, and runs \texttt{RVT\_files\_allocfiles ()} to update the \texttt{alloc\_files} index.
+After running, each plugin ensures that \texttt{mnt/p00} contains a symlink to its output folder (or otherwise creates it) and \texttt{RVT\_files\_allocfiles ()} is run to update the \texttt{alloc\_files} index.
 
 Thus, further plugin executions will take as input, not only the content of the mounted filesystem (\texttt{/mnt/@partitions}) but also the output of previous plugin executions.
 
@@ -1581,6 +1581,22 @@ script parse pst <partition>
 
 
 
+\subsection{\emph{script parse bkf}}
+
+This module extracts content from BKF archives. These are backup files created with the Microsoft Tape Format (MTF).
+
+This module needs the \texttt{mtftar} tool installed. This is explained in section \ref{anx:mtftar}.
+
+
+
+\begin{verbatim}
+script parse bkf <partition>
+\end{verbatim}
+
+
+
+
+
 
 \subsection{\emph{script parse zip}}
 
@@ -1614,7 +1630,9 @@ script parse rar <partition>
 \subsection{\emph{script parse pdf}}
 
 Uses \texttt{pdftotext} to extract text from PDF files.
-% XX_FIXME: falta incluir una referencia al anexo que explica la instalación del software.
+
+This module needs the \texttt{pdftotext} package installed. This is explained in section \ref{anx:pdftotext}.
+
 \begin{verbatim}
 script parse pdf <partition>
 \end{verbatim}
@@ -2232,6 +2250,28 @@ Please keep in mind that PhotoRec must be in the path of the same user running R
 
 \begin{verbatim}
 ln -s /usr/sbin/photorec /usr/local/bin/
+\end{verbatim}
+
+
+
+
+\section{mtftar} \label{anx:mtftar}
+
+\texttt{mtftar} is a tool for extracting the contents of BKF archives (technically, it converts them to the TAR format).
+
+\texttt{mtftar} is distributed under the GNU General Public License version 2. Its source code is available\footnote{http://gpl.internetconnection.net/files/mtftar.tar.gz} and it is also included in the RVT \texttt{tools} folder.
+
+\texttt{mtftar} seems to have been developed by the folks at \emph{InternetConnection.net}, and is based on the work by D. Alan Stewart form Layton Graphics, Inc., whose original \texttt{mtf} program was also distributed under GNU GPL.
+
+To compile and install \texttt{mtftar}, do the following (as root):
+
+\begin{verbatim}
+cd /tmp
+wget http://gpl.internetconnection.net/files/mtftar.tar.gz
+tar xzf mtftar.tar.gz
+cd mtftar
+make
+cp mtftar /usr/local/bin/
 \end{verbatim}
 
 
