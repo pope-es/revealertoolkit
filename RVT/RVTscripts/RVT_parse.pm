@@ -491,7 +491,36 @@ sub RVT_script_parse_search_launch  {
         print "-- $string\n";
 		open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
 		open (FOUT, ">$searchespath/$string");
-		while (<FMATCH>) { print FOUT $_; }
+		while (<FMATCH>) {
+			# Tengo en $_ el fichero que ha hecho match. Puedo ir buscando su source recursivamente.
+			my $file = $_;
+			chomp ($file);
+			my $source = RVT_get_source($file);
+			my $line = $file;
+
+			while ( $source ) {
+				$line = $line . '#' . $source;
+				$file = $source;
+				$source = RVT_get_source($file);
+			}
+			
+# 			unless ( $file =~ /\/mnt\/p0[^0]\// ) {
+# 				my $source = RVT_get_source ($file);
+# 				if ( $source ) {
+# 					RVT_copy_with_source ($source, $opath.'/'.basename($file).'_RVT-Source');
+# 				} else { # If there was no source we create a metafile indicating it.
+# 					$opath = $opath.'/'.basename($file).'_RVT-Source';
+# 					mkpath $opath;
+# 					my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-No_Source.txt';
+# 					open (OFILE, ">", $exceptionfile);
+# 					print OFILE "# BEGIN RVT METADATA\n# Exception: File does not have a Source header.\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+# 					close OFILE;			
+# 				}
+# 			} # unless
+			
+			# al final del tema, se hacía: print FOUT $_;			
+			print FOUT "$line\n";
+		} # while FMATCH
 		close FMATCH;
 		close FOUT;
     }
@@ -561,7 +590,7 @@ sub RVT_copy_with_source  {
 #     
 #     } else if {
 #     
-    } else { # NORMAL CASE, file is copied.
+    } else { ################################## NORMAL CASE, file is copied.
     	copy ($file, $opath);
     }
 
@@ -570,7 +599,6 @@ sub RVT_copy_with_source  {
 	    if ( $source ) {
 	    	RVT_copy_with_source ($source, $opath.'/'.basename($file).'_RVT-Source');
 	    } else { # If there was no source we create a metafile indicating it.
-	    	printf ("Vale, no tengo SOURCE !!! me doy cuen!!!\n");
 	    	$opath = $opath.'/'.basename($file).'_RVT-Source';
 	    	mkpath $opath;
 			my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-No_Source.txt';
@@ -587,7 +615,7 @@ sub RVT_copy_with_source  {
 sub RVT_get_source () {
 	# dado un contenido en parser, encuentra su fuente según RVT METADATA.
 	my $file = shift;
-	my $source;
+	my $source = 0;
 	my $control = 0;
 	if ( ! -e $file ) {print "ERROR $file does not exist!!\n"; exit }
 	
