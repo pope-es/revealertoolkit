@@ -316,7 +316,6 @@ sub RVT_mount_assign {
     
         if ( ! -d $pmnt ) { mkdir($pmnt) or RVT_log('CRIT' , "couldn't create directory $!"); }
         my $ppart = "$pmnt/p$part"; 
-
         if (! -d $ppart ) { mkdir ($ppart) or RVT_log('CRIT' , "couldn't create directory $!"); }
         
         my @args = ("sudo", "mount",  
@@ -326,7 +325,6 @@ sub RVT_mount_assign {
         print "\n" . join (" ", @args) . "\n";
         system(@args) == 0 or  RVT_log ('ERR', "mount $case-$device-$disk-p$part failed: $?");
     }
-    
     RVT_losetup_recheck;
 }
 
