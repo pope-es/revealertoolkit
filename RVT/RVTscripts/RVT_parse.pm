@@ -73,42 +73,40 @@ sub constructor {
    my $lnkparse = `lnk-parse-1.0.pl`;
    my $evtparse = `evtparse.pl`;
    
-   my $f = 0;
-   
    if (!$pdftotext) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pdftotext)');
-        $f = 1;
+        return;
    }
    if (!$readpst) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find libpst)');
-        $f = 1;
+        return;
    }
    if (!$mtftar) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find mtftar)');
-        $f = 1;
+        return;
    }
       if (!$unzip) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unzip)');
-        $f = 1;
+        return;
    }
       if (!$unrar) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unrar)');
-        $f = 1;
+        return;
    }
       if (!$fstrings) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, compile (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)');
-        $f = 1;
+        return;
    }
       if (!$lnkparse) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Jacob Cunningham\'s lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
-        $f = 1;
+        return;
    }
       if (!$evtparse) {
         RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
-        $f = 1;
+        return;
    }
 
-	return if $f;
+
 
    $main::RVT_requirements{'readpst'} = $readpst;
    $main::RVT_requirements{'pdftotext'} = $pdftotext;
