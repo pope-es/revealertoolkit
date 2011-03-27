@@ -1,0 +1,186 @@
+<?xml version="1.0" standalone="yes" ?>
+<commands>
+	<command>
+		<name>case_list</name>
+		<alias>Case list</alias>
+		<description>Gives a list of the cases currently stored in the morgue</description>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_case_list</function>
+		<standard>/[ ]*(\d+)[ ]\'(.+)\':\s?/</standard>
+	</command>
+	<command>
+		<name>images_list</name>
+		<alias>Images list</alias>
+		<description>Gives a list of the disk images stored in the morgue</description>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_images_list</function>
+		<standard>/[ \t]+((((\d+)-(\d+))-(\d+)).*)/</standard>
+		<icon>images_list.png</icon>
+	</command>
+	<command>
+		<name>images_partition_info</name>
+		<alias>Partition information</alias>
+		<description>Gives information about a partition</description>
+		<objects>
+			<object>partition</object>
+		</objects>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_images_partition_info</function>
+		<args>
+			<arg>object</arg>
+		</args>
+		<standard>/.*:[ ]*(.*)\s?/</standard>
+		<icon>partition_info.png</icon>
+	</command>
+	<command>
+		<name>images_partition_table</name>
+		<alias>Partition table</alias>
+		<description>Gives the partition table of an image</description>
+		<objects>
+			<object>disk</object>
+		</objects>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_images_partition_table</function>
+		<args>
+			<arg>object</arg>
+		</args>
+		<standard>/[ \t]*(\d+):[ \t]*(\d+ .{2})[ \t]+(.*)\s?/</standard>
+		<icon>partition_list.png</icon>
+	</command>
+	<command>
+		<name>images_scan</name>
+		<alias>Scan images</alias>
+		<description>Scans the morgue</description>
+		<objects>
+			<object>case</object>
+		</objects>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_images_scan</function>
+		<args>
+			<arg>case</arg>
+		</args>
+		<standard>/.*/</standard>
+		<icon>command.png</icon>
+		<advanced>true</advanced>
+	</command>
+	<command>
+		<name>info_list</name>
+		<alias>Info list</alias>
+		<description>Gives RVT shell configuration information</description>
+		<module>RVTbase::RVT_info</module>
+		<function>RVT_info_list</function>
+		<standard>/.*/</standard>
+		<icon>info_list.png</icon>
+	</command>
+	<command>
+		<name>info_debug_dumpmorguexml</name>
+		<alias>Info - dump RVTmorgueInfo</alias>
+		<description>Dumps content of RVTmorgueInfo.xml as imported by RVT</description>
+		<module>RVTbase::RVT_info</module>
+		<function>RVT_info_debug_dumpmorguexml</function>
+		<standard>/.*/</standard>
+		<icon>info_morgue.png</icon>
+		<advanced>true</advanced>
+	</command>
+	<command>
+		<name>info_debug_dumprvtcases</name>
+		<alias>Info - dump RVT_cases</alias>
+		<description>Dumps content of internal variable RVT_cases</description>
+		<module>RVTbase::RVT_info</module>
+		<function>RVT_info_debug_dumprvtcases</function>
+		<standard>/.*/</standard>
+		<icon>info_cases.png</icon>
+		<advanced>true</advanced>
+	</command>
+	<command>
+		<name>info_debug_dumprvtcfg</name>
+		<alias>Info - dump RVT config</alias>
+		<description>Dumps content of current RVT configuration</description>
+		<module>RVTbase::RVT_info</module>
+		<function>RVT_info_debug_dumprvtcfg</function>
+		<standard>/.*/</standard>
+		<icon>info_cfg.png</icon>
+		<advanced>true</advanced>
+	</command>
+	<command>
+		<name>mount_assign</name>
+		<alias>Mount</alias>
+		<description>Mounts the partitions</description>
+		<objects>
+			<object>case</object>
+		</objects>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_mount_assign</function>
+		<args>
+			<arg>case</arg>
+		</args>
+		<icon>mount_assign.png</icon>
+	</command>
+	<command>
+		<name>mount_delete</name>
+		<alias>Unmount</alias>
+		<description>Unmounts the partitions</description>
+		<objects>
+			<object>case</object>
+		</objects>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_mount_delete</function>
+		<args>
+			<arg>case</arg>
+		</args>
+		<pre>
+			<pre command="mount_assign"></pre>
+		</pre>
+		<icon>mount_delete.png</icon>
+	</command>
+	<command>
+		<name>mount_list</name>
+		<alias>List mounted partitions</alias>
+		<description>Show a list of the currently mounted partitions</description>
+		<objects>
+			<object>case</object>
+		</objects>
+		<module>RVTbase::RVT_morgue</module>
+		<function>RVT_mount_list</function>
+		<standard>/[ ]*(\d{6}-\d{2}-\d).*[ ]\w*=(.+)[ ]\w*=(\d+)\s?/</standard>
+		<icon>mount_list.png</icon>
+	</command>
+	<command>
+		<name>cluster_allocation_status</name>
+		<alias>Cluster allocation status</alias>
+		<description>Prints cluster allocation status</description>
+		<objects>
+			<object>partition</object>
+		</objects>
+		<module>RVTbase::RVT_cluster</module>
+		<function>RVT_cluster_allocationstatus</function>
+		<args>
+			<arg>input</arg>
+			<arg>object</arg>
+		</args>
+		<standard>/.*/</standard>
+		<icon>cluster_status.png</icon>
+	</command>
+	<command>
+		<name>timelines_generate</name>
+		<alias>Generate timelines</alias>
+		<description>Generates timelines for all partitions of a disk</description>
+		<objects>
+			<object>disk</object>
+		</objects>
+		<module>RVTscripts::RVT_timelines</module>
+		<function>RVT_script_timelines_generate</function>
+		<args>
+			<arg>object</arg>
+		</args>
+		<files>
+			<file viewer="timelineViewer" params=",headers:'Date,Size,Type,Mode,UID,GID,Meta,File Name',expression:'/(.*?),(.*?),(.*?),(.*?),(.*?),(.*?),(.*?),(.*)/'">/.*timelines\/.*-p\d{2}_iTL\.csv/i</file>
+			<file viewer="textViewer">/.*timelines\/.*-p\d{2}_iTL-day\.sum/i</file>
+			<file viewer="timelineViewer" params=",expression:'/(.*?),(.*?),(.*?),(.*?),(.*?),(.*?),(.*?),(.*)/'">/.*timelines\/.*-disk_TL\.csv/i</file>
+			<file viewer="timelineViewer" params=",headers:' Date                    Size Type Mode         UID GID Meta File Name',expression:'/[ ](.{23})[ ]+(.+?)[ ](.{4})[ ](.{12})[ ](.+?)[ ]+(.+?)[ ]+(.+?)[ ](.+)/'">/.*timelines\/.*_TL\.txt/i</file>
+			<file viewer="textViewer">/.*timelines\/.*_TL-day\.sum/i</file>
+			<file viewer="textViewer">/.*timelines\/.*_TL-hour\.sum/i</file>
+		</files>
+		<icon>timelines_generate.png</icon>
+	</command>
+</commands>
