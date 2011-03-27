@@ -42,7 +42,7 @@ BEGIN {
 }
 
 
-our $RVT_version = '0.3 alpha';
+our $RVT_version = '0.2.1';
 
 
 
