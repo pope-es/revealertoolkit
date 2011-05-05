@@ -397,7 +397,7 @@ sub RVT_script_search_clusterlist {
 	        my $du = int( $offset /
 	                       $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{clustersize} );
     	    my $loopdev = $main::RVT_cases->{case}{$adisk->{case}}{device}{$adisk->{device}}{disk}{$adisk->{disk}}{partition}{$part}{loop};
-    	    
+    	
     	    my $inodes = RVT_get_inodefromcluster( $du, "$ndisk-p$part" );
     	    foreach my $inode (@{$inodes}) {
     	        my $r_istat = RVT_tsk_istat ($ndisk, $part, $inode);

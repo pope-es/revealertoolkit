@@ -39,7 +39,10 @@ use strict;
                             &RVT_cluster_extract_ascii
                             &RVT_cluster_toinode
                             &RVT_cluster_allocationstatus
+                            &RVT_cluster_filename
+                            &RVT_get_filenameFromInode
                             &RVT_inode_allocationstatus
+                            &RVT_inode_filename
                         );
        
        
@@ -75,9 +78,12 @@ sub constructor {
                             cluster extract <cluster> <partition>";                            
    $main::RVT_functions{RVT_cluster_allocationstatus } = "Prints cluster allocation status\n
                                     cluster allocationstatus <cluster> <partition>";
+   $main::RVT_functions{RVT_cluster_filename } = "Prints filenames associated with cluster\n
+                                    cluster filename <inode> <partition>";                                    
    $main::RVT_functions{RVT_inode_allocationstatus } = "Prints inode allocation status\n
-                                    inode allocationstatus <cluster> <partition>";                                    
-
+                                    inode allocationstatus <inode> <partition>";                                    
+   $main::RVT_functions{RVT_inode_filename } = "Prints filenames associated with inode\n
+                                    inode filename <inode> <partition>"; 
 }
 
 
@@ -138,7 +144,7 @@ sub RVT_get_inodefromcluster {
     #   cluster
     #   partition
     # returns an array with the results (one element per inode)
-    #print "xx\n\n";
+
     my ( $cluster, $part ) = @_;
     
     next unless ($cluster =~ /^[0-9\-]+$/);
@@ -184,8 +190,8 @@ sub RVT_get_cluster {
     return 0 unless ($diskpath);
     
     my $p = RVT_tsk_mmls($disk);
-    return 0 unless ($p);
-    my $offset = $p->{$part}{offset};
+    return 0 unless ($p->{p});
+    my $offset = $p->{p}{$part}{offset};
 
     $cluster =~ s/,/ /;
     open (PA,"$main::RVT_cfg->{tsk_path}/blkcat -o $offset $diskpath $cluster | ") || RVT_log ('CRIT', 'Couldn\'t execute blkcat');    
@@ -194,6 +200,24 @@ sub RVT_get_cluster {
     
     return @results;
 }
+
+
+sub RVT_get_filenameFromInode {
+
+	my ($inode, $part) = @_;
+
+    next unless ($inode =~ /^[0-9\-]+$/);
+    $part = $main::RVT_level->{tag} unless $part;
+    if (RVT_check_format($part) ne 'partition') { RVT_log('ERR', "$part that is not a partition\n\n"); return 0; }
+    
+    my $p = RVT_split_diskname( $part );	
+	
+	my $disk = RVT_join_diskname ($p->{case}, $p->{device}, $p->{disk});
+    my $r_ffind = RVT_tsk_ffind ($disk, $p->{partition}, $inode);
+    
+    return $r_ffind;
+}
+
 
 
 sub RVT_cluster_extract_raw {
@@ -271,6 +295,28 @@ sub RVT_cluster_allocationstatus {
     print "Cluster $cluster: " . RVT_tsk_blkstat ($disk, $p->{partition}, $cluster) . "\n";
 }
 
+sub RVT_cluster_filename {
+
+    my ($cluster, $part) = @_;
+    
+    next unless ($cluster =~ /^[0-9\-]+$/);
+    $part = $main::RVT_level->{tag} unless $part;
+    if (RVT_check_format($part) ne 'partition') { RVT_log('ERR', "$part that is not a partition\n\n"); return 0; }
+    
+    my $p = RVT_split_diskname( $part );
+    
+    my $disk = RVT_join_diskname ($p->{case}, $p->{device}, $p->{disk});
+    
+    my $i = RVT_get_inodefromcluster ( $cluster,$part );
+    
+    my $inode;
+    foreach $inode (@{$i}) {
+    	print "$inode: " . join("\n", @{RVT_get_filenameFromInode($inode, $part)}) . "\n";
+    }
+
+    print "\n";
+}
+
 
 sub RVT_inode_allocationstatus {
 
@@ -285,6 +331,16 @@ sub RVT_inode_allocationstatus {
     my $disk = RVT_join_diskname ($p->{case}, $p->{device}, $p->{disk});
     my $r_istat = RVT_tsk_istat ($disk, $p->{partition}, $inode);
     print "inode $inode: " . $r_istat->{allocationStatus} . "\n";
+}
+
+
+
+sub RVT_inode_filename {
+
+	my ($inode, $part) = @_;
+
+	my $r = RVT_get_filenameFromInode($inode, $part);
+    print join('\n',@{$r}) . "\n";
 }
 
 

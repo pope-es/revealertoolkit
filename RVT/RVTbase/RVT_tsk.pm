@@ -37,6 +37,7 @@ use strict;
                             &RVT_tsk_fsstat
                             &RVT_tsk_blkstat
                             &RVT_tsk_istat
+                            &RVT_tsk_ffind
                         );
        
        
@@ -65,7 +66,9 @@ sub constructor {
 
 sub RVT_tsk_mmls ($) {
     # takes a disk
-    # returns a reference   $results->{dd} 
+    # returns a reference   
+    #						$results->{sectorsize}
+    #						$results->{p}{dd} 
     #                                {description}
     #                                {offset}
     #                                {length}
@@ -80,27 +83,34 @@ sub RVT_tsk_mmls ($) {
 	
 	while ( my $l = <MMLS> ) {
 	    chomp($l);
+	    if ( $l =~ /Units are in (\d+)-byte sectors/) 
+                    { $results->{sectorsize}=$1; }
 	    next unless ( $l =~ /^..:\s*0+.*/ && $l !~ /Extended/ );
 	    $l =~ /([0-9]{1,2}):\s*..:..\s*([0-9]*)\s*([0-9]*)\s*([0-9]*)\s*(.*)$/;
-	    $results->{$1}{description} = $5;
-	    $results->{$1}{offset} = $2;
-	    $results->{$1}{length} = $4;
+	    $results->{p}{$1}{description} = $5;
+	    $results->{p}{$1}{offset} = $2;
+	    $results->{p}{$1}{length} = $4;
 	}
 
     close(MMLS);
 
-    return $results if ($results);
-    
+    return $results if ($results->{p});
+   
     open (MMLS,"$main::RVT_cfg->{tsk_path}/fsstat $diskpath 2> /dev/null |") or RVT_log ('CRIT', "$main::RVT_cfg->{tsk_path}/fsstat NOT FOUND");
     
     while ( my $l  = <MMLS> ) {
         chomp ($l);
-        next unless ( $l =~ /File System Type Label: (.*)$/ );
-        $results->{0}{description} = $1;
-        $results->{0}{offset} = 0;
-        close (MMLS);
-        return $results;
+        if  ( $l =~ /File System Type( Label)?: (.*)$/ ) {
+        	$results->{p}{0}{description} = $2;
+        	$results->{p}{0}{offset} = 0;
+        }
+        if ($l =~ /^Sector Size: (.*)$/ ) {
+        	$results->{sectorsize} = $1;
+        }
     }
+    close (MMLS);
+    
+    return $results if ($results);
     
     return 0;
 }
@@ -126,7 +136,7 @@ sub RVT_tsk_fsstat ($) {
     
     my $p = RVT_tsk_mmls($disk);
     return 0 unless ($p);
-    my $offset = $p->{$part}{offset};
+    my $offset = $p->{p}{$part}{offset};
     
     #print  "$RVT_cfg->{tsk_path}/fsstat -o $offset $diskpath  2> /dev/null | \n";
     open (FSSTAT,"$main::RVT_cfg->{tsk_path}/fsstat -o $offset $diskpath  2> /dev/null |") or RVT_log ('CRIT', "$main::RVT_cfg->{tsk_path}/fsstat NOT FOUND");
@@ -170,7 +180,7 @@ sub RVT_tsk_blkstat ($$$) {
     
     my $p = RVT_tsk_mmls($disk);
     return 0 unless ($p);
-    my $offset = $p->{$part}{offset};
+    my $offset = $p->{p}{$part}{offset};
 
     open (PA,"$main::RVT_cfg->{tsk_path}/blkstat -o $offset $diskpath $du | grep Allocated |") or RVT_log ('CRIT', "$main::RVT_cfg->{tsk_path}/blkstat NOT FOUND");    
     my $allocation = <PA>; 
@@ -192,7 +202,7 @@ sub RVT_tsk_istat ($$$) {
     
     my $p = RVT_tsk_mmls($disk);
     return 0 unless ($p);
-    my $offset = $p->{$part}{offset};
+    my $offset = $p->{p}{$part}{offset};
 
     open (PA,"$main::RVT_cfg->{tsk_path}/istat -o $offset $diskpath $inode | ") or RVT_log ('CRIT', "$main::RVT_cfg->{tsk_path}/istat NOT FOUND");    
     my @istatOutput = <PA>;
@@ -206,6 +216,29 @@ sub RVT_tsk_istat ($$$) {
     
     return $results;
 }
+
+
+sub RVT_tsk_ffind ($$$) {
+	# takes a disk, a partition and an inode
+	# and gives the filenames associated with the last
+	
+	my ( $disk,$part,$inode ) = @_;
+    
+    my $diskpath = RVT_get_imagepath($disk);
+    return 0 unless ($diskpath);
+    
+    my $p = RVT_tsk_mmls($disk);
+    return 0 unless ($p);
+    my $offset = $p->{p}{$part}{offset};
+
+    open (PA,"$main::RVT_cfg->{tsk_path}/ffind -o $offset $diskpath $inode | ") or RVT_log ('CRIT', "$main::RVT_cfg->{tsk_path}/ffind NOT FOUND");    
+    my $results;
+    @{$results} = <PA>;
+    close (PA);
+    
+    return $results;
+}
+
 
 
 1;  

@@ -251,7 +251,7 @@ sub RVT_check_format ($)  {
     return 'case number'    if $thing =~ /^\d{6}$/;
     return 'device'         if $thing =~ /^\d{6}-\d{2}$/;
     return 'disk'           if $thing =~ /^\d{6}-\d{2}-\d{1,2}$/;
-    return 'partition'      if $thing =~ /^\d{6}-\d{2}-\d{1,2}-p\d{2}$/;
+    return 'partition'      if $thing =~ /^\d{6}-\d{2}-\d{1,2}-p\d{1,2}$/;
     return 'case code'      if $thing =~ /^[a-z ]+$/;
 }
 
