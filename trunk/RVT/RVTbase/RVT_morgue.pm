@@ -166,12 +166,12 @@ sub RVT_images_partition_table   {
 
     my $part = RVT_tsk_mmls($disk);
 
-    if (!$part) { RVT_log('ERR', 'Partition expected'); return; }
+    if (!$part->{p}) { RVT_log('ERR', 'Partition expected'); return; }
 
     print "\n";
-    for my $dd ( keys %{$part} ) {
-        my $size = int($part->{$dd}{length} * 512 / 1048576) +1 ; # 1024^3
-        print "\t$dd:\t$size MB\t" . $part->{$dd}{description} . "\n";
+    for my $dd ( keys %{$part->{p}} ) {
+        my $size = int($part->{p}{$dd}{length} * 512 / 1048576) +1 ; # 1024^3
+        print "\t$dd:\t$size MB\t" . $part->{p}{$dd}{description} . "\n";
     }
     print "\n";
 
@@ -238,9 +238,9 @@ sub RVT_losetup_recheck {
         my $r = `sudo losetup /dev/$d 2> /dev/null`;   # TODO glups!
         #my $imagepath =  $main::RVT_cases->{$case}{imagepath};
         #$imagepath =~ s/\//\\\//g;
-        next unless ($r=~/^\/dev\/$d: \S* \(.*\/\d{6}-\w+\/(\d{6})-(\d\d)-(\d\d?)\.dd\)\D+(\d+)/ );
+        next unless ($r=~/^\/dev\/$d: \S* \(.*\/\d{6}-\w+\/(\d{6})-(\d\d)-(\d\d?)\.dd\)(\D+(\d+))?/ );
         for my $partition (keys %{$main::RVT_cases->{case}{$1}{device}{$2}{disk}{$3}{partition}}) {
-             if ($main::RVT_cases->{case}{$1}{device}{$2}{disk}{$3}{partition}{$partition}{obytes} == $4) {
+             if ($main::RVT_cases->{case}{$1}{device}{$2}{disk}{$3}{partition}{$partition}{obytes} == $5) {
                 $main::RVT_cases->{case}{$1}{device}{$2}{disk}{$3}{partition}{$partition}{loop} = $d;
              } 
         }        
@@ -441,30 +441,33 @@ sub RVT_images_scan {
             my $device = $1;
             my $disk = $2;
             
-            open(PA,"mmls $imgpath 2>/dev/null|") || RVT_log ('CRIT', "couldn't execute mmls");
-            while (my $line=<PA>) {
-                if ( $line =~ /Units are in (\d+)-byte sectors/) 
-                    { $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{sectorsize}=$1; }
-                next unless ( $line =~ /(\d\d):\s*..:..\s*(\d+)\s*\d+\s*(\d+)\s*(.+)$/)  ;  
-                my ($pnum, $pstart, $plength, $pdesc) = ($1, $2, $3, $4);
-                next if ($pdesc =~ /Extended/);
-                $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{type}=$pdesc;
-                $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{osects}=$pstart;
-                $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{obytes}=
-                    $pstart * $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{sectorsize};
-                $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{size}=
-                    $plength * $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{sectorsize};
-                    
-                # filesystem information
-                
-                #print "$case-$device-$disk-p$pnum\n";
-                my $fsstat = RVT_tsk_fsstat ("$case-$device-$disk-p$pnum");
+            my $diskname = RVT_join_diskname( $case, $device, $disk );
+            
+            my $p = RVT_tsk_mmls( $diskname );
+            next unless $p;
+            
+            $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{sectorsize} = $p->{sectorsize};
+            
+            my $pnum;
+            foreach $pnum (keys %{$p->{p}}) {
+            	
+            	$main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{type} 
+            		= $p->{p}{$pnum}{description};
+            	$main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{osects} 
+            		= $p->{p}{$pnum}{offset};
+            	$main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{obytes} 
+            		= $p->{p}{$pnum}{offset} * $p->{sectorsize};
+            	$main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{size} 
+            		= $p->{p}{$pnum}{length} * $p->{sectorsize};
+            
+            	# filesystem information
+            	
+            	my $fsstat = RVT_tsk_fsstat ("$case-$device-$disk-p$pnum");
                 next unless ($fsstat);
                 $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{filesystem} = $fsstat->{filesystem};
                 $main::RVT_cases->{case}{$case}{device}{$device}{disk}{$disk}{partition}{$pnum}{clustersize} = $fsstat->{clustersize};
-                
+            
             }
-            close(PA);
 
 			# morgue
   	    	for my $morgue ( @{$main::RVT_cfg->{paths}[0]{morgues}} )  {
