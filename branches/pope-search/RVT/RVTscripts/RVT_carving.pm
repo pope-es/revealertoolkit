@@ -52,7 +52,7 @@ use Date::Manip;
 
 sub constructor {
    
-    my $photorec = `which photorec`;
+    my $photorec = `photorec -v`;
 
    if (!$photorec) {
         RVT_log ('ERR', 'RVT_carving not loaded (couldn\'t find photorec)');
@@ -93,8 +93,6 @@ sub RVT_script_carving_default {
 #         close (META);   	
    	my @args = ("$photorec", "/log", "/d", "$carvingpath", "/cmd", "$imagepath", "partition_none,fileopt,everything,disable,accdb,enable,dat,enable,doc,enable,evt,enable,gz,enable,jpg,enable,lnk,enable,mdb,enable,mov,enable,mpg,enable,pdf,enable,png,enable,pst,enable,rar,enable,reg,enable,tar,enable,tx?,enable,txt,enable,zip,enable,options,keep_corrupted_file,search");
    	system(@args);
-   	printf ("Finished data carving. NOT updating alloc_files. This content is not linked in mnt/p00\n");
-	return 1;
 
 }
 

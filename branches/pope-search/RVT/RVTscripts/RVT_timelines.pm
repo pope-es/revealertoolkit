@@ -119,11 +119,11 @@ sub RVT_script_timelines_generate  {
 		# glups ...
 		print  "\t Generando ficheros intermedios para $disk-p$p ... \n";
 		
-    	my $cmd = "$main::RVT_cfg->{tsk_path}/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . "@" . $sectorsize .
+    	my $cmd = "$main::RVT_cfg->{tsk_path}/fls -s 0 -m \"$p/\" -r -o " . $parts{$p}{osects} . " -b " . $sectorsize .
     		" -i raw $imagepath >> $timelinespath/temp/${disk}-disk_body ";
     	`$cmd`;
     	
-    	my $cmd = "$main::RVT_cfg->{tsk_path}/ils -s 0 -e -m -o " . $parts{$p}{osects} . "@" . $sectorsize .
+    	my $cmd = "$main::RVT_cfg->{tsk_path}/ils -s 0 -e -m -o " . $parts{$p}{osects} . " -b " . $sectorsize .
     		" -i raw $imagepath > $timelinespath/temp/${disk}-disk_ibody ";
     	`$cmd`;
     }
@@ -147,7 +147,7 @@ sub RVT_script_timelines_generate  {
 			chop($line);
 			my @line = split(",", $line);
 			my $inode = $line[6];
-			my $filename = `$main::RVT_cfg->{tsk_path}/ffind -o $parts{$p}{osects}\@$sectorsize -i raw $imagepath $inode`;
+			my $filename = `$main::RVT_cfg->{tsk_path}/ffind -o $parts{$p}{osects} -b $sectorsize -i raw $imagepath $inode`;
 			chop($filename);	
 			print IDEST join(",",@line[0..6]) . ",$filename\n";
 		}

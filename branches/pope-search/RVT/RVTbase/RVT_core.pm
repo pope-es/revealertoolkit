@@ -56,7 +56,6 @@ use Sys::Syslog;
                             &RVT_fill_level
                             &RVT_exploit_diskname
                             &RVT_create_folder
-                            &RVT_create_file
                         );
        
        
@@ -252,7 +251,7 @@ sub RVT_check_format ($)  {
     return 'case number'    if $thing =~ /^\d{6}$/;
     return 'device'         if $thing =~ /^\d{6}-\d{2}$/;
     return 'disk'           if $thing =~ /^\d{6}-\d{2}-\d{1,2}$/;
-    return 'partition'      if $thing =~ /^\d{6}-\d{2}-\d{1,2}-p\d{2}$/;
+    return 'partition'      if $thing =~ /^\d{6}-\d{2}-\d{1,2}-p\d{1,2}$/;
     return 'case code'      if $thing =~ /^[a-z ]+$/;
 }
 
@@ -628,31 +627,6 @@ sub RVT_create_folder ($$) {
     
     return "$mother/$prefix-$n";
 }
-
-
-
-sub RVT_create_file ($$$) {
-    # given a folder, find the first non-existant name with a given
-    # prefix and suffix.
-    # Note that in fact this routine DOES NOT CREATE the file. Its name
-    # comes from its sister routine, RVT_create_folder
-    
-    # args:     mother folder in which you want a free filename
-    #           prefix
-    #		suffix (extension)
-    
-    my ($mother, $prefix, $suffix) = @_;
-    
-    return unless (-d $mother);
-    return unless ($prefix =~ /^[A-Za-z0-9]+$/);
-    
-    my $n = 1;
-    $n++ while (-e "$mother/$prefix-$n.$suffix");
-
-    return "$mother/$prefix-$n.$suffix";
-}
-
-
 
 
 1; 

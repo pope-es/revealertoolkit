@@ -32,6 +32,10 @@
 
 BEGIN {
 
+	# Pope> This was activated in my parsing code, and resulted in filenames with special
+	# characters not being correctly treated. Ugly. Thus I leave it COMMENTED.
+	# use encoding "utf-8";
+
 	# loading RVT libraries path
 	use FindBin;
 	use lib "$FindBin::Bin/../lib" ;
@@ -42,7 +46,7 @@ BEGIN {
 }
 
 
-our $RVT_version = '0.2.1';
+our $RVT_version = '0.2.2';
 
 
 

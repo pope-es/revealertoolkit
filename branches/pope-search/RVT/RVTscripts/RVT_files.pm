@@ -84,9 +84,11 @@ sub RVT_script_files_allocfiles  {
     mkdir $infopath unless (-e $infopath);
     if (! -d $infopath) { RVT_log ('ERR', "there is no path to the morgue/info!"); return 0};
 
-    my $command = "find -L $morguepath/mnt > $infopath/alloc_files.txt";
+    my $command = "find $morguepath/mnt > $infopath/alloc_files.txt";
+    
+    print "$command\n\n";
     `$command`;
-	printf ("Finished updating alloc_files.\n");
+    
     return 1;
 }
 
