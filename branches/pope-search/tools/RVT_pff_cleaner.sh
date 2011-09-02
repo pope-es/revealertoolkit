@@ -34,23 +34,26 @@ for mensaje in $( find "$target" -type d -regex ".*Message[0-9][0-9][0-9][0-9][0
 	if [ ! -f RVT_metadata ]; then # This allows me to skip already parsed Messages.
 		# Coger los To:
 		total_to=""
-		for address in $( grep  -B5 "^Recipient Type:.To" Recipients.txt 2>/dev/null | grep "^Email Address:" | cut -f2 ); do
-			displayname=$( grep  -B5 "^Recipient Type:.To" Recipients.txt 2>/dev/null | grep -B4 "^Email Address:.$address" | grep "^Display Name:" | cut -f2 )
-			total_to="${total_to}$displayname ($address); "
+		for address in $( grep  -B5 "^Recipient type:..To" Recipients.txt 2>/dev/null | grep "^Email address:" | sed 's/.*:..//g' ); do
+			displayname=$( grep  -B5 "^Recipient type:..To" Recipients.txt 2>/dev/null | grep -B4 "^Email address:..$address" | grep "^Display name:" | sed 's/.*:..//g' )
+#			total_to="${total_to}$displayname ($address); "
+			total_to="${total_to}$displayname; "
 		done
 		total_to=$( echo $total_to | sed 's/\(.*\), $/\1/g' )
 		# Coger los Cc:
 		total_cc=""
-		for address in $( grep  -B5 "^Recipient Type:.CC" Recipients.txt 2>/dev/null | grep "^Email Address:" | cut -f2 ); do
-			displayname=$( grep  -B5 "^Recipient Type:.CC" Recipients.txt 2>/dev/null | grep -B4 "^Email Address:.$address" | grep "^Display Name:" | cut -f2 )
-			total_cc="${total_cc}$displayname ($address); "
+		for address in $( grep  -B5 "^Recipient type:..CC" Recipients.txt 2>/dev/null | grep "^Email address:" | sed 's/.*:..//g' ); do
+			displayname=$( grep  -B5 "^Recipient type:..CC" Recipients.txt 2>/dev/null | grep -B4 "^Email address:..$address" | grep "^Display name:" | sed 's/.*:..//g' )
+#			total_cc="${total_cc}$displayname ($address); "
+			total_cc="${total_cc}$displayname; "
 		done
 		total_cc=$( echo $total_cc | sed 's/\(.*\), $/\1/g' )
 		# Coger los Bcc:
 		total_bcc=""
-		for address in $( grep  -B5 "^Recipient Type:.BCC" Recipients.txt 2>/dev/null | grep "^Email Address:" | cut -f2 ); do
-			displayname=$( grep  -B5 "^Recipient Type:.BCC" Recipients.txt 2>/dev/null | grep -B4 "^Email Address:.$address" | grep "^Display Name:" | cut -f2 )
-			total_bcc="${total_bcc}$displayname ($address); "
+		for address in $( grep  -B5 "^Recipient type:..BCC" Recipients.txt 2>/dev/null | grep "^Email address:" | sed 's/.*:..//g' ); do
+			displayname=$( grep  -B5 "^Recipient type:..BCC" Recipients.txt 2>/dev/null | grep -B4 "^Email address:..$address" | grep "^Display name:" | sed 's/.*:..//g' )
+#			total_bcc="${total_bcc}$displayname ($address); "
+			total_bcc="${total_bcc}$displayname; "
 		done
 		total_bcc=$( echo $total_bcc | sed 's/\(.*\); $/\1/g' )
 		
@@ -147,22 +150,22 @@ echo "WARNING, you should manually UPDATE allocfiles !!!"
 # 	
 # 	# Coger los To:
 # 	total_to=""
-# 	for address in $( grep  -B5 "^Recipient Type:.To" Recipients.txt | grep "^Email Address:" | cut -f2 ); do
-# 		displayname=$( grep  -B5 "^Recipient Type:.To" Recipients.txt | grep -B4 "^Email Address:.$address" | grep "^Display Name:" | cut -f2 )
+# 	for address in $( grep  -B5 "^Recipient type:..To" Recipients.txt | grep "^Email address:" | sed 's/.*:..//g' ); do
+# 		displayname=$( grep  -B5 "^Recipient type:..To" Recipients.txt | grep -B4 "^Email address:.$address" | grep "^Display name:" | sed 's/.*:..//g' )
 # 		total_to="${total_to}$displayname ($address), "
 # 	done
 # 	total_to=$( echo $total_to | sed 's/\(.*\), $/\1/g' )
 # 	# Coger los Cc:
 # 	total_cc=""
-# 	for address in $( grep  -B5 "^Recipient Type:.CC" Recipients.txt | grep "^Email Address:" | cut -f2 ); do
-# 		displayname=$( grep  -B5 "^Recipient Type:.CC" Recipients.txt | grep -B4 "^Email Address:.$address" | grep "^Display Name:" | cut -f2 )
+# 	for address in $( grep  -B5 "^Recipient type:..CC" Recipients.txt | grep "^Email address:" | sed 's/.*:..//g' ); do
+# 		displayname=$( grep  -B5 "^Recipient type:..CC" Recipients.txt | grep -B4 "^Email address:.$address" | grep "^Display name:" | sed 's/.*:..//g' )
 # 		total_cc="${total_cc}$displayname ($address), "
 # 	done
 # 	total_cc=$( echo $total_cc | sed 's/\(.*\), $/\1/g' )
 # 	# Coger los Bcc:
 # 	total_bcc=""
-# 	for address in $( grep  -B5 "^Recipient Type:.BCC" Recipients.txt | grep "^Email Address:" | cut -f2 ); do
-# 		displayname=$( grep  -B5 "^Recipient Type:.BCC" Recipients.txt | grep -B4 "^Email Address:.$address" | grep "^Display Name:" | cut -f2 )
+# 	for address in $( grep  -B5 "^Recipient type:..BCC" Recipients.txt | grep "^Email address:" | sed 's/.*:..//g' ); do
+# 		displayname=$( grep  -B5 "^Recipient type:..BCC" Recipients.txt | grep -B4 "^Email address:.$address" | grep "^Display name:" | sed 's/.*:..//g' )
 # 		total_bcc="${total_bcc}$displayname ($address), "
 # 	done
 # 	total_bcc=$( echo $total_bcc | sed 's/\(.*\), $/\1/g' )
