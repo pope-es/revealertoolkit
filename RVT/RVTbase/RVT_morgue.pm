@@ -202,11 +202,13 @@ sub RVT_images_partition_info  {
 
 sub RVT_mount_list {
 
-   print "Mounted partitions: \n";
-   open ( MOUNT, 'mount | grep "ro,loop=" |' ) or RVT_log('CRIT', "couldn't execute mount: $!");
+   print "Mounted partitions: \n\n";
+   open ( MOUNT, 'mount | grep "/dev/loop" |' ) or RVT_log('CRIT', "couldn't execute mount: $!");
    while (my $l=<MOUNT>) {
-   	$l=~/.*\/([^\/]+) on .*(loop=\/dev\/loop\d+).+(offset=\d+)/;
-	print "\t$1\t$2\t$3\n";
+	for my $morgue ( @{$main::RVT_cfg->{paths}[0]{morgues}} ) { 
+		$l =~ /^(\/dev\/loop\d+) on $morgue\/[^\/]+\/([^\/]+)\/mnt\/([^ ]+) type/;
+		print "\t$2-$3 - $1\n";
+	}
    }
    close MOUNT;
    print "\n";
@@ -232,20 +234,17 @@ sub RVT_losetup_recheck {
           }
        }
     }
-    
-    # created losetups
-    for my $d (@loopdev) { 
-        my $r = `sudo losetup /dev/$d 2> /dev/null`;   # TODO glups!
-        #my $imagepath =  $main::RVT_cases->{$case}{imagepath};
-        #$imagepath =~ s/\//\\\//g;
-        next unless ($r=~/^\/dev\/$d: \S* \(.*\/\d{6}-\w+\/(\d{6})-(\d\d)-(\d\d?)\.dd\)(\D+(\d+))?/ );
-        for my $partition (keys %{$main::RVT_cases->{case}{$1}{device}{$2}{disk}{$3}{partition}}) {
-             if ($main::RVT_cases->{case}{$1}{device}{$2}{disk}{$3}{partition}{$partition}{obytes} == $5) {
-                $main::RVT_cases->{case}{$1}{device}{$2}{disk}{$3}{partition}{$partition}{loop} = $d;
-             } 
-        }        
-    }
 
+   # mounted loop devices
+   open ( MOUNT, 'mount | grep "/dev/loop" |' ) or RVT_log('CRIT', "couldn't execute mount: $!");
+   while (my $l=<MOUNT>) {
+        for my $morgue ( @{$main::RVT_cfg->{paths}[0]{morgues}} ) { 
+                $l =~ /^\/dev\/(loop\d+) on $morgue\/\d{6}-\w+\/(\d{6})-(\d\d)-(\d\d?)\/mnt\/p(\d{2})/;
+		$main::RVT_cases->{case}{$2}{device}{$3}{disk}{$4}{partition}{$5}{loop} = $1;
+        }
+   }
+   close MOUNT;
+    
 }
 
 
