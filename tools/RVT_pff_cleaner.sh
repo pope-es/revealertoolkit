@@ -13,18 +13,7 @@ RVT_moduleVersion="0.1" # por decir algo
 
 target="$1"
 
-
-
-
-
-
-
-
 echo "!!!!!!!!!! WARNING, first parameter should be an ABSOLUTE PATH !!!!!!!!!!!!"
-
-
-
-
 echo "Parsing PFF output in path: $target"
 
 for mensaje in $( find "$target" -type d -regex ".*Message[0-9][0-9][0-9][0-9][0-9]" ); do # this DOESN'T MATCH contacts, meetings, etc.
@@ -65,54 +54,23 @@ for mensaje in $( find "$target" -type d -regex ".*Message[0-9][0-9][0-9][0-9][0
                         notes=""
                         grep -E "^Flags.*Has attachments" OutlookHeaders.txt > /dev/null && notes="Has attachments; $notes"
                 fi
-                echo "# BEGIN RVT METADATA" > RVT_metadata
-                echo "# Source file: $mensaje" >> RVT_metadata
-                echo "# Parsed by: $RVT_moduleName v$RVT_moduleVersion" >> RVT_metadata
-                echo "#" >> RVT_metadata
-                echo "# From:    $from_name ($from_addr)" >> RVT_metadata
-                echo "# Date:    $date" >> RVT_metadata
-                echo "# Subject: $subject" >> RVT_metadata
-                echo "# To:      $total_to" >> RVT_metadata
-                echo "# Cc:      $total_cc" >> RVT_metadata
-                echo "# Bcc:     $total_bcc" >> RVT_metadata
-                echo "# Notes:   $notes" >> RVT_metadata
-                echo "#" >> RVT_metadata
-                echo "######### Section: OutlookHeaders.txt ########################################" >> RVT_metadata
+                echo -e "# BEGIN RVT METADATA\n# Source file: $mensaje\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n#\n# From:    $from_name ($from_addr)\n# Date:    $date\n# Subject: $subject\n# To:      $total_to\n# Cc:      $total_cc\n# Bcc:     $total_bcc\n# Notes:   $notes\n#\n######### Section: OutlookHeaders.txt ########################################\n" > RVT_metadata
                 if [ -f OutlookHeaders.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
-                echo "######### End of section #####################################################" >> RVT_metadata
-                echo "" >> RVT_metadata
+                echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: InternetHeaders.txt #######################################" >> RVT_metadata
                 if [ -f InternetHeaders.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
-                echo "######### End of section #####################################################" >> RVT_metadata
-                echo "" >> RVT_metadata
+                echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: Recipients.txt ############################################" >> RVT_metadata
                 if [ -f Recipients.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
-                echo "######### End of section #####################################################" >> RVT_metadata
-                echo "" >> RVT_metadata
+                echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: ItemValues.txt ############################################" >> RVT_metadata
                 if [ -f ItemValues.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
-                echo "######### End of section #####################################################" >> RVT_metadata
-                echo "" >> RVT_metadata
+                echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: ConversationIndex.txt ############################################" >> RVT_metadata
                 if [ -f ConversationIndex.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
-                echo "######### End of section #####################################################" >> RVT_metadata
-                echo "" >> RVT_metadata
-                echo "# END RVT METADATA" >> RVT_metadata
+                echo -e "######### End of section #####################################################\n\n# END RVT METADATA\n" >> RVT_metadata
 
-                echo "<!--#$from_name ($from_addr)#$date#$subject#$total_to#$total_cc#$total_bcc#$notes#-->" > FullMessage.html
-                echo "<HTML>" >> FullMessage.html
-                echo "<HEAD>" >> FullMessage.html
-                echo "<TITLE>$subject</TITLE>" >> FullMessage.html
-                echo "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">" >> FullMessage.html
-                echo "</HEAD>" >> FullMessage.html
-                echo "<BODY>" >> FullMessage.html
-                echo "<TABLE border=1 rules=none frame=box>" >> FullMessage.html
-                echo "<tr><td><b>From:</b></td><td>$from_name ($from_addr)</td></tr>" >> FullMessage.html
-                echo "<tr><td><b>Date:</b></td><td>$date</td></tr>" >> FullMessage.html
-                echo "<tr><td><b>Subject:</b></td><td>$subject</td></tr>" >> FullMessage.html
-                echo "<tr><td><b>To:</b></td><td>$total_to</td></tr>" >> FullMessage.html
-                echo "<tr><td><b>Cc:</b></td><td>$total_cc</td></tr>" >> FullMessage.html
-                echo "<tr><td><b>Bcc:</b></td><td>$total_bcc</td></tr>" >> FullMessage.html
+                echo -e "<!--#$from_name ($from_addr)#$date#$subject#$total_to#$total_cc#$total_bcc#$notes#-->\n<HTML>\n<HEAD>\n<TITLE>$subject</TITLE>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n<TABLE border=1 rules=none frame=box>\n<tr><td><b>From:</b></td><td>$from_name ($from_addr)</td></tr>\n<tr><td><b>Date:</b></td><td>$date</td></tr>\n<tr><td><b>Subject:</b></td><td>$subject</td></tr>\n<tr><td><b>To:</b></td><td>$total_to</td></tr>\n<tr><td><b>Cc:</b></td><td>$total_cc</td></tr>\n<tr><td><b>Bcc:</b></td><td>$total_bcc</td></tr>" > FullMessage.html
         
                 ## AQUI LOS ADJUNTOS... aquí unos amigos.
                 if [ -d Attachments ]; then
@@ -137,7 +95,7 @@ done
 echo "Cleaning additional items..." # WARNING this deletes files, like contact.txt, not parsed.
 
 find $target -name ItemValues.txt -exec rm '{}' \;
-find $target -name Contact.txt -exec rm '{}' \;
+# find $target -name Contact.txt -exec rm '{}' \;
 echo "Done."
 echo "WARNING, you should manually UPDATE allocfiles !!!"
 

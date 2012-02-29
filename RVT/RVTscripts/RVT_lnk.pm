@@ -75,7 +75,7 @@ sub RVT_script_lnk_generate
 	$disk = $main::RVT_level->{tag} unless $disk;
 	if (RVT_check_format($disk) ne 'disk') { RVT_log ('WARNING', 'that is not a disk'); return 0; }
 
-	$morguepath = RVT_get_morguepath($disk);
+	my $morguepath = RVT_get_morguepath($disk);
 	if (! $morguepath) { RVT_log ('WARNING', 'there is no path to the morgue!'); return 0};
 	my $lnkpath= "$morguepath/output/lnk";
 	if (! -e $lnkpath){
