@@ -34,6 +34,7 @@ use strict;
        @ISA         = qw(Exporter);
        @EXPORT      = qw(   &constructor
                             &RVT_script_carving_default
+                            &RVT_script_carving_graphics
                         );
        
        
@@ -52,7 +53,7 @@ use Date::Manip;
 
 sub constructor {
    
-    my $photorec = `photorec -v`;
+    my $photorec = `which photorec`;
 
    if (!$photorec) {
         RVT_log ('ERR', 'RVT_carving not loaded (couldn\'t find photorec)');
@@ -64,6 +65,9 @@ sub constructor {
    $main::RVT_functions{RVT_script_carving_default } =
    "Extracts files in raw mode; types: compressed, MS Office, HTML, PST, EVT, LNK...\n
    script carving default <disk>";
+   $main::RVT_functions{RVT_script_carving_graphics } =
+   "Extracts files in raw mode; types: graphic, images...\n
+   script carving graphics <disk>";
 
 }
 
@@ -93,6 +97,34 @@ sub RVT_script_carving_default {
 #         close (META);   	
    	my @args = ("$photorec", "/log", "/d", "$carvingpath", "/cmd", "$imagepath", "partition_none,fileopt,everything,disable,accdb,enable,dat,enable,doc,enable,evt,enable,gz,enable,jpg,enable,lnk,enable,mdb,enable,mov,enable,mpg,enable,pdf,enable,png,enable,pst,enable,rar,enable,reg,enable,tar,enable,tx?,enable,txt,enable,zip,enable,options,keep_corrupted_file,search");
    	system(@args);
+   	printf ("Finished data carving. NOT updating alloc_files. This content is not linked in mnt/p00\n");
+	return 1;
+
+}
+
+sub RVT_script_carving_graphics {
+
+	my $imagepath;
+	my $morguepath;
+   	my $photorec = "photorec";
+	my ( $disk ) = @_;
+	$disk = $main::RVT_level->{tag} unless $disk;
+        if (RVT_check_format($disk) ne 'disk') { RVT_log ('WARNING', 'that is not a disk'); return 0; }
+
+	$imagepath = RVT_get_imagepath($disk);
+        $morguepath = RVT_get_morguepath($disk);
+        if (! $morguepath) { RVT_log ('WARNING', 'there is no path to the morgue!'); return 0};
+        my $carvingpath= "$morguepath/output/carving/";
+        if (! -e $carvingpath){
+            my @args = ('mkdir', $carvingpath);
+            system (@args);
+        }
+
+   	print "Starting file carving on $disk...\n";   	
+   	my @args = ("$photorec", "/log", "/d", "$carvingpath", "/cmd", "$imagepath", "partition_none,fileopt,everything,disable,gif,enable,jpg,enable,png,enable,options,keep_corrupted_file,search");
+   	system(@args);
+   	printf ("Finished data carving. NOT updating alloc_files. This content is not linked in mnt/p00\n");
+	return 1;
 
 }
 

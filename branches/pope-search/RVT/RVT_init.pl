@@ -122,9 +122,14 @@ RVTscripts::RVT_report::constructor;
 use RVTscripts::RVT_evt;
 RVTscripts::RVT_evt::constructor;
 
+use RVTscripts::RVT_parse;
+RVTscripts::RVT_parse::constructor;
+
 use RVTscripts::RVT_carving;
 RVTscripts::RVT_carving::constructor;
 
+use RVTscripts::RVT_supertl;
+RVTscripts::RVT_supertl::constructor;
 
 
 #######################################################################

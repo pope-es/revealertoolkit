@@ -123,7 +123,7 @@ sub RVT_script_regripper_execmodule {
         print "\n";
         last unless ($hivetype eq "ntuser");
     } 
-    
+
     return 1;
 }
 
@@ -153,7 +153,8 @@ sub RVT_script_regripper_execallmodules {
     
     my $disk = RVT_chop_diskname('disk', $part);
     
-    my $ofolder = RVT_get_morguepath($disk) . '/output/regripper';
+	my $morguepath = RVT_get_morguepath($disk);
+    my $ofolder = $morguepath.'/output/regripper';
     if ( ! -d $ofolder )  { mkdir ($ofolder) or RVT_log ('CRIT', "Could not create $ofolder"); }
     
     foreach $hivetype (@hivetypes) {
@@ -173,7 +174,10 @@ sub RVT_script_regripper_execallmodules {
             print "regripped: $files[$f]\n";
         } 
     }
-    
+
+#     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };    
+#     my @args = ('ln', '-s', $ofolder , $morguepath.'/mnt/p00/output_regripper');
+# 	system (@args);
     return 1;
 }
 
