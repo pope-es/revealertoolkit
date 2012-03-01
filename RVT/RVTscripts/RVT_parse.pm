@@ -54,6 +54,9 @@ my $RVT_moduleName = "RVT_parse";
 my $RVT_moduleVersion = "1.0";
 my $RVT_moduleAuthor = "Pope";
 
+# Changelog:
+# 1.0 - Initial release. Messy!
+
 use RVTbase::RVT_core;
 use RVTscripts::RVT_files;
 use File::Copy;
@@ -142,6 +145,14 @@ sub constructor {
 
 
 
+
+
+
+
+
+
+
+
 sub RVT_script_parse_pst {
 
     my $part = shift(@_);
@@ -165,18 +176,12 @@ sub RVT_script_parse_pst {
     foreach my $f (@filelist) {
         my $fpath = RVT_create_folder($opath, 'pst');
         
-        mkdir ("$fpath/contents") or die ("ERR: failed to create output directories.");
         open (META, ">$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
             print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
         close (META);
         
-        $fpath="$fpath/libpff";
-        my @args = ('pffexport', '-f', 'html', '-m', 'debug', '-t', "$fpath", $f);
+        my @args = ('pffexport', '-f', 'text', '-m', 'all', '-q', '-t', "$fpath/libpff", $f); # -f text and -m all are in fact default options.
         system(@args);
-
-	# Pope> This is shit. And it works.
-#		my $command = "find $fpath -type f -regex ".'".*/[0-9]*"'." -exec mv '{}' '{}'.eml \\;";
-#		system ($command);
     }
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
@@ -185,10 +190,19 @@ sub RVT_script_parse_pst {
 		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
 		system (@args);
 	}
-	printf ("Finished parsing PST and OST files.\n");
+	printf ("Finished parsing PST, OST, PAB files.\n");
 	RVT_script_files_allocfiles($disk);
     return 1;
 }
+
+
+
+
+
+
+
+
+
 
 
 
