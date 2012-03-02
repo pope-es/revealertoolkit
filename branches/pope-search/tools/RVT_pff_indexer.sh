@@ -50,7 +50,7 @@ echo "<TABLE id=\"my_table\" border=1 rules=all frame=box>" >> $index
 echo "<THEAD>" >> $index
 echo "<tr><th width=\"1%\">Action</th><th width=\"10%\">From</th><th width=\"10%\">____________Date____________</th><th width=\"10%\">Subject</th><th width=\"10%\">To</th><th width=\"10%\">Cc</th><th width=\"10%\">Bcc</th><th width=\"10%\">Notes</th></tr>" >>$index
 echo "</THEAD>" >> $index
-for mensaje in $( find . -type f -name "FullMessage.html" ); do
+for mensaje in $( find . -type f -name "Message?????.html" ); do
 	echo "<tr><td><a href=\"file:$mensaje\" target=\"_blank\">Open</a></td><td>$(head -n 1 "$mensaje" | cut -d\# -f2-8 | sed 's/\#/<\/td><td>/g')</td></tr>" >> $index
 done
 echo "</TABLE>" >>$index
