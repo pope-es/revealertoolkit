@@ -98,7 +98,7 @@ sub RVT_script_evt_generate {
 	}
 
    	my $parsevt = "evtparse.pl";
-    my @evtlist = RVT_get_allocfiles('evt$', $disk);
+    my @evtlist = RVT_get_allocfiles('\.evt$', $disk);
 	my $line;
 	
 	foreach my $f (@evtlist) {
@@ -154,7 +154,7 @@ sub RVT_script_evt_report {
 	}
 	my $reportevt = "evtrpt.pl";
 
-	my @evtlist = RVT_get_allocfiles('evt$', $disk);
+	my @evtlist = RVT_get_allocfiles('\.evt$', $disk);
 	my $line;
 	foreach my $f (@evtlist) {
 		print "opening file $f\n";
