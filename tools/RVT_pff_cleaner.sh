@@ -58,16 +58,16 @@ for mensaje in $( find "$target" -type d -regex ".*Message[0-9][0-9][0-9][0-9][0
                 if [ -f OutlookHeaders.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
                 echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: InternetHeaders.txt #######################################" >> RVT_metadata
-                if [ -f InternetHeaders.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
+                if [ -f InternetHeaders.txt ]; then cat InternetHeaders.txt >> RVT_metadata; fi
                 echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: Recipients.txt ############################################" >> RVT_metadata
-                if [ -f Recipients.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
+                if [ -f Recipients.txt ]; then cat Recipients.txt >> RVT_metadata; fi
                 echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: ItemValues.txt ############################################" >> RVT_metadata
-                if [ -f ItemValues.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
+                if [ -f ItemValues.txt ]; then cat ItemValues.txt >> RVT_metadata; fi
                 echo -e "######### End of section #####################################################\n\n" >> RVT_metadata
                 echo "######### Section: ConversationIndex.txt ############################################" >> RVT_metadata
-                if [ -f ConversationIndex.txt ]; then cat OutlookHeaders.txt >> RVT_metadata; fi
+                if [ -f ConversationIndex.txt ]; then cat ConversationIndex.txt >> RVT_metadata; fi
                 echo -e "######### End of section #####################################################\n\n# END RVT METADATA\n" >> RVT_metadata
 
                 echo -e "<!--#$from_name ($from_addr)#$date#$subject#$total_to#$total_cc#$total_bcc#$notes#-->\n<HTML>\n<HEAD>\n<TITLE>$subject</TITLE>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n<TABLE border=1 rules=none frame=box>\n<tr><td><b>From:</b></td><td>$from_name ($from_addr)</td></tr>\n<tr><td><b>Date:</b></td><td>$date</td></tr>\n<tr><td><b>Subject:</b></td><td>$subject</td></tr>\n<tr><td><b>To:</b></td><td>$total_to</td></tr>\n<tr><td><b>Cc:</b></td><td>$total_cc</td></tr>\n<tr><td><b>Bcc:</b></td><td>$total_bcc</td></tr>" > FullMessage.html
