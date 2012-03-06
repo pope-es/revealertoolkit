@@ -1059,7 +1059,7 @@ sub pff_cleaner {
 	} elsif ( $File::Find::name =~ /\/Message[0-9]{5}\/OutlookHeaders.txt$/ ) {
 		################################################################################
 		# This is the code for parsing libpff's MESSAGES
-		print("ESTOY EN UN MENSAJE: $File::Find::name\n");
+		print("Message: $File::Find::name\n");
 		
 		my $from_name = "";
 		my $from_addr = "";
@@ -1073,7 +1073,7 @@ sub pff_cleaner {
 		my $priority = "";
 		my $flags = "";
 		
-		open (RVT_TARGET, ">$File::Find::dir.html") or die ("ERR: failed to create: $File::Find::dir.txt\n");
+		open (RVT_TARGET, ">$File::Find::dir.html") or die ("ERR: failed to create: $File::Find::dir.html\n");
 		open (RVT_META, ">$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
 		print RVT_META "Source: $File::Find::name\n";
 		
@@ -1114,8 +1114,8 @@ sub pff_cleaner {
 				$line =~ s/.*\t//;
 				chomp( $line );
 				$flags = $line;
-			} # BEWARE $line is taunted till the end of the WHILE.
-		}
+			} # BEWARE $line may be taunted till the end of the WHILE.
+		} # end of the WHILE.
 		close (SOURCE); ########## Done with OutlookHeaders.txt.
 		unlink ("$File::Find::name") or warn ("WARNING: failed to delete $File::Find::name\n");
 
@@ -1215,6 +1215,7 @@ sub pff_cleaner {
 		print RVT_TARGET "</HTML>\n";
 		close (RVT_TARGET);
 		close (RVT_META);
+		rmdir ("$File::Find::dir") or warn ("WARNING: failed to delete $File::Find::dir\n");
 
 #		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
 #		unlink ("$File::Find::dir/Recipients.txt") or warn ("WARNING: failed to delete $File::Find::dir/Recipients.txt\n");
