@@ -176,10 +176,9 @@ sub RVT_script_parse_pff {
     
 	printf ("Parsing PST, OST, PAB files...\n");
     foreach my $f (@filelist) {
-#        my $fpath = RVT_create_folder($opath, 'pst');
     	my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');
     	
-        open (META, ">$fpath") or die ("ERR: failed to create metadata files.");
+        open (META,">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
         close (META);
         $fpath =~ s/.RVT_metadata//; 
@@ -189,12 +188,9 @@ sub RVT_script_parse_pff {
         # Code for cleaning libpff's mess:
         
         foreach my $mode ('export','orphan','recovered') {
-			find( \&pff_cleaner,"$fpath.$mode");
+			finddepth( \&pff_cleaner,"$fpath.$mode");
 		}
-        
-        
-        
-        
+         
     }
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
@@ -545,7 +541,6 @@ sub RVT_script_parse_text {
 
 
 sub RVT_script_parse_search_launch  {
-#	use encoding "utf-8";
     # launches a search over indexed (PARSEd) files writing results (hits) to a file.
     # takes as arguments:
     #   file with searches: one per line
@@ -612,7 +607,6 @@ sub RVT_script_parse_search_launch  {
 
 
 sub RVT_script_parse_search_export  {
-#	use encoding "utf-8";
     # Exports results (from script parse search launch) to disk.
     # takes as arguments:
     #   file with searches: one per line
@@ -652,7 +646,6 @@ sub RVT_script_parse_search_export  {
 
 
 sub RVT_copy_with_source  {
-#	use encoding "utf-8";
 #	Copies a file to a directory.
 #	If the file presents a RVT_METADATA structure, this function is applied recursively to the SOURCE.
 #	Parameters:
@@ -704,7 +697,6 @@ sub RVT_copy_with_source  {
 
 
 sub RVT_get_source () { 
-#	use encoding "utf-8";
 	# dado un contenido en parser, encuentra su fuente según RVT METADATA.
 	my $file = shift;
 	print "Getting source for $file\n";
@@ -818,6 +810,7 @@ sub pff_cleaner {
 		close (RVT_TARGET);
 		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
 		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
+		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
 
 	} elsif ( $File::Find::name =~ /\/Meeting[0-9]{5}\/Meeting.txt$/ ) {
 		################################################################################
@@ -891,6 +884,7 @@ sub pff_cleaner {
 		close (RVT_TARGET);
 		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
 		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
+		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
 	} elsif ( $File::Find::name =~ /\/Note[0-9]{5}\/Note.txt$/ ) {
 		################################################################################
 		# This is the code for parsing libpff's NOTES
@@ -953,6 +947,7 @@ sub pff_cleaner {
 		close (RVT_TARGET);
 		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
 		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
+		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
 
 	} elsif ( $File::Find::name =~ /\/Appointment[0-9]{5}\/Appointment.txt$/ ) {
 		################################################################################
@@ -1056,6 +1051,8 @@ sub pff_cleaner {
 		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
 		unlink ("$File::Find::dir/Recipients.txt") or warn ("WARNING: failed to delete $File::Find::dir/Recipients.txt\n");
 		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
+		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
+
 	} elsif ( $File::Find::name =~ /\/Message[0-9]{5}\/OutlookHeaders.txt$/ ) {
 		################################################################################
 		# This is the code for parsing libpff's MESSAGES
@@ -1073,9 +1070,9 @@ sub pff_cleaner {
 		my $priority = "";
 		my $flags = "";
 		
-		open (RVT_TARGET, ">$File::Find::dir.html") or die ("ERR: failed to create: $File::Find::dir.html\n");
-		open (RVT_META, ">$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
-		print RVT_META "Source: $File::Find::name\n";
+		open (RVT_TARGET, ">:encoding(UTF-8)", "$File::Find::dir.html") or die ("ERR: failed to create: $File::Find::dir.html\n");
+		open (RVT_META, ">:encoding(UTF-8)", "$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
+		print RVT_META "Source: $File::Find::name\n\n";
 		
 		########## Append OutlookHeaders.txt to RVT_META and save some variables.
 		open (SOURCE, "<$File::Find::name") or warn ("WARNING: failed to open $File::Find::name\n");
@@ -1177,20 +1174,21 @@ sub pff_cleaner {
 			print RVT_TARGET "<tr><td><b>Remarks</b></td><td>$flags</td></tr>\n"
 		}
 		
-		########## Write part of RVT_TARGET about attachments (if there are any)
+		########## If there are attachments, treat them and write parts of RVT_TARGET and RVT_META
 		if( -d "$File::Find::dir/Attachments" ) {
 			print "Attachments: $File::Find::dir/Attachments\n";
-			print RVT_META "\n\n## Attachment information follows:\n";
+			print RVT_META "\n## Attachment information follows:\n\n";
 			sub attachment {
-				if ( -f ) { # only do this for actual files - omitir the directory entry for "Attachments/"
+				if ( -f ) { # only do this for actual files - omit the directory entry for "Attachments/"
 					my $string = $File::Find::name;
 					print RVT_META "Attachment: $File::Find::name\n";
 					chomp( $string );
-					$string =~ s/\/Attachments\// /;
+					$string =~ s/(.*)\/Attachments\//\1.attach\//;
+					mkdir dirname( $string );
 					move( "$File::Find::name", "$string" );
 					print RVT_TARGET "<tr><td><b>Attachment</b></td><td><a href=\"", basename($string)  ,"\">", basename($File::Find::name), "</a></td></tr>\n";
 				} # end if -f
-			} # end sub
+			} # end sub attachment
 			find( \&attachment, "$File::Find::dir/Attachments" );
 			rmdir ("$File::Find::dir/Attachments") or warn ("WARNING: failed to delete $File::Find::dir/Attachments\n");
 		} # end if -d ....Attachments
@@ -1198,11 +1196,11 @@ sub pff_cleaner {
 
  		if( -f "$File::Find::dir/Message.txt" ) {
  			########## Append Message.txt to RVT_META and RVT_TARGET
- 			print RVT_META "## Message.txt follows:\n\n";
+ 			print RVT_META "\n## Message.txt follows:\n\n";
  			open (MESSAGE, "<$File::Find::dir/Message.txt") or warn ("WARNING: failed to open $File::Find::dir/Message.txt\n");
 			while( my $line = <MESSAGE> ) {
-				print RVT_META $line;
 				chomp( $line );
+				print RVT_META "$line\n";
 				print RVT_TARGET "$line<br>\n";
 			} 
  			close (MESSAGE); # done parsing Message.txt
@@ -1217,11 +1215,7 @@ sub pff_cleaner {
 		close (RVT_META);
 		rmdir ("$File::Find::dir") or warn ("WARNING: failed to delete $File::Find::dir\n");
 
-#		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
-#		unlink ("$File::Find::dir/Recipients.txt") or warn ("WARNING: failed to delete $File::Find::dir/Recipients.txt\n");
-#		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
-
-		
+		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
 		
 	} else { ################################################################## No match
 	print "(other): $File::Find::name\n";
