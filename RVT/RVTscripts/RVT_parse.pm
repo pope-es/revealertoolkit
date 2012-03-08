@@ -513,8 +513,12 @@ sub RVT_script_parse_text {
     my @filelist = (@listtxt, @listcsv, @listeml, @listdbx, @listdoc, @listppt, @listxls, @listrtf, @listhtm, @listhtml, @listphp, @listasp, @listxml);
 
 	printf ("Parsing text files...\n");
-	foreach my $f (@filelist) { 
-		my $fpath = RVT_create_file($opath, 'text', 'txt');
+	
+	my $fpath = RVT_create_file($opath, 'text', 'txt');
+	my $count = $fpath;
+	$count =~ s/.*-([0-9]*).txt$/\1/;
+	foreach my $f (@filelist) {
+		$fpath = "$opath/text-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 		my $normalized = `echo "$f" | f-strings`;
 		chomp ($normalized);
 
@@ -526,7 +530,8 @@ sub RVT_script_parse_text {
 		}
 		close (FTEXT);
 		close (FOUT);
-	}
+		$count++;
+	} # end foreach my $f (@filelist)
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
 	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
@@ -1178,7 +1183,7 @@ sub pff_cleaner {
 		if( -d "$File::Find::dir/Attachments" ) {
 			print "Attachments: $File::Find::dir/Attachments\n";
 			print RVT_META "\n## Attachment information follows:\n\n";
-			sub attachment {
+			sub attachment { # XX lgomez> fixme: attached e-mail messages are not processed correctly.
 				if ( -f ) { # only do this for actual files - omit the directory entry for "Attachments/"
 					my $string = $File::Find::name;
 					print RVT_META "Attachment: $File::Find::name\n";
