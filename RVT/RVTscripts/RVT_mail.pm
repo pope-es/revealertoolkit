@@ -69,7 +69,7 @@ sub RVT_script_mail_parsepsts {
 
     my $part = shift(@_);
     
-    $part = RVT_fill_level{$part} unless $part;
+    $part = RVT_fill_level{\$part} unless $part;
     if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
     
     my $disk = RVT_chop_diskname('disk', $part);
