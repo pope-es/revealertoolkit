@@ -147,14 +147,6 @@ sub constructor {
 
 
 
-
-
-
-
-
-
-
-
 sub RVT_script_parse_pff {
 
     my $part = shift(@_);
@@ -176,8 +168,7 @@ sub RVT_script_parse_pff {
     
 	printf ("Parsing PST, OST, PAB files...\n");
     foreach my $f (@filelist) {
-    	my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');
-    	
+    	my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');    	
         open (META,">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
         close (META);
@@ -185,12 +176,7 @@ sub RVT_script_parse_pff {
         my @args = ('pffexport', '-f', 'text', '-m', 'all', '-q', '-t', "$fpath", $f); # -f text and -m all are in fact default options.
         system(@args);
         
-        # Code for cleaning libpff's mess:
-        
-        foreach my $mode ('export','orphan','recovered') {
-			finddepth( \&pff_cleaner,"$fpath.$mode");
-		}
-         
+        foreach my $mode ('export','orphan','recovered') { finddepth( \&RVT_sanitize_libpff_item, "$fpath.$mode" ) }
     }
 
     if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
@@ -734,503 +720,268 @@ sub RVT_get_source () {
 }
 
 
+sub RVT_sanitize_libpff_item {
+	
+	return unless ( -d ); # We are only interested in DIRECTORIES
+	return unless ( $File::Find::name =~ /\/[A-Z][a-z]*[0-9]{5}$/ );
 
+	# LIST OF AVAILABLE FIELDS:
+	# Client submit time
+	# Delivery time
+	# Creation time
+	# Modification time
+	# Size
+	# Flags
+	# Display name
+	# Conversation topic
+	# Subject
+	# Sender name			
+	# Sender email address				# it is not necessary to declare the name of this field, because its value will be shown under the Field Name of 'Sender name'
+	# Sent representing name
+	# Sent representing email address
+	# Importance
+	# Priority
+	# Sensitivity
+	# Is a reminder
+	# Reminder time
+	# Is private
+	
+	# This defines which fields we want for each item type, and what name to give them.
+	my %field_names;
+	### Appointments:
+	$field_names{'Appointment'}{'Creation time'} = "Creation";
+	$field_names{'Appointment'}{'Modification time'} = "Modification";
+	$field_names{'Appointment'}{'Flags'} = "Flags";
+	$field_names{'Appointment'}{'Subject'} = "Subject";
+	$field_names{'Appointment'}{'Sender name'} = "Creator";
+	$field_names{'Appointment'}{'Sender email address'} = "Creator e-mail address"; # this label is not used
+	$field_names{'Appointment'}{'Importance'} = "Importance";
+	$field_names{'Appointment'}{'Priority'} = "Priority";
+	### Contacts:
+	$field_names{'Contact'}{'Creation time'} = "Creation";
+	$field_names{'Contact'}{'Modification time'} = "Modification";
+	$field_names{'Contact'}{'Flags'} = "Flags";
+	$field_names{'Contact'}{'Subject'} = "Contact name";
+	$field_names{'Contact'}{'Sender name'} = "Creator";
+	$field_names{'Contact'}{'Sender email address'} = "Creator e-mail address"; # this label is not used
+	$field_names{'Contact'}{'Importance'} = "Importance";
+	$field_names{'Contact'}{'Priority'} = "Priority";
+	### Meetings:
+	$field_names{'Meeting'}{'Creation time'} = "Creation";
+	$field_names{'Meeting'}{'Modification time'} = "Modification";
+	$field_names{'Meeting'}{'Flags'} = "Flags";
+	$field_names{'Meeting'}{'Subject'} = "Subject";
+	$field_names{'Meeting'}{'Sender name'} = "Creator";
+	$field_names{'Meeting'}{'Sender email address'} = "Creator e-mail address"; # this label is not used
+	$field_names{'Meeting'}{'Importance'} = "Importance";
+	$field_names{'Meeting'}{'Priority'} = "Priority";
+	### Messages:
+	$field_names{'Message'}{'Creation time'} = "Creation";
+	$field_names{'Message'}{'Modification time'} = "Modification";
+	$field_names{'Message'}{'Flags'} = "Flags";
+	$field_names{'Message'}{'Subject'} = "Subject";
+	$field_names{'Message'}{'Sender name'} = "From";
+	$field_names{'Message'}{'Sender email address'} = "Creator e-mail address"; # this label is not used
+	$field_names{'Message'}{'Importance'} = "Importance";
+	$field_names{'Message'}{'Priority'} = "Priority";
+	### Notes:
+	$field_names{'Note'}{'Creation time'} = "Creation";
+	$field_names{'Note'}{'Modification time'} = "Modification";
+	$field_names{'Note'}{'Flags'} = "Flags";
+	$field_names{'Note'}{'Subject'} = "Subject";
+	$field_names{'Note'}{'Sender name'} = "Creator";
+	$field_names{'Note'}{'Sender email address'} = "Creator e-mail address"; # this label is not used
+	$field_names{'Note'}{'Importance'} = "Importance";
+	$field_names{'Note'}{'Priority'} = "Priority";
+	### Tasks:
+	$field_names{'Task'}{'Creation time'} = "Creation";
+	$field_names{'Task'}{'Modification time'} = "Modification";
+	$field_names{'Task'}{'Flags'} = "Flags";
+	$field_names{'Task'}{'Subject'} = "Subject";
+	$field_names{'Task'}{'Sender name'} = "Created by";
+	$field_names{'Task'}{'Sender email address'} = "Creator e-mail address"; # this label is not used
+	$field_names{'Task'}{'Importance'} = "Importance";
+	$field_names{'Task'}{'Priority'} = "Priority";
+	###	
 
+	my @sortorder = ( 'Creation time', 'Client submit time', 'Delivery time', 'Modification time', 'Sender name', 'Sender email address', 'Sent representing name', 'Sent representing email address', 'Display name', 'Conversation topic', 'Subject', 'Importance', 'Priority', 'Sensitivity', 'Is a reminder', 'Is private', 'Size','Flags' ); # This affects in which order fields are written to RVT_ITEMs
 
+	my %field_values = (
+		'Subject' => undef,
+		'Sender name' => undef,
+		'Sender email address' => undef,
+		'Importance' => undef,
+		'Priority' => undef,
+		'Flags' => undef,
+		'Client submit time' => undef,
+		'Delivery time' => undef,
+		'Creation time' => undef,
+		'Modification time' => undef,
+	);
 
-sub pff_cleaner {
-#	my $string, $line, $previous_line;
-#	my $from_name, $from_addr, $to, $cc, $bcc, $date, $date_sent, $subject, $importance, $priority, $flags;
-		
+	my $folder = $File::Find::name;
+	my $source = $folder; $source =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control.pff/\1/;
+	my $item_type = basename( $folder ); $item_type =~ s/[0-9]{5}//;
+	my $file = basename( $folder );	$file =~ s/[0-9]{5}/.txt/;
+	if( $item_type eq 'Message' ) { $file =~ s/Message/OutlookHeaders/ }
+	
+	return if( $item_type eq 'Attachment' ); # Folders like Attachment00001 must not be treated directly by us; instead they will be treated during the sub parse_attachment of their parent directory.
+	return if( $item_type eq 'Folder' ); # Folders like Folder00001 are likely to be found in recovered structures, but they are not "by themselves" items to be analyzed. Note that the normal items (Message, Contact...) inside WILL be analyzed normally.
 
-	if ( $File::Find::name =~ /\/Contact[0-9]{5}\/Contact.txt$/ ) {
-		################################################################################
-		# This is the code for parsing libpff's CONTACTS
-		
-		print ("Contact: $File::Find::name\n");
-		
-		my $from_name = "";
-		my $from_addr = "";
-		my $date = "";
-		my $subject = "";
-		my $importance = "";
-		my $priority = "";
-		my $flags = "";
-		
-		open (SOURCE, "<$File::Find::name") or warn ("WARNING: failed to open $File::Find::name\n");
-		open (RVT_TARGET, ">$File::Find::dir.txt") or die ("ERR: failed to create: $File::Find::dir.txt\n");
-		open (RVT_META, ">$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
-		print RVT_META "Source: $File::Find::name\n";
-		
-		########## Read Contact.txt, writing to RVT_metadata and RVT_TARGET.
-		while( my $line = <SOURCE> ) {
-			print RVT_META $line;	# BEWARE! After this point in the loop, we modify $line
-			if( $line =~ /^Creation time:/ ) {
-				$line =~ s/.*\t//;
+	if( exists $field_names{$item_type} ) { print "Item: $item_type ($source)\n" }
+	else {
+		warn "WARNING: Skipping unknown item type $item_type ($source)\n";
+		return
+	}
+	
+	open( LIBPFF_ITEM, "<:encoding(UTF-8)", "$folder/$file" ) || warn( "WARNING: Cannot open $folder/$file for reading - skipping item.\n" ) && return;
+	open( RVT_ITEM, ">:encoding(UTF-8)", "$folder.html" ) || warn( "WARNING: Cannot open $folder.txt for writing - skipping item.\n" ) && return;
+	open( RVT_META, ">:encoding(UTF-8)", "$folder.RVT_metadata" ) || warn( "WARNING: Cannot open $folder.RVT_metadata for writing - skipping item.\n" ) && return;	
+	print RVT_META "## $file follows:\n\n";
+	
+	# Parse LIBPFF_ITEM until an empty line is found, writing to RVT_META and store wanted keys:
+	PARSE_KEYS:
+	while( my $line = <LIBPFF_ITEM> ) { # This loop exits as soon as one empty line is found
+		if( $line =~ /^$/ ) { last PARSE_KEYS } # this exits the WHILE loop
+		print RVT_META $line;
+		STORE_KEY:
+		foreach my $k ( keys %field_values ) { # Store the key if we want it:
+			if( $line =~ /^$k:/ ) {
+				$line =~ s/.*\t//; 
 				chomp( $line );
-				my $date = $line;
-			} elsif( $line =~ /^Subject:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $subject = $line;
-			} elsif( $line =~ /^Sender name:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $from_name = $line;
-			} elsif( $line =~ /^Sender email address:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $from_addr = $line;
-			} elsif( $line =~ /^Importance:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $importance = $line;
-			} elsif( $line =~ /^Priority:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $priority = $line;
-			} elsif( $line =~ /^Flags:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $flags = $line;
-			} elsif( $line =~ /^Contact:/ ) {
-				my $string = $File::Find::dir;
-				$string =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control.pff/\1/;
-				print RVT_TARGET "Source: $string\nCreator: $from_name, $from_addr\nCreation time: $date\nContact: $subject\n";
-				if( $importance ne 'Normal' ) { print RVT_TARGET "Importance: $importance\n" }
-				if( ( $priority ne '' ) && ( $priority ne 'Normal' ) ) { print RVT_TARGET "Priority: $priority\n" }
-				if( $flags ne '0x00000001 (Read)' ) { print RVT_TARGET "Flags: $flags\n" }
-				print RVT_TARGET "\n";
-				print RVT_TARGET $line; # This line was already written to RVT_META
-				while( $line = <SOURCE> ) {
-					print RVT_TARGET $line;
-					print RVT_META $line;
-				}
-			} 			 # $line is taunted, keep an eye on that.			
-		}
-		close (SOURCE);
-		########## Done with Contact.txt.
+				$field_values{$k} = $line;
+				last STORE_KEY; # this exits the FOREACH loop
+			} # end if
+		} # end foreach 
+	} # end while
 
-		close (RVT_META);
-		close (RVT_TARGET);
-		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
-		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
-		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
+	# InternetHeaders.txt: append to RVT_META
+	if( -f "$folder/InternetHeaders.txt" ) {
+		print RVT_META "\n\n## InternetHeaders.txt follows:\n\n";
+		open (INTERNETHEADERS, "<:encoding(UTF-8)", "$folder/InternetHeaders.txt") or warn ("WARNING: failed to open $folder/InternetHeaders.txt\n");
+		while( my $line = <INTERNETHEADERS> ) {
+			chomp( $line); # Two chomps attempting to normalize the DOS line ending.
+			chomp( $line);
+			print RVT_META "$line\n";
+		}			
+		close (INTERNETHEADERS);
+		unlink ("$folder/InternetHeaders.txt") or warn ("WARNING: failed to delete $folder/InternetHeaders.txt\n");
+	}
 
-	} elsif ( $File::Find::name =~ /\/Meeting[0-9]{5}\/Meeting.txt$/ ) {
-		################################################################################
-		# This is the code for parsing libpff's MEETINGS
-
-		print ("Meeting: $File::Find::name\n");
-
-		my $from_name = "";
-		my $from_addr = "";
-		my $date = "";
-		my $subject = "";
-		my $importance = "";
-		my $priority = "";
-		my $flags = "";
-		
-		open (SOURCE, "<$File::Find::name") or warn ("WARNING: failed to open $File::Find::name\n");
-		open (RVT_TARGET, ">$File::Find::dir.txt") or die ("ERR: failed to create: $File::Find::dir.txt\n");
-		open (RVT_META, ">$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
-		print RVT_META "Source: $File::Find::name\n";
-		
-		########## Read Meeting.txt, writing to RVT_metadata and RVT_TARGET.
-		while( my $line = <SOURCE> ) {
-			print RVT_META $line;	# BEWARE! After this point in the loop, we modify $line
-			if( $line =~ /^Client submit time:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $date = $line;
-			} elsif( $line =~ /^Subject:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $subject = $line;
-			} elsif( $line =~ /^Sender name:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $from_name = $line;
-			} elsif( $line =~ /^Sender email address:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $from_addr = $line;
-			} elsif( $line =~ /^Importance:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $importance = $line;
-			} elsif( $line =~ /^Priority:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $priority = $line;
-			} elsif( $line =~ /^Flags:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $flags = $line;
-			} elsif( $line =~ /^Meeting:/ ) {
-				my $string = $File::Find::dir;
-				$string =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control.pff/\1/;
-				print RVT_TARGET "Source: $string\nCreator: $from_name, $from_addr\nCreation time: $date\nSubject: $subject\n";
-				if( $importance ne 'Normal' ) { print RVT_TARGET "Importance: $importance\n" }
-				if( $priority ne 'Normal' ) { print RVT_TARGET "Priority: $priority\n" }
-				if( $flags ne '0x00000001 (Read)' ) { print RVT_TARGET "Flags: $flags\n" }
-				print RVT_TARGET "\n";
-				print RVT_TARGET $line; # This line was already written to RVT_META
-				while( $line = <SOURCE> ) {
-					print RVT_TARGET $line;
-					print RVT_META $line;
-				}
-			} 			 # $line is taunted, keep an eye on that.			
-		}
-		close (SOURCE);
-		########## Done with Meeting.txt.
-
-		close (RVT_META);
-		close (RVT_TARGET);
-		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
-		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
-		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
-	} elsif ( $File::Find::name =~ /\/Note[0-9]{5}\/Note.txt$/ ) {
-		################################################################################
-		# This is the code for parsing libpff's NOTES
-
-		print ("Note: $File::Find::name\n");
-
-		my $date = "";
-		my $subject = "";
-		my $importance = "";
-		my $priority = "";
-		my $flags = "";
-		
-		open (SOURCE, "<$File::Find::name") or warn ("WARNING: failed to open $File::Find::name\n");
-		open (RVT_TARGET, ">$File::Find::dir.txt") or die ("ERR: failed to create: $File::Find::dir.txt\n");
-		open (RVT_META, ">$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
-		print RVT_META "Source: $File::Find::name\n";
-		
-		########## Read Note.txt, writing to RVT_metadata and RVT_TARGET.
-		while( my $line = <SOURCE> ) {
-			print RVT_META $line;	# BEWARE! After this point in the loop, we modify $line
-			if( $line =~ /^Client submit time:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $date = $line;
-			} elsif( $line =~ /^Subject:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $subject = $line;
-			} elsif( $line =~ /^Importance:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $importance = $line;
-			} elsif( $line =~ /^Priority:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $priority = $line;
-			} elsif( $line =~ /^Flags:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $flags = $line;
-			} elsif( $line =~ /^Note:/ ) {
-				my $string = $File::Find::dir;
-				$string =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control.pff/\1/;
-				print RVT_TARGET "Source: $string\nCreation time: $date\nSubject: $subject\n";
-				if( $importance ne 'Normal' ) { print RVT_TARGET "Importance: $importance\n" }
-				if( $priority ne 'Normal' ) { print RVT_TARGET "Priority: $priority\n" }
-				if( $flags ne '0x00000001 (Read)' ) { print RVT_TARGET "Flags: $flags\n" }
-				print RVT_TARGET "\n";
-				print RVT_TARGET $line; # This line was already written to RVT_META
-				while( $line = <SOURCE> ) {
-					print RVT_TARGET $line;
-					print RVT_META $line;
-				}
-			} 			 # $line is taunted, keep an eye on that.			
-		}
-		close (SOURCE);
-		########## Done with Note.txt.
-
-		close (RVT_META);
-		close (RVT_TARGET);
-		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
-		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
-		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
-
-	} elsif ( $File::Find::name =~ /\/Appointment[0-9]{5}\/Appointment.txt$/ ) {
-		################################################################################
-		# This is the code for parsing libpff's APPOINTMENTS
-
-		print ("Appointment: $File::Find::name\n");
-
-		my $from_name = "";
-		my $from_addr = "";
-		my $to = "";
-		my $cc = "";
-		my $bcc = "";
-		my $date = "";
-		my $subject = "";
-		my $importance = "";
-		my $priority = "";
-		my $flags = "";
-		
-		########## Parse Recipients.txt for To, CC and BCC.
-		open (RECIPIENTS, "<$File::Find::dir/Recipients.txt") or warn ("WARNING: failed to open $File::Find::dir/Recipients.txt\n");
+	# Recipients.txt: append to RVT_META and save To, Cc and Bcc (will be in RVT_ITEM).
+	my $to = "";
+	my $cc = "";
+	my $bcc = "";
+	if( -f "$folder/Recipients.txt" ) {
+		my $string;
 		my $previous_line = "";
+		print RVT_META "\n\n## Recipients.txt follows:\n\n";
+		open (RECIPIENTS, "<:encoding(UTF-8)", "$folder/Recipients.txt") or warn ("WARNING: failed to open $File::Find::dir/Recipients.txt\n");
 		while( my $line = <RECIPIENTS> ) {
+			print RVT_META $line;
 			if( $line =~ /^Recipient type/ ) {
 				my $string = $previous_line;
 				$string =~ s/.*\t//;
 				chomp( $string );
-				if( $line =~ /To$/ ) {
-					$to = "$to$string; ";
-				} elsif( $line =~ /CC$/ ) {
-					$cc = "$cc$string; ";
-				} elsif( $line =~ /BCC$/ ) {
-					$bcc = "$bcc$string; ";
-				} else {
-				warn ("WARNING: RVT_parse_pff: Unknown recipient type \"$string\" in $File::Find::dir/Recipients.txt\n");
-				}
+				if( $line =~ /To$/ ) { $to = "$to$string; " }
+				elsif( $line =~ /CC$/ ) { $cc = "$cc$string; " }
+				elsif( $line =~ /BCC$/ ) { $bcc = "$bcc$string; " }
+				else { warn ("WARNING: RVT_parse_pff: Unknown recipient type \"$string\" in $File::Find::dir/Recipients.txt\n") }
 			}			
 		$previous_line = $line;			
 		}
-		close (RECIPIENTS);
-		########## Finished parsing Recipients.txt
-
-		open (SOURCE, "<$File::Find::name") or warn ("WARNING: failed to open $File::Find::name\n");
-		open (RVT_TARGET, ">$File::Find::dir.txt") or die ("ERR: failed to create: $File::Find::dir.txt\n");
-		open (RVT_META, ">$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
-		print RVT_META "Source: $File::Find::name\n";
-		
-		########## Read Appointment.txt, writing to RVT_metadata and RVT_TARGET.
-		while( my $line = <SOURCE> ) {
-			print RVT_META $line;	# BEWARE! After this point in the loop, we modify $line
-			if( $line =~ /^Client submit time:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $date = $line;
-			} elsif( $line =~ /^Subject:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $subject = $line;
-			} elsif( $line =~ /^Sender name:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $from_name = $line;
-			} elsif( $line =~ /^Sender email address:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $from_addr = $line;
-			} elsif( $line =~ /^Importance:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $importance = $line;
-			} elsif( $line =~ /^Priority:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $priority = $line;
-			} elsif( $line =~ /^Flags:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				my $flags = $line;
-			} elsif( $line =~ /^Appointment:/ ) {
-				my $string = $File::Find::dir;
-				$string =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control.pff/\1/;
-				print RVT_TARGET "Source: $string\nCreator: $from_name, $from_addr\nCreation time: $date\nSubject: $subject\n";
-				if( $importance ne 'Normal' ) { print RVT_TARGET "Importance: $importance\n" }
-				if( $priority ne 'Normal' ) { print RVT_TARGET "Priority: $priority\n" }
-				if( $to ) { print RVT_TARGET "To: $to\n" }
-				if( $cc ) { print RVT_TARGET "CC: $cc\n" }
-				if( $bcc ) { print RVT_TARGET "BCC: $bcc\n" }
-				if( $flags ne '0x00000001 (Read)' ) { print RVT_TARGET "Flags: $flags\n" }
-				print RVT_TARGET "\n";
-				print RVT_TARGET $line; # This line was already written to RVT_META
-				while( my $line = <SOURCE> ) {
-					print RVT_TARGET $line;
-					print RVT_META $line;
-				}
-			} 			 # $line is taunted, keep an eye on that.			
-		}
-		close (SOURCE);
-		########## Done with Appointment.txt.
-
-		close (RVT_META);
-		close (RVT_TARGET);
-		unlink ($File::Find::name) or warn ("WARNING: failed to delete $File::Find::name\n");
-		unlink ("$File::Find::dir/Recipients.txt") or warn ("WARNING: failed to delete $File::Find::dir/Recipients.txt\n");
-		rmdir ($File::Find::dir) or warn ("WARNING: failed to delete $File::Find::dir\n");
-		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
-
-	} elsif ( $File::Find::name =~ /\/Message[0-9]{5}\/OutlookHeaders.txt$/ ) {
-		################################################################################
-		# This is the code for parsing libpff's MESSAGES
-		print("Message: $File::Find::name\n");
-		
-		my $from_name = "";
-		my $from_addr = "";
-		my $to = "";
-		my $cc = "";
-		my $bcc = "";
-		my $date = "";
-		my $date_sent = "";
-		my $subject = "";
-		my $importance = "";
-		my $priority = "";
-		my $flags = "";
-		
-		open (RVT_TARGET, ">:encoding(UTF-8)", "$File::Find::dir.html") or die ("ERR: failed to create: $File::Find::dir.html\n");
-		open (RVT_META, ">:encoding(UTF-8)", "$File::Find::dir.RVT_metadata") or die ("ERR: failed to create: $File::Find::dir.RVT_metadata\n");
-		print RVT_META "Source: $File::Find::name\n\n";
-		
-		########## Append OutlookHeaders.txt to RVT_META and save some variables.
-		open (SOURCE, "<$File::Find::name") or warn ("WARNING: failed to open $File::Find::name\n");
-		print RVT_META "## OutlookHeaders.txt follows:\n\n";
-		while( my $line = <SOURCE> ) {
-			print RVT_META $line;	# BEWARE! After this point in the loop, we modify $line
-			if( $line =~ /^Delivery time:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$date = $line;
-			} elsif( $line =~ /^Client submit time:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$date_sent = $line;
-			} elsif( $line =~ /^Subject:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$subject = $line;
-			} elsif( $line =~ /^Sender name:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$from_name = $line;
-			} elsif( $line =~ /^Sender email address:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$from_addr = $line;
-			} elsif( $line =~ /^Importance:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$importance = $line;
-			} elsif( $line =~ /^Priority:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$priority = $line;
-			} elsif( $line =~ /^Flags:/ ) {
-				$line =~ s/.*\t//;
-				chomp( $line );
-				$flags = $line;
-			} # BEWARE $line may be taunted till the end of the WHILE.
-		} # end of the WHILE.
-		close (SOURCE); ########## Done with OutlookHeaders.txt.
-		unlink ("$File::Find::name") or warn ("WARNING: failed to delete $File::Find::name\n");
-
-		if( -f "$File::Find::dir/InternetHeaders.txt" ) {
-			########## Append InternetHeaders.txt to RVT_META
-			print RVT_META "## InternetHeaders.txt follows:\n\n";
-			open (INTERNETHEADERS, "<$File::Find::dir/InternetHeaders.txt") or warn ("WARNING: failed to open $File::Find::dir/InternetHeaders.txt\n");
-			while( my $line = <INTERNETHEADERS> ) { print RVT_META $line }			
-			close (INTERNETHEADERS); # done parsing InternetHeaders.txt
-			unlink ("$File::Find::dir/InternetHeaders.txt") or warn ("WARNING: failed to delete $File::Find::dir/InternetHeaders.txt\n");
-		} else { print RVT_META "## There is no InternetHeaders.txt\n\n" }
-
-		if( -f "$File::Find::dir/Recipients.txt" ) {
-			########## Append Recipients.txt to RVT_META __AND__ save To, CC and BCC
-			print RVT_META "## Recipients.txt follows:\n\n";
-			open (RECIPIENTS, "<$File::Find::dir/Recipients.txt") or warn ("WARNING: failed to open $File::Find::dir/Recipients.txt\n");
-			my $previous_line = '';
-			while( my $line = <RECIPIENTS> ) {
-				print RVT_META $line;
-				if( $line =~ /^Recipient type/ ) {
-					my $string = $previous_line;
-					$string =~ s/.*\t//;
-					chomp( $string );
-					if( $line =~ /To$/ ) {
-						$to = "$to$string; ";
-					} elsif( $line =~ /CC$/ ) {
-						$cc = "$cc$string; ";
-					} elsif( $line =~ /BCC$/ ) {
-						$bcc = "$bcc$string; ";
-					} else { warn ("WARNING: RVT_parse_pff: Unknown recipient type \"$string\" in $File::Find::dir/Recipients.txt\n") }
-				}			
-			$previous_line = $line;			
-			}
-			close (RECIPIENTS); # done parsing Recipients.txt
-			unlink ("$File::Find::dir/Recipients.txt") or warn ("WARNING: failed to delete $File::Find::dir/Recipients.txt\n");
-		} else { print RVT_META "## There is no Recipients.txt\n\n" }
-
-		if( -f "$File::Find::dir/ConversationIndex.txt" ) {
-			########## Append ConversationIndex.txt to RVT_META
-			print RVT_META "## ConversationIndex.txt follows:\n\n";
-			open (CONVERSATIONINDEX, "<$File::Find::dir/ConversationIndex.txt") or warn ("WARNING: failed to open $File::Find::dir/ConversationIndex.txt\n");
-			while( my $line = <CONVERSATIONINDEX> ) { print RVT_META $line }			
-			close (CONVERSATIONINDEX); # done parsing ConversationIndex.txt
-			unlink ("$File::Find::dir/ConversationIndex.txt") or warn ("WARNING: failed to delete $File::Find::dir/ConversationIndex.txt\n");
-		} else { print RVT_META "## There is no ConversationIndex.txt\n\n" }
-
-		########## Write base RVT_TARGET:
-		print RVT_TARGET "<HTML><!--#$from_name ($from_addr)#$date#$subject#$to#$cc#$bcc#$flags#-->\n";	
-		my $string = $File::Find::dir;
-		$string =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control.pff/\1/;
- 		print RVT_TARGET "<HEAD>\n<TITLE>$subject</TITLE>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n<TABLE border=1 rules=all frame=box>\n<tr><td><b>Source</b></td><td>$string&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename($File::Find::dir),".RVT_metadata\">Headers</a></td></tr>\n<tr><td><b>From</b></td><td>$from_name, $from_addr</td></tr>\n<tr><td><b>Sent</b></td><td>$date_sent</td></tr>\n<tr><td><b>Received</b></td><td>$date</td></tr>\n<tr><td><b>Subject</b></td><td>$subject</td></tr>\n";
-		if( ( $importance) && ($importance ne 'Normal') ) { print RVT_TARGET "<tr><td><b>Importance</b></td><td>$importance</td></tr>\n" }
-		if( ( $priority ) && ( $priority ne 'Normal') ) { print RVT_TARGET "<tr><td><b>Priority</b></td><td>$priority</td></tr>\n" }
-		if( $to ) { print RVT_TARGET "<tr><td><b>To</b></td><td>$to</td></tr>\n" }
-		if( $cc ) { print RVT_TARGET "<tr><td><b>CC</b></td><td>$cc</td></tr>\n" }
-		if( $bcc ) { print RVT_TARGET "<tr><td><b>BCC</b></td><td>$bcc</td></tr>\n" }
-		if( $flags ne '0x00000001 (Read)' ) {
-			$flags =~ s/.*Read, (.*)\)/\1/;
-			print RVT_TARGET "<tr><td><b>Remarks</b></td><td>$flags</td></tr>\n"
-		}
-		
-		########## If there are attachments, treat them and write parts of RVT_TARGET and RVT_META
-		if( -d "$File::Find::dir/Attachments" ) {
-			print "Attachments: $File::Find::dir/Attachments\n";
-			print RVT_META "\n## Attachment information follows:\n\n";
-			sub attachment { # XX lgomez> fixme: attached e-mail messages are not processed correctly.
-				if ( -f ) { # only do this for actual files - omit the directory entry for "Attachments/"
-					my $string = $File::Find::name;
-					print RVT_META "Attachment: $File::Find::name\n";
-					chomp( $string );
-					$string =~ s/(.*)\/Attachments\//\1.attach\//;
-					mkdir dirname( $string );
-					move( "$File::Find::name", "$string" );
-					print RVT_TARGET "<tr><td><b>Attachment</b></td><td><a href=\"", basename($string)  ,"\">", basename($File::Find::name), "</a></td></tr>\n";
-				} # end if -f
-			} # end sub attachment
-			find( \&attachment, "$File::Find::dir/Attachments" );
-			rmdir ("$File::Find::dir/Attachments") or warn ("WARNING: failed to delete $File::Find::dir/Attachments\n");
-		} # end if -d ....Attachments
-		print RVT_TARGET "</TABLE>\n";
-
- 		if( -f "$File::Find::dir/Message.txt" ) {
- 			########## Append Message.txt to RVT_META and RVT_TARGET
- 			print RVT_META "\n## Message.txt follows:\n\n";
- 			open (MESSAGE, "<$File::Find::dir/Message.txt") or warn ("WARNING: failed to open $File::Find::dir/Message.txt\n");
-			while( my $line = <MESSAGE> ) {
-				chomp( $line );
-				print RVT_META "$line\n";
-				print RVT_TARGET "$line<br>\n";
-			} 
- 			close (MESSAGE); # done parsing Message.txt
- 			unlink ("$File::Find::dir/Message.txt") or warn ("WARNING: failed to delete $File::Find::dir/Message.txt\n");
- 		} else {
- 			print RVT_META "## There is no Message.txt\n\n";
- 			print RVT_TARGET "<i>Empty message</i>\n";
- 		}
- 		
-		print RVT_TARGET "</HTML>\n";
-		close (RVT_TARGET);
-		close (RVT_META);
-		rmdir ("$File::Find::dir") or warn ("WARNING: failed to delete $File::Find::dir\n");
-
-		# aquí se podría incluir un RETURN para que no siga procesando el resto de "elsif..."
-		
-	} else { ################################################################## No match
-	print "(other): $File::Find::name\n";
+		close (RECIPIENTS); # done parsing Recipients.txt
+		unlink ("$folder/Recipients.txt") or warn ("WARNING: failed to delete $folder/Recipients.txt\n");	
 	}
+
+	# ConversationIndex.txt: append to RVT_META
+	if( -f "$folder/ConversationIndex.txt" ) {
+		print RVT_META "\n\n## ConversationIndex.txt follows:\n\n";
+		open (CONVERSATIONINDEX, "<:encoding(UTF-8)", "$folder/ConversationIndex.txt") or warn ("WARNING: failed to open $folder/ConversationIndex.txt\n");
+		while( my $line = <CONVERSATIONINDEX> ) { print RVT_META $line }			
+		close (CONVERSATIONINDEX);
+		unlink ("$folder/ConversationIndex.txt") or warn ("WARNING: failed to delete $folder/ConversationIndex.txt\n");
+	}
+
+	print RVT_ITEM "<HTML>
+<!--#$field_values{'Sender name'}#$field_values{'Subject'}#$field_values{'Flags'}#-->
+<HEAD>\n	<TITLE>\n		$field_values{'Subject'}\n	</TITLE>\n	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n	<TABLE border=1 rules=all frame=box>\n		<tr><td><b>Outlook item</b></td><td>$item_type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>\n		<tr><td><b>Source</b></td><td>$source</td></tr>\n";
+	# Specific treatment to some headers:
+	if( $field_values{'Sender email address'} ) { $field_values{'Sender name'} = "$field_values{'Sender name'} ($field_values{'Sender email address'})" }
+	undef $field_values{'Sender email address'}; # We don't want this field printed later. Its value is already stored along the 'Sender name'.
+	if( $field_values{'Importance'} eq 'Normal' ) { undef $field_values{'Importance'} }
+	if( $field_values{'Priority'} eq 'Normal' ) { undef $field_values{'Priority'} }
+	if( $field_values{'Flags'} eq '0x00000001 (Read)' ) { undef $field_values{'Flags'} }
+	else { $field_values{'Flags'} =~ s/.*Read, (.*)\)/\1/ }
+	foreach my $k ( @sortorder ) { # Write headers to RVT_ITEM:
+		if( defined( $field_values{$k} ) && defined( $field_names{$item_type}{$k} ) ) {
+			print RVT_ITEM "		<tr><td><b>$field_names{$item_type}{$k}</b></td><td>$field_values{$k}</td></tr>\n";
+		}
+	}
+	# Write recipients to RVT_ITEM:
+	if( $to ne '' ) { print RVT_ITEM "		<tr><td><b>To</b></td><td>$to</td></tr>\n" }
+	if( $cc ne '' ) { print RVT_ITEM "		<tr><td><b>CC</b></td><td>$cc</td></tr>\n" }
+	if( $bcc ne '' ) { print RVT_ITEM "		<tr><td><b>BCC</b></td><td>$bcc</td></tr>\n" }
+	
+	# Attachments:
+	if( -d "$folder/Attachments" ) {
+		print "    Attachments: $folder/Attachments\n";
+		move( "$folder/Attachments", "$folder.attach" );
+		print RVT_META "\n\n## Attachment information follows:\n\n";
+		our $wanted_depth = "$folder" =~ tr[/][];
+		find( \&RVT_sanitize_libpff_attachment, "$folder.attach" );
+	}
+
+	# Parse rest of LIBPFF_ITEM writing to RVT_META and RVT_ITEM
+	print RVT_ITEM "</TABLE><br>\n";	
+	print RVT_META "\n## Rest of $file follows:\n\n";
+	while( my $line = <LIBPFF_ITEM> ) { 
+		print RVT_ITEM "$line<br>";
+		print RVT_META $line;
+	}
+
+	# Message.txt: append to RVT_META and RVT_ITEM
+	if( -f "$folder/Message.txt" ) {
+		print RVT_META "\n\n## Message.txt follows:\n\n";
+		open (MESSAGE,  "<:encoding(UTF-8)", "$folder/Message.txt") or warn ("WARNING: failed to open $folder/Message.txt\n");
+		while( my $line = <MESSAGE> ) {
+			chomp( $line); # Two chomps attempting to normalize the DOS line ending.
+			chomp( $line);
+			print RVT_META "$line\n";
+			print RVT_ITEM "$line<br>\n";
+		} 
+		close (MESSAGE); # done parsing Message.txt
+		unlink ("$folder/Message.txt") or warn ("WARNING: failed to delete $folder/Message.txt\n");
+	}
+	
+	print RVT_ITEM "	</BODY>\n</HTML>\n";
+	close( LIBPFF_ITEM );
+	close( RVT_ITEM );
+	close( RVT_META );
+	unlink( "$folder/$file" ) || warn( "WARNING: Cannot delete $folder/file\n" );
+	rmdir( $folder ) || warn( "WARNING: Cannot delete $folder\n" );
 }
 
 
+sub RVT_sanitize_libpff_attachment {
+	return if ( -d ); # We only want to act on FILES.
+	my $item_depth = $File::Find::dir =~ tr[/][];
+	our $wanted_depth;
+	if( $item_depth == $wanted_depth ) {
+		my $string = $File::Find::name;
+		print RVT_META "Attachment: $File::Find::name\n";
+		chomp( $string );
+		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
+		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
+	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*Message00001.html/ )  {
+		my $string = $File::Find::name;
+		print RVT_META "Attachment: $File::Find::name\n";
+		chomp( $string );
+		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
+		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
+	}
+} # end sub parse_attachment
 
 
 
-
-1;  
-
+1;
