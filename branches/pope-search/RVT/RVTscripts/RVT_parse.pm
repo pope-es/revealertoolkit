@@ -776,8 +776,8 @@ sub RVT_sanitize_libpff_item {
 	$field_names{'Meeting'}{'Importance'} = "Importance";
 	$field_names{'Meeting'}{'Priority'} = "Priority";
 	### Messages:
-	$field_names{'Message'}{'Creation time'} = "Creation";
-	$field_names{'Message'}{'Modification time'} = "Modification";
+	$field_names{'Message'}{'Client submit time'} = "Sent";
+	$field_names{'Message'}{'Delivery time'} = "Received";
 	$field_names{'Message'}{'Flags'} = "Flags";
 	$field_names{'Message'}{'Subject'} = "Subject";
 	$field_names{'Message'}{'Sender name'} = "From";
@@ -903,9 +903,6 @@ sub RVT_sanitize_libpff_item {
 		unlink ("$folder/ConversationIndex.txt") or warn ("WARNING: failed to delete $folder/ConversationIndex.txt\n");
 	}
 
-	print RVT_ITEM "<HTML>
-<!--#$field_values{'Sender name'}#$field_values{'Subject'}#$field_values{'Flags'}#-->
-<HEAD>\n	<TITLE>\n		$field_values{'Subject'}\n	</TITLE>\n	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n	<TABLE border=1 rules=all frame=box>\n		<tr><td><b>Outlook item</b></td><td>$item_type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>\n		<tr><td><b>Source</b></td><td>$source</td></tr>\n";
 	# Specific treatment to some headers:
 	if( $field_values{'Sender email address'} ) { $field_values{'Sender name'} = "$field_values{'Sender name'} ($field_values{'Sender email address'})" }
 	undef $field_values{'Sender email address'}; # We don't want this field printed later. Its value is already stored along the 'Sender name'.
@@ -913,6 +910,10 @@ sub RVT_sanitize_libpff_item {
 	if( $field_values{'Priority'} eq 'Normal' ) { undef $field_values{'Priority'} }
 	if( $field_values{'Flags'} eq '0x00000001 (Read)' ) { undef $field_values{'Flags'} }
 	else { $field_values{'Flags'} =~ s/.*Read, (.*)\)/\1/ }
+	# Write RVT_ITEM:
+	print RVT_ITEM "<HTML>
+<!--#$field_values{'Sender name'}#$field_values{'Client submit time'}#$field_values{'Subject'}#$to#$cc#$bcc#$field_values{'Remarks'}#-->
+<HEAD>\n	<TITLE>\n		$field_values{'Subject'}\n	</TITLE>\n	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n	<TABLE border=1 rules=all frame=box>\n		<tr><td><b>Outlook item</b></td><td>$item_type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>\n		<tr><td><b>Source</b></td><td>$source</td></tr>\n";
 	foreach my $k ( @sortorder ) { # Write headers to RVT_ITEM:
 		if( defined( $field_values{$k} ) && defined( $field_names{$item_type}{$k} ) ) {
 			print RVT_ITEM "		<tr><td><b>$field_names{$item_type}{$k}</b></td><td>$field_values{$k}</td></tr>\n";
