@@ -265,6 +265,30 @@ sub RVT_get_source {
 }
 
 
+sub RVT_get_unique_filename ($$) {
+	# Given a folder and a filename, checks that the filename is not already present in
+	# that folder. If it is, it returns an alternate filename.
+	my ( $file, $mother ) = @_;
+	$file = basename( $file );
+	my $result;
+	if ( -e "$mother/$file" ) {
+		my $ext = $file;
+		$ext =~ s/.*\.([^.]{1,16})$/\1/;
+		my $name = $file;
+		$name =~ s/(.*)\.[^.]{1,16}$/\1/;
+		my $count=1;
+		$result = "$mother/$name RVT_Duplicate_$count.$ext";
+		while( -e $result ) {
+			$count++;
+			$result = "$mother/$name RVT_Duplicate_$count.$ext";
+		}
+	} else {
+		$result = "$mother/$file";
+	}
+	return $result;
+}
+
+
 sub RVT_parse_everything {
     my ( $disk ) = @_;
     $disk = $main::RVT_level->{tag} unless $disk;
@@ -867,9 +891,10 @@ sub RVT_sanitize_libpff_item {
 
 sub RVT_script_parse_autoparse {
 	# works at disk level. Supports @disks.
-	while( my $disk = shift( @_ ) ) {
+	my $disk = shift( @_ );
+	$disk = $main::RVT_level->{tag} unless $disk;
+	while( $disk ) {
 		my $max_passes = 20;
-		$disk = $main::RVT_level->{tag} unless $disk;
 		if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
 	
 		RVT_images_scan;    
@@ -877,6 +902,7 @@ sub RVT_script_parse_autoparse {
 		for( my $i = 1; $i < $max_passes ; $i++ ) {
 			RVT_parse_everything( $disk );
 		}
+		$disk = shift( @_ );
 	}
 	return 1;
 }
@@ -889,10 +915,11 @@ sub RVT_script_parse_export  {
     #   one or more disks from the morgue (supports @disks)
 
     my $searchesfilename = shift( @_ );
-    while( my $disk = shift( @_ ) ) {
+	my $disk = shift( @_ );
+	$disk = $main::RVT_level->{tag} unless $disk;
+    while( $disk ) {
 		my $string;
-		$disk = $main::RVT_level->{tag} unless $disk;
-		print "\t launching $disk\n";
+		print "\t Exporting search results for $disk\n";
 		my $case = RVT_get_casenumber($disk);
 		my $diskpath = RVT_get_morguepath($disk);
 		my $searchespath = "$diskpath/output/parser/searches/";
@@ -927,21 +954,18 @@ sub RVT_script_parse_export  {
 							dircopy( $result, "$opath/outlook/$dest" );
 						}
 					} else { # Common files
-						my $ext = basename( $result );
-						$ext =~ s/.*\.([^.]{1,16})$/\1/;
-						my $name = basename( $result );
-						$name =~ s/(.*)\.[^.]{1,16}$/\1/;
-						my $dest = RVT_create_file( "$opath/files", "$name", "$ext" );
-						if( ! $dest ) { $dest = "$opath/files/" }
+						my $dest = RVT_get_unique_filename( $result, "$opath/files" );
 						fcopy( $result, $dest );
-						open( REPORT, ">:encoding(UTF-8)", "$opath/RVT_index.html" );
+						open( REPORT, ">>:encoding(UTF-8)", "$opath/RVT_report.txt" );
 						print REPORT "$result -> $dest\n";
 						close( REPORT );
 					}
 				}
 			} # end while ... (for each line of results...)
 		} # end for each string...
-	} # end while( $disk = shift(@_) )
+		$disk = shift( @_ );
+	} # end while( $disk )
+	return 1;
 }
 
 
@@ -952,10 +976,11 @@ sub RVT_script_parse_search  {
     #   one or more disks from the morgue (supports @disks)
 
     my $searchesfilename = shift( @_ );
-    while( my $disk = shift( @_ ) ) {
+    my $disk = shift( @_ );
+	$disk = $main::RVT_level->{tag} unless $disk;
+    while( $disk ) {
 		my $string;
-		$disk = $main::RVT_level->{tag} unless $disk;
-		print "\t launching $disk\n";
+		print "\t Launching searches for $disk\n";
 		my $case = RVT_get_casenumber($disk);
 		my $diskpath = RVT_get_morguepath($disk);
 		my $parsedfiles = "$diskpath/output/parser/control/text/";
@@ -968,7 +993,6 @@ sub RVT_script_parse_search  {
 		my @searches = grep {!/^\s*#/} <F>;
 		close (F);
 		
-		print "\n\nLaunching searches:\n\n";    
 		for $string ( @searches ) {
 			chomp $string;
 			$string = lc($string);
@@ -987,7 +1011,8 @@ sub RVT_script_parse_search  {
 			close FMATCH;
 			close FOUT;
 		}
-	}
+		$disk = shift( @_ );
+	} # end while( $disk )
     return 1;
 }
 
