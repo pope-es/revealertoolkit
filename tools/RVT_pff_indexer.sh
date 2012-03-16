@@ -9,12 +9,12 @@ IFS="
 # END OF VERY IMPORTANT THING ;-)
 
 RVT_moduleName="RVT_pff_indexer.sh (external tool)"
-RVT_moduleVersion="0.1" # por decir algo
+RVT_moduleVersion="0.2"
 
 target="$1"
 
 if [ ! -d $target ]; then
-	echo "ERROR, directorio no existe";
+	echo "ERROR, not a directory: $target";
 	exit
 fi
 
@@ -48,10 +48,11 @@ echo "</HEAD>" >> $index
 echo "<BODY>" >> $index
 echo "<TABLE id=\"my_table\" border=1 rules=all frame=box>" >> $index
 echo "<THEAD>" >> $index
-echo "<tr><th width=\"1%\">Action</th><th width=\"10%\">From</th><th width=\"10%\">____________Date____________</th><th width=\"10%\">Subject</th><th width=\"10%\">To</th><th width=\"10%\">Cc</th><th width=\"10%\">Bcc</th><th width=\"10%\">Notes</th></tr>" >>$index
+echo "<tr><th width=\"1%\">Item</th><th width=\"10%\">From</th><th width=\"10%\">____________Date____________</th><th width=\"10%\">Subject</th><th width=\"10%\">To</th><th width=\"10%\">Cc</th><th width=\"10%\">Bcc</th><th width=\"10%\">Notes</th></tr>" >>$index
 echo "</THEAD>" >> $index
-for mensaje in $( find . -type f -name "Message?????.html" ); do
-	echo "<tr><td><a href=\"file:$mensaje\" target=\"_blank\">Open</a></td><td>$(head -n 1 "$mensaje" | cut -d\# -f2-8 | sed 's/\#/<\/td><td>/g')</td></tr>" >> $index
+for item in $( find . -type f -regex ".*\/[A-Z][a-z]*[0-9][0-9][0-9][0-9][0-9].html" ); do
+	item_type="$( echo $item | sed 's/.*\/\([A-Z][a-z]*\)[0-9][0-9][0-9][0-9][0-9].html/\1/g' )"
+	echo "<tr><td><a href=\"file:$item\" target=\"_blank\">$item_type</a></td><td>$(head -n 1 "$item" | cut -d\# -f2-8 | sed 's/\([^#]\{120\}\)[^#]*/\1<i>... (more...)<\/i>/g' | sed 's/\#/<\/td><td>/g')</td></tr>" >> $index
 done
 echo "</TABLE>" >>$index
 echo "</BODY>" >> $index
