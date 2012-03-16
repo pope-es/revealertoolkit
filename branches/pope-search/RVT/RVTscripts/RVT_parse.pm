@@ -28,40 +28,29 @@ BEGIN {
    use Exporter   ();
    our ($VERSION, @ISA, @EXPORT, @EXPORT_OK, %EXPORT_TAGS);
 
-   $VERSION     = 1.00;
+   $VERSION     = 2.00;
 
    @ISA         = qw(Exporter);
    @EXPORT      = qw(   &constructor
-						&RVT_script_parse_pff
-						&RVT_script_parse_bkf
-						&RVT_script_parse_zip
-						&RVT_script_parse_rar
-						&RVT_script_parse_pdf
-						&RVT_script_parse_lnk
-						&RVT_script_parse_evt
-						&RVT_script_parse_text
-						&RVT_script_parse_search_launch
-						&RVT_script_parse_search_export
+   						&RVT_script_parse_autoparse
+						&RVT_script_parse_search
+						&RVT_script_parse_export
 					);
 }
 
-# XX_TODO:
-# - pdftotext nos ha dicho alguna vez "Error: Incorrect password". Hay que mirar cómo darle un pass y LOG de los PDFs cifrados
-# - LOG de zips y rar cifrados
-# - LOG de office cifrados?
-
 my $RVT_moduleName = "RVT_parse";
-my $RVT_moduleVersion = "1.1";
+my $RVT_moduleVersion = "2.0";
 my $RVT_moduleAuthor = "Pope";
 
 # Changelog:
-# 1.1 - 
+# 2.0 - March 2012 - Bigger, better, faster - more!
 # 1.0 - Initial release. Messy!
 
 use RVTbase::RVT_core;
+use RVTbase::RVT_morgue;
 use RVTscripts::RVT_files;
 use File::Copy;
-use File::Copy::Recursive qw (dircopy);
+use File::Copy::Recursive qw (fcopy dircopy);
 use File::Path qw(mkpath);
 use File::Basename;
 use File::Find;
@@ -123,393 +112,441 @@ sub constructor {
    $main::RVT_requirements{'lnkparse'} = $lnkparse;
    $main::RVT_requirements{'evtparse'} = $evtparse;
 
-   $main::RVT_functions{RVT_script_parse_pff } = "Parses all PST, OST and PAB files found on the partition using libpff\n
-                                                    script parse pff <partition>";
-   $main::RVT_functions{RVT_script_parse_bkf } = "Extracts contents from Windows backup (.bkf) files\n
-                                                    script parse bkf <partition>";
-   $main::RVT_functions{RVT_script_parse_zip } = "Extracts contents from ZIP, ODT and OOXML files\n
-                                                    script parse zip <partition>";
-   $main::RVT_functions{RVT_script_parse_rar } = "Extracts contents from RAR archives\n
-                                                    script parse rar <partition>";
-   $main::RVT_functions{RVT_script_parse_pdf } = "Extracts text from PDFs using pdftotext\n
-                                                    script parse pdf <partition>";
-   $main::RVT_functions{RVT_script_parse_lnk } = "Parses Windows LNK files\n
-                                                    script parse lnk <partition>";
-   $main::RVT_functions{RVT_script_parse_evt } = "Parses Windows event logs (EVT files)\n
-                                                    script parse evt <partition>";
-   $main::RVT_functions{RVT_script_parse_text } = "Extracts raw text strings from suitable files\n
-                                                    script parse text <partition>";
-   $main::RVT_functions{RVT_script_parse_search_launch } = "Find PARSED files containing keywords from a search file\n
-                                                    script parse search launch <search file> <disk>";
-   $main::RVT_functions{RVT_script_parse_search_export } = "Exports search results to disk\n
-                                                    script parse search export <search file> <disk>";
+   $main::RVT_functions{RVT_script_parse_autoparse } = "Parse a disk automagically\n
+                                                    script parse autoparse <disk>";
+   $main::RVT_functions{RVT_script_parse_search } = "Find parsed files containing keywords from a search file\n
+                                                    script parse search <search file> <disk>";
+   $main::RVT_functions{RVT_script_parse_export } = "Export search results to disk\n
+                                                    script parse export <search file> <disk>";
+}
+
+
+sub RVT_build_filelists {
+	our @filelist_bkf;
+	our @filelist_evt;
+	our @filelist_lnk;
+	our @filelist_pdf;
+	our @filelist_pff;
+	our @filelist_rar;
+	our @filelist_text;
+	our @filelist_zip;
+	if( -f $File::Find::name ) {
+		# filelist_bkf:
+		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }
+		# filelist_evt:
+		elsif( $File::Find::name =~ /\.evt$/i ) { push( @filelist_evt, $File::Find::name ) }
+		# filelist_lnk:
+		elsif( $File::Find::name =~ /\.lnk$/i ) { push( @filelist_lnk, $File::Find::name ) }
+		# filelist_pdf:
+		elsif( $File::Find::name =~ /\.pdf$/i ) { push( @filelist_pdf, $File::Find::name ) }
+		# filelist_pff:
+		elsif( $File::Find::name =~ /\.pst$/i ) { push( @filelist_pff, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.ost$/i ) { push( @filelist_pff, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.pab$/i ) { push( @filelist_pff, $File::Find::name ) }
+		# filelist_rar:
+		elsif( $File::Find::name =~ /\.rar$/i ) { push( @filelist_rar, $File::Find::name ) }
+		# filelist_text:
+		elsif( $File::Find::name =~ /\.txt$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.csv$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.eml$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.ppt$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.pps$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.rtf$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.asp$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.php$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }
+		# filelist_zip:
+		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.xlsx$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.pptx$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.ppsx$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }
+	}
+}
+
+
+sub RVT_get_all_sources {
+	# Traces an object origin, recursively, using RVT metadata.
+	# Returns a list containing the filename of the original item, and its parent objects,
+	# up to a final (/mnt) path.
+	my $file = shift;
+	chomp( $file );
+	my $source = RVT_get_source( $file );
+	if( $source ) {
+		return( $file, RVT_get_all_sources( $source ) );
+	} else {
+		return( $file, 0 );
+	}
 }
 
 
 
-sub RVT_script_parse_pff {
+sub RVT_get_best_source { 
+	my $file = shift( @_ );
+	my $found = 0;
+	my @results = ( );
+	my @sources = RVT_get_all_sources( $file );
+	while( (not $found) && (my $source = shift(@sources)) ) {
+		if( $source =~ /.*\/output\/parser\/control\/pff.*/ ) {
+			# libpff items are treated differently:
+			$source =~ s/(\/[A-Z][a-z]*[0-9]{5}).*/\1/;
+			push( @results, "$source.html" );
+			push( @results, "$source.RVT_metadata" );
+			if( -d "$source.attach" ) { push( @results, "$source.attach" ) }
+			$found = 1;
+		} elsif( $source =~ /\/mnt\/p0[0-9]\// ) {
+			push( @results, "$source" );
+			$found = 1;
+		}
+	}
+	return( @results );
+}
 
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
+sub RVT_get_source { 
+	my $file = shift;
+	my $source = 0;
+	my $source_type;
+	my $got_source = 0;
+	
+	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/rar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/zip-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	
+	if( $source_type eq 'infolder' ) {
+		$file =~ s/(.*\/output\/parser\/control\/[a-z]*-[0-9]*)\/.*/\1\/RVT_metadata/;
+		$source_type = 'infile';
+	} elsif( $source_type eq 'special_pff' ) {
+		if( $file =~ /[0-9]{5}\.attach\/[^\/]*$/ ) { # If an attachment, point its parent.
+			$source = $file;
+			$source =~ s/([0-9]{5})\.attach\/[^\/]*$/\1.html/;
+			$got_source = 1;
+		}
+		else {
+			$file =~ s/(.*\/output\/parser\/control\/pff-[0-9]*)\..*/\1.RVT_metadata/;
+			$source_type = 'infile';
+		}
+	}
+	
+	if( $source_type eq 'infile' ) {
+		if ( ! -e $file ) {print "ERROR $file does not exist!!\n"; } #exit }
+		open (FILE, "<:encoding(UTF-8)", $file);	
+		my $count = 0;
+		while ( $source = <FILE>) {
+			if ($source =~ s/# Source file: //) { $got_source = 1; last; }
+			if ($count > 5) { last; } ## THIS is the number of lines that will be read when looking for the RVT_Source metadata.
+			$count++ ;
+		}
+		close (FILE);
+		if ( $got_source == 0 ) {print "  RVT_get_source: ERROR, SOURCE not found.\n"}
+	}
+	if( $got_source == 0 || $source_type eq 'final' ) { $source = 0 }	
+	
+	if( $source ) {
+		chomp ($source);
+		return( $source );
+	} else {
+		return 0;
+	}
+}
+
+
+sub RVT_parse_everything {
+    my ( $disk ) = @_;
+    $disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/pff';
+	my $parsepath = "$morguepath/output/parser/control";
+	my @sources;
+	my $file;
+
+	# Build list of not-yet-parsed sources:
+	mkpath $parsepath unless (-d $parsepath);
+	opendir( my $dir, $parsepath ) or warn "WARNING: cannot open dir $parsepath: $!";
+	while( defined( $file = readdir $dir ) ) {
+		if( $file ne '.' && $file ne '..' && $file ne 'text' && -d "$parsepath/$file" && not -f "$parsepath/$file/__item_is_parsed.RVT_flag" ) { 
+			push( @sources, "$parsepath/$file" );
+		}
+	}
+	closedir( $dir );
+	if( not -f "$parsepath/__mnt_is_parsed.RVT_flag" ) {
+		push( @sources, "$morguepath/mnt" );
+	}
+
+	foreach my $item (@sources) {
+		print "Parsing source: $item\n";
+		# Parse all known file types:
+		our @filelist_bkf = ( );
+		our @filelist_evt = ( );
+		our @filelist_lnk = ( );
+		our @filelist_pdf = ( );
+		our @filelist_pff = ( );
+		our @filelist_rar = ( );
+		our @filelist_zip = ( );
+		our @filelist_text = ( );
+		
+		find( \&RVT_build_filelists, $item );
+		RVT_parse_bkf( $item, $disk );
+		RVT_parse_evt( $item, $disk );
+		RVT_parse_lnk( $item, $disk );
+		RVT_parse_pdf( $item, $disk );
+		RVT_parse_pff( $item, $disk );
+		RVT_parse_rar( $item, $disk );
+		RVT_parse_zip( $item, $disk );
+		RVT_parse_text( $item, $disk );
+		
+		# Flag this source as parsed.
+		if( $item =~ /.*\/mnt$/ ) { $file = "$parsepath/__mnt_is_parsed.RVT_flag" }
+		else { $file = "$item/__item_is_parsed.RVT_flag" }
+		open( FLAG, ">:encoding(UTF-8)", $file );
+		close( FLAG );
+		print " Finished parsing source $item.\n";
+	}
+	
+	return 1;
+}
+
+
+sub RVT_parse_bkf {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+
+	printf ("  Parsing BKF files... ");
+	our @filelist_bkf;
+    foreach my $f ( our @listbkf) {
+    	print "\n    $f ";
+        my $fpath = RVT_create_folder($opath, 'bkf');
+		my $output = `mtftar < "$f" | tar xv -C "$fpath" 2>&1 `;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+        close (META);
+#        my $command = 'mtftar < "'.$f.'" | tar xv -C '.$fpath;
+#        `$command`;
+    }
+
+	printf ("done.\n");
+    return 1;
+}
+
+
+sub RVT_parse_evt {
+	my $EVTPARSE = "evtparse.pl";
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};
-    my @pablist = grep {/$repath/} RVT_get_allocfiles('\.pab$', $disk);
-    my @pstlist = grep {/$repath/} RVT_get_allocfiles('\.pst$', $disk);
-    my @ostlist = grep {/$repath/} RVT_get_allocfiles('\.ost$', $disk);
-    my @filelist = (@pablist,@pstlist, @ostlist);
+	printf ("  Parsing EVT files... ");
+	our @filelist_evt;
+	if( @filelist_evt ) {
+		my $evtpath = RVT_create_folder($opath, 'evt');
+		my $fpath = RVT_create_file($evtpath, 'evt', 'txt');
+		my $count = $fpath;
+		$count =~ s/.*-([0-9]*).txt$/\1/;
+		foreach my $f ( our @filelist_evt ) {
+			$fpath = "$evtpath/evt-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+			print "\n    $f ";
+			open (FEVT, "-|", "$EVTPARSE", $f) or die "Error: $!";
+			binmode (FEVT, ":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
+			open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output file.");
+			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print FOUT "Date#Type#User#Event ID#Description\n";
+			while (<FEVT>) {
+				chomp ($_);
+				my @field= split ('\|',$_ ) ;
+				my $time=ParseDateString("epoch $field[0]");
+				print FOUT $time."#".$field[1]."#".$field[2]."#".$field[3]."#".$field[4]."\n";
+			}
+			close (FEVT);
+			close (FOUT);
+			$count++;
+		}
+	} # end if
+
+	printf ("done.\n");
+    return 1;
+}
+
+
+sub RVT_parse_lnk {
+	my $LNKPARSE = "lnk-parse-1.0.pl";
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
     
-	printf ("Parsing PST, OST, PAB files...\n");
-    foreach my $f (@filelist) {
+	printf ("  Parsing LNK files... ");
+	our @filelist_lnk;
+	if( @filelist_lnk ) {
+		my $lnkpath = RVT_create_folder($opath, 'lnk');
+		my $fpath = RVT_create_file($lnkpath, 'lnk', 'txt');
+		my $count = $fpath;
+		$count =~ s/.*-([0-9]*).txt$/\1/;
+		foreach my $f ( our @filelist_lnk ) {
+			$fpath = "$lnkpath/lnk-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+			print "\n    $f ";
+			open (FLNK, "-|", "$LNKPARSE", $f);
+			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
+			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			while (<FLNK>) { print FOUT $_ }
+			close (FLNK);
+			close (FOUT);
+			$count++;
+		}
+	}
+	printf ("done.\n");
+    return 1;
+}
+
+
+sub RVT_parse_pdf {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("  Parsing PDF files... ");
+	our @filelist_pdf;
+	if( @filelist_pdf ) {
+		my $pdfpath = RVT_create_folder($opath, 'pdf');
+		my $fpath = RVT_create_file($pdfpath, 'pdf', 'txt');
+		my $count = $fpath;
+		$count =~ s/.*-([0-9]*).txt$/\1/;
+		foreach my $f ( our @filelist_pdf ) {
+			$fpath = "$pdfpath/pdf-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+			print "\n    $f ";
+			my $output = `pdftotext "$f" - 2>&1`;
+			open (META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+			if( $output =~ /^Error: Incorrect password$/ ) {
+				open( REPORT, ">>:encoding(UTF-8)", "$opath/password_protected_files.txt" );
+				print REPORT "$f\n";
+				close( REPORT );
+			}
+			$count++;
+		}
+	}
+	printf ("done.\n");
+    return 1;
+}
+
+
+sub RVT_parse_pff {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("  Parsing PFF files (PST, OST, PAB)... ");
+	our @filelist_pff;
+    foreach my $f (@filelist_pff) {
+    	print "\n    $f ";
     	my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');    	
         open (META,">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
         close (META);
         $fpath =~ s/.RVT_metadata//; 
         my @args = ('pffexport', '-f', 'text', '-m', 'all', '-q', '-t', "$fpath", $f); # -f text and -m all are in fact default options.
-        system(@args);
-        
+        system(@args);        
         foreach my $mode ('export','orphan','recovered') { finddepth( \&RVT_sanitize_libpff_item, "$fpath.$mode" ) }
     }
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-		system (@args);
-	}
-	printf ("Finished parsing PST, OST, PAB files.\n");
-	RVT_script_files_allocfiles($disk);
+	printf ("done.\n");
     return 1;
 }
 
 
-
-
-sub RVT_script_parse_bkf {
-
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
+sub RVT_parse_rar {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
 	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/bkf';
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    
-    my @listbkf = grep {/$repath/} RVT_get_allocfiles('\.bkf$', $disk);
-
-	printf ("Parsing BKF files...\n");
-    foreach my $f (@listbkf) {
-        my $fpath = RVT_create_folder($opath, 'bkf');
-        
-        mkdir ("$fpath/contents") or die ("ERR: failed to create output directories.");
-        open (META, ">$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-            print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-        close (META);
-        
-        $fpath="$fpath/contents";
-        my $command = 'mtftar < "'.$f.'" | tar xv -C '.$fpath;
-        `$command`;
-    }
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-	my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { system (@args); }
-	printf ("Finished parsing BKF files.\n");
-	RVT_script_files_allocfiles($disk);
-    return 1;
-}
-
-
-
-sub RVT_script_parse_zip {
-
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/zip';
-    mkpath $opath unless (-d $opath);
-    
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    
-    my @listzip = grep {/$repath/} RVT_get_allocfiles('\.zip$', $disk);
-    my @listodt = grep {/$repath/} RVT_get_allocfiles('\.odt$', $disk);
-    my @listods = grep {/$repath/} RVT_get_allocfiles('\.ods$', $disk);
-    my @listodp = grep {/$repath/} RVT_get_allocfiles('\.odp$', $disk);
-    my @listodg = grep {/$repath/} RVT_get_allocfiles('\.odg$', $disk);
-    my @listdocx = grep {/$repath/} RVT_get_allocfiles('\.docx$', $disk);
-    my @listxlsx = grep {/$repath/} RVT_get_allocfiles('\.xlsx$', $disk);
-    my @listpptx = grep {/$repath/} RVT_get_allocfiles('\.pptx$', $disk);
-    my @listppsx = grep {/$repath/} RVT_get_allocfiles('\.ppsx$', $disk);
-    my @filelist = (@listzip, @listodt, @listods, @listodp, @listodg, @listdocx, @listxlsx, @listpptx, @listppsx);
-
-	printf ("Parsing ZIP (plus ODF plus OOXML) files...\n");
-    foreach my $f (@filelist) {
-        my $fpath = RVT_create_folder($opath, 'zip');
-        
-        mkdir ("$fpath/contents") or die ("ERR: failed to create output directories.");
-        open (META, ">$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-            print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-        close (META);
-        
-        $fpath="$fpath/contents";
-        my @args = ('unzip', '-q', '-P', 'SiCuelaCuela', $f, '-d', $fpath);
-        system (@args)
-    }
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-	my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { system (@args); }
-	printf ("Finished parsing ZIP (plus ODF plus OOXML) files.\n");
-	RVT_script_files_allocfiles($disk);
-    return 1;
-}
-
-
-sub RVT_script_parse_rar {
-
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/rar';
-    mkpath $opath unless (-d $opath);
-    
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    
-    my @filelist = grep {/$repath/} RVT_get_allocfiles('\.rar$', $disk);
-
-	printf ("Parsing RAR files...\n");
-    foreach my $f (@filelist) {
+	printf ("  Parsing RAR files... ");
+	our @filelist_rar;
+    foreach my $f ( our @filelist_rar ) {
+    	print "\n    $f ";
         my $fpath = RVT_create_folder($opath, 'rar');
-        
-        mkdir ("$fpath/contents") or die ("ERR: failed to create output directories.");
-        open (META, ">$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-            print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+		my $output = `unrar x -ppassword "$f" "$fpath" 2>&1`;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+		print META $output;
         close (META);
-        
-        $fpath="$fpath/contents";
-        my @args = ('unrar', 'x', '-pSiCuelaCuela', '-inul', $f, $fpath);
-        system (@args)
-    }
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-	my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { system (@args); }
-	printf ("Finished parsing RAR files.\n");
-	RVT_script_files_allocfiles($disk);
-    return 1;
-}
-
-
-
-sub RVT_script_parse_pdf {
-
-	my $PDFTOTEXT = "pdftotext";
-
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/pdf';
-    mkpath $opath unless (-d $opath);
-    
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    my @filelist = grep {/$repath/} RVT_get_allocfiles('\.pdf$', $disk);
-
-	printf ("Parsing PDF files...\n");
-    foreach my $f (@filelist) { 
-        my $fpath = RVT_create_file($opath, 'pdf', 'txt');
-        open (FPDF, "-|", "$PDFTOTEXT", $f, '-');
-        open (FOUT, ">$fpath") or die ("ERR: failed to create metadata files.");
-		print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		while (<FPDF>) {
-			print FOUT $_;
+		if( $output =~ /or wrong password./ ) {
+			open( REPORT, ">>:encoding(UTF-8)", "$opath/password_protected_files.txt" );
+			print REPORT "$f\n";
+			close( REPORT );
 		}
-		close (FPDF);
-        close (FOUT);
     }
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-		system (@args);
-	}
-	printf ("Finished parsing PDF files.\n");
-	RVT_script_files_allocfiles($disk);
+	printf ("done.\n");
     return 1;
 }
 
 
-sub RVT_script_parse_lnk {
-
-	my $LNKPARSE = "lnk-parse-1.0.pl";
-
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/lnk';
-    mkpath $opath unless (-d $opath);
-    
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    my @filelist = grep {/$repath/} RVT_get_allocfiles('\.lnk$', $disk);
-
-	printf ("Parsing LNK files...\n");
-    foreach my $f (@filelist) { 
-        my $fpath = RVT_create_file($opath, 'lnk', 'txt');
-        open (FLNK, "-|", "$LNKPARSE", $f);
-        open (FOUT, ">$fpath") or die ("ERR: failed to create output file.");
-		print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		while (<FLNK>) {
-			print FOUT $_;
-		}
-		close (FLNK);
-        close (FOUT);
-    }
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-		system (@args);
-	}
-	printf ("Finished parsing LNK files.\n");
-	RVT_script_files_allocfiles($disk);
-    return 1;
-}
-
-
-sub RVT_script_parse_evt {
-
-	my $EVTPARSE = "evtparse.pl";
-
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control/evt';
-    mkpath $opath unless (-d $opath);
-    
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    my @filelist = grep {/$repath/} RVT_get_allocfiles('\.evt$', $disk);
-
-	printf ("Parsing EVT files...\n");
-    foreach my $f (@filelist) { 
-        my $fpath = RVT_create_file($opath, 'evt', 'txt');
-        open (FEVT, "-|", "$EVTPARSE", $f) or die "Error: $!";
-        binmode (FEVT, ":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
-        open (FOUT, ">$fpath") or die ("ERR: failed to create output file.");
-		print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		print FOUT "Date#Type#User#Event ID#Description\n";
-		while (<FEVT>) {
-			chomp ($_);
-			my @field= split ('\|',$_ ) ;
-			my $time=ParseDateString("epoch $field[0]");
-			print FOUT $time."#".$field[1]."#".$field[2]."#".$field[3]."#".$field[4]."\n";
-		}
-		close (FEVT);
-        close (FOUT);
-    }
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-		system (@args);
-	}
-	printf ("Finished parsing EVT files.\n");
-	RVT_script_files_allocfiles($disk);
-    return 1;
-}
-
-
-sub RVT_script_parse_text {
-	## XX_FIXME: we should check that files in output/parser/control/text are NOT taken as input.
-
-	my $FSTRINGS = "f-strings";
-
-    my $part = shift(@_);
-    
-    $part = RVT_fill_level{$part} unless $part;
-    if (RVT_check_format($part) ne 'partition') { RVT_log ( 'WARNING' , 'that is not a partition'); return 0; }
-    
-    my $disk = RVT_chop_diskname('disk', $part);
+sub RVT_parse_text {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
 	my $morguepath = RVT_get_morguepath($disk);
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control/text';
     mkpath $opath unless (-d $opath);
-    
-    my $sdisk = RVT_split_diskname($part);
-    my $repath = RVT_get_morguepath($disk) . '/mnt/p' . $sdisk->{partition};    
-    # typical text files:
-    my @listtxt = grep {/$repath/} RVT_get_allocfiles('\.txt$', $disk);
-    my @listcsv = grep {/$repath/} RVT_get_allocfiles('\.csv$', $disk);
-    # emails:
-    my @listeml = grep {/$repath/} RVT_get_allocfiles('\.eml$', $disk);
-    my @listdbx = grep {/$repath/} RVT_get_allocfiles('\.dbx$', $disk);
-    # office file types:
-    my @listdoc = grep {/$repath/} RVT_get_allocfiles('\.doc$', $disk);
-    my @listppt = grep {/$repath/} RVT_get_allocfiles('\.ppt$', $disk);
-    my @listxls = grep {/$repath/} RVT_get_allocfiles('\.xls$', $disk);
-    my @listrtf = grep {/$repath/} RVT_get_allocfiles('\.rtf$', $disk);
-    # likely to be found in cached webpages:
-    my @listhtm = grep {/$repath/} RVT_get_allocfiles('\.htm$', $disk);
-    my @listhtml = grep {/$repath/} RVT_get_allocfiles('\.html$', $disk);
-    my @listphp = grep {/$repath/} RVT_get_allocfiles('\.php$', $disk);
-    my @listasp = grep {/$repath/} RVT_get_allocfiles('\.asp$', $disk);
-    my @listxml = grep {/$repath/} RVT_get_allocfiles('\.xml$', $disk);
+	my $FSTRINGS = "f-strings";
 
-    my @filelist = (@listtxt, @listcsv, @listeml, @listdbx, @listdoc, @listppt, @listxls, @listrtf, @listhtm, @listhtml, @listphp, @listasp, @listxml);
-
-	printf ("Parsing text files...\n");
-	
+	printf ("  Parsing text files... ");
+	our @filelist_text;	
 	my $fpath = RVT_create_file($opath, 'text', 'txt');
 	my $count = $fpath;
 	$count =~ s/.*-([0-9]*).txt$/\1/;
-	foreach my $f (@filelist) {
+	foreach my $f (@filelist_text) {
 		$fpath = "$opath/text-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 		my $normalized = `echo "$f" | f-strings`;
 		chomp ($normalized);
 
 		open (FTEXT, "-|", "$FSTRINGS", "$f") or die ("ERROR: Failed to open input file $f\n");
-		open (FOUT, ">$fpath") or die ("ERR: failed to create output files.");
+		open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output files.");
 		print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Normalized name and path: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 		while (<FTEXT>){
 			print FOUT $_;
@@ -517,206 +554,62 @@ sub RVT_script_parse_text {
 		close (FTEXT);
 		close (FOUT);
 		$count++;
-	} # end foreach my $f (@filelist)
-
-    if ( ! -e "$morguepath/mnt/p00" ) { mkdir "$morguepath/mnt/p00" or RVT_log('CRIT' , "couldn't create directory $!"); };
-	if ( ! -e $morguepath.'/mnt/p00/parser' ) { 
-		$opath = RVT_get_morguepath($disk) . '/output/parser/control';
-		my @args = ('ln', '-s', $opath, $morguepath.'/mnt/p00/parser');
-		system (@args);
 	}
-	printf ("Finished parsing files with text strings.\n");
-	RVT_script_files_allocfiles($disk);
+	printf ("done.\n");
     return 1;
 }
 
 
-sub RVT_script_parse_search_launch  {
-    # launches a search over indexed (PARSEd) files writing results (hits) to a file.
-    # takes as arguments:
-    #   file with searches: one per line
-    #   disk from the morgue
-
-    my ( $searchesfilename, $disk ) = @_;
-    my $string;
+sub RVT_parse_zip {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
     
-    $disk = $main::RVT_level->{tag} unless $disk;
-    print "\t launching $disk\n";
-    my $case = RVT_get_casenumber($disk);
-    my $diskpath = RVT_get_morguepath($disk);
-    my $parsedfiles = "$diskpath/output/parser/control/text/";
-    my $searchespath = "$diskpath/output/parser/";
-    return 0 if (! $diskpath);
-    return 0 if (! -d $parsedfiles);
-    if (! -e $searchespath) { mkdir $searchespath or return 0; }
-
-    open (F, "<".RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
-    my @searches = grep {!/^\s*#/} <F>;
-    close (F);
-    
-    print "\n\nLaunching searches:\n\n";    
-    for $string ( @searches ) {
-        chomp $string;
-		$string = lc($string);
-        print "-- $string\n";
-		open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
-		open (FOUT, ">$searchespath/$string");
-		while (<FMATCH>) {
-			# Tengo en $_ el fichero que ha hecho match. Puedo ir buscando su source recursivamente.
-			my $file = $_;
-			chomp ($file);
-			my $source = RVT_get_source($file);
-			my $line = $file;
-
-			while ( $source ) {
-				$line = $line . '#' . $source;
-				$file = $source;
-				$source = RVT_get_source($file);
-			}
-			
-# 			unless ( $file =~ /\/mnt\/p0[^0]\// ) {
-# 				my $source = RVT_get_source ($file);
-# 				if ( $source ) {
-# 					RVT_copy_with_source ($source, $opath.'/'.basename($file).'_RVT-Source');
-# 				} else { # If there was no source we create a metafile indicating it.
-# 					$opath = $opath.'/'.basename($file).'_RVT-Source';
-# 					mkpath $opath;
-# 					my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-No_Source.txt';
-# 					open (OFILE, ">", $exceptionfile);
-# 					print OFILE "# BEGIN RVT METADATA\n# Exception: File does not have a Source header.\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-# 					close OFILE;			
-# 				}
-# 			} # unless
-
-			print FOUT "$line\n";
-		} # while FMATCH
-		close FMATCH;
-		close FOUT;
+	printf ("  Parsing ZIP files (and ODF, OOXML)... ");
+	our @filelist_zip;
+    foreach my $f ( our @filelist_zip ) {
+    	print "\n    $f ";
+        my $fpath = RVT_create_folder($opath, 'zip');
+		my $output = `unzip -P password "$f" -d "$fpath" 2>&1`;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+		print META $output;
+        close (META);
+		if( $output =~ /incorrect password$/ ) {
+			open( REPORT, ">>:encoding(UTF-8)", "$opath/password_protected_files.txt" );
+			print REPORT "$f\n";
+			close( REPORT );
+		}
     }
+	printf ("done.\n");
     return 1;
 }
 
 
-sub RVT_script_parse_search_export  {
-    # Exports results (from script parse search launch) to disk.
-    # takes as arguments:
-    #   file with searches: one per line
-    #   disk from the morgue
-
-    my ( $searchesfilename, $disk ) = @_;
-    my $string;
-    
-    $disk = $main::RVT_level->{tag} unless $disk;
-    print "\t launching $disk\n";
-    my $case = RVT_get_casenumber($disk);
-    my $diskpath = RVT_get_morguepath($disk);
-    my $searchespath = "$diskpath/output/parser/";
-    my $exportpath = "$searchespath/export/";
-    return 0 if (! $diskpath);
-    if (! -e $exportpath) { mkdir $exportpath or return 0; }
-    
-    open (F, "<".RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
-    my @searches = grep {!/^\s*#/} <F>;
-    close (F);
-    
-    for $string ( @searches ) {
-        chomp $string;
-		$string = lc($string);
-        print "-- $string\n";
-		open (FMATCH, "$searchespath/$string");
-		my $opath = "$exportpath/$string";
-		mkdir $opath;
-		while (<FMATCH>) {
-			chomp ();
-			my $match = $_;
-			$match =~ s/#.*//;
-			RVT_copy_with_source ($match, $opath);
-		}
+sub RVT_sanitize_libpff_attachment {
+# WARNING!!! This function is to be called ONLY from within RVT_sanitize_libpff_item.
+# File descriptors RVT_META and RVT_ITEM are expected to be open when entering this sub.
+	return if ( -d ); # We only want to act on FILES.
+	my $item_depth = $File::Find::dir =~ tr[/][];
+	our $wanted_depth;
+	if( $item_depth == $wanted_depth ) {
+		my $string = $File::Find::name;
+		print RVT_META "Attachment: $File::Find::name\n";
+		chomp( $string );
+		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
+		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
+	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*Message00001.html/ )  {
+		my $string = $File::Find::name;
+		print RVT_META "Attachment: $File::Find::name\n";
+		chomp( $string );
+		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
+		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
 	}
-}
-
-
-sub RVT_copy_with_source  {
-#	Copies a file to a directory.
-#	If the file presents a RVT_METADATA structure, this function is applied recursively to the SOURCE.
-#	Parameters:
-#		The FILE that you want to copy.
-#		The destination DIRECTORY where you want it copied.
-
-    my ( $file, $opath ) = @_;
-    
-    my $RVT_parse_Copy_Size_Limit = 20000000; # 20 Megabytes
-
-    chomp ($file);
-    print "RVT_copy_with_source ( $file , $opath )\n";
-    if ( ! -e $opath ) {mkpath $opath}
-
-	# Here we can raise EXCEPTIONS based on certain conditions.
-	# for instance: not copying big files, or files of certain types.
-    if ( -s $file > $RVT_parse_Copy_Size_Limit ) { #  EXCEPTION: Size limit
-		my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-Exceeded_Copy_Size_Limit.txt';
-     	open (OFILE, ">", $exceptionfile);
-     	print OFILE "# BEGIN RVT METADATA\n# Exception: File skipped for exceeding size limit (\$RVT_parse_Copy_Size_Limit = $RVT_parse_Copy_Size_Limit).\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-     	close OFILE;
-	# XX Pope> En algún lugar por aquí cerca, tenemos que darnos cuenta de que si algo viene de "Message[0-9]{5}/FullMessage.html" o de "Message[0-9]{5}/Attachments/*", tenemos que coger todo el paquete ""Message[0-9]{5}"
-    } elsif (( $file =~ s/(^.*Message[0-9][0-9][0-9][0-9][0-9])\/FullMessage.html$/\1/ ) or ( $file =~ s/(^.*Message[0-9][0-9][0-9][0-9][0-9])\/Attachments\/[^\/]*$/\1/ )) {
-    	# This is what happens when our file happens to be a part of an e-mail (parsed by libpff).
-    	dircopy ($file, $opath);
-#     
-#     } else if (....) {
-#     
-    } else { ################################## NORMAL CASE, file is copied.
-    	copy ($file, $opath);
-    }
-
-	unless ( $file =~ /\/mnt\/p0[^0]\// ) {
-	    my $source = RVT_get_source ($file);
-	    if ( $source ) {
-	    	RVT_copy_with_source ($source, $opath.'/'.basename($file).'_RVT-Source');
-	    } else { # If there was no source we create a metafile indicating it.
-	    	$opath = $opath.'/'.basename($file).'_RVT-Source';
-	    	mkpath $opath;
-			my $exceptionfile = $opath.'/'.basename($file).'_RVT-Exception-No_Source.txt';
-			open (OFILE, ">", $exceptionfile);
-			print OFILE "# BEGIN RVT METADATA\n# Exception: File does not have a Source header.\n# Source file: $file\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			close OFILE;			
-	    }
-	} 
-	if ( $file =~ /\/mnt\/p0[^0]\// ) { print "--\n"; }
-	return 1;
-}
-
-
-sub RVT_get_source () { 
-	# dado un contenido en parser, encuentra su fuente según RVT METADATA.
-	my $file = shift;
-	print "Getting source for $file\n";
-	my $source = 0;
-	my $control = 0;
-	if ( ! -e $file ) {print "ERROR $file does not exist!!\n"; } #exit }
-	
-	# If the file was generated by a one-input-many-output-files plugin (such 
-	# as PST, RAR, ZIP), we have to look for metadata in the output directory:
-	my $aux = $file;
-	$aux =~ s/(.*\/mnt\/p00\/parser\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+-[0-9]+\/).*/\1\/RVT_metadata/; # XX OJO, esto va bien siempre? (creemos que sí, pero quizá puede fallar con nuevos plugins que vayamos haciendo)
-	if ( -e $aux ) { $file = $aux; }
-	if ( ($file =~ /.*\/mnt\/p00\/.*/) or ($file =~ /.*\/output\/parser\/control\/.*/) ) {
-		open (FILE, $file);	
-		my $count = 0;
-		while ( $source = <FILE>) {
-			if ($source =~ s/# Source file: //) { $control = 1; last; }
-			if ($count > 5) { last; } ## THIS is the number of lines that will be read when looking for the RVT_Source metadata.
-			$count++ ;
-		}
-		close (FILE);
-		if ( $control == 0 ) {print "  RVT_get_source: ERROR, SOURCE not found.\n"}
-	} else {
-		print "  Hit primitive file, no source. This is normal.\n"
-	}
-	
-	chomp ($source);
-#	print "RVT_get_source: Source of $file is $source\n";
-	return $source;
 }
 
 
@@ -748,6 +641,15 @@ sub RVT_sanitize_libpff_item {
 	
 	# This defines which fields we want for each item type, and what name to give them.
 	my %field_names;
+	### Activities:
+	$field_names{'Activity'}{'Creation time'} = "Creation";
+	$field_names{'Activity'}{'Modification time'} = "Modification";
+	$field_names{'Activity'}{'Flags'} = "Flags";
+	$field_names{'Activity'}{'Subject'} = "Subject";
+	$field_names{'Activity'}{'Sender name'} = "Creator";
+	$field_names{'Activity'}{'Sender email address'} = "Creator e-mail address"; # this label is not used
+	$field_names{'Activity'}{'Importance'} = "Importance";
+	$field_names{'Activity'}{'Priority'} = "Priority";
 	### Appointments:
 	$field_names{'Appointment'}{'Creation time'} = "Creation";
 	$field_names{'Appointment'}{'Modification time'} = "Modification";
@@ -820,7 +722,7 @@ sub RVT_sanitize_libpff_item {
 	);
 
 	my $folder = $File::Find::name;
-	my $source = $folder; $source =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control.pff/\1/;
+	my $source = $folder; $source =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control/\1/;
 	my $item_type = basename( $folder ); $item_type =~ s/[0-9]{5}//;
 	my $file = basename( $folder );	$file =~ s/[0-9]{5}/.txt/;
 	if( $item_type eq 'Message' ) { $file =~ s/Message/OutlookHeaders/ }
@@ -911,8 +813,7 @@ sub RVT_sanitize_libpff_item {
 	if( $field_values{'Flags'} eq '0x00000001 (Read)' ) { undef $field_values{'Flags'} }
 	else { $field_values{'Flags'} =~ s/.*Read, (.*)\)/\1/ }
 	# Write RVT_ITEM:
-	print RVT_ITEM "<HTML>
-<!--#$field_values{'Sender name'}#$field_values{'Client submit time'}#$field_values{'Subject'}#$to#$cc#$bcc#$field_values{'Remarks'}#-->
+	print RVT_ITEM "<HTML><!--#$field_values{'Sender name'}#$field_values{'Client submit time'}#$field_values{'Subject'}#$to#$cc#$bcc#$field_values{'Flags'}#-->
 <HEAD>\n	<TITLE>\n		$field_values{'Subject'}\n	</TITLE>\n	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n	<TABLE border=1 rules=all frame=box>\n		<tr><td><b>Outlook item</b></td><td>$item_type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>\n		<tr><td><b>Source</b></td><td>$source</td></tr>\n";
 	foreach my $k ( @sortorder ) { # Write headers to RVT_ITEM:
 		if( defined( $field_values{$k} ) && defined( $field_names{$item_type}{$k} ) ) {
@@ -964,25 +865,131 @@ sub RVT_sanitize_libpff_item {
 }
 
 
-sub RVT_sanitize_libpff_attachment {
-	return if ( -d ); # We only want to act on FILES.
-	my $item_depth = $File::Find::dir =~ tr[/][];
-	our $wanted_depth;
-	if( $item_depth == $wanted_depth ) {
-		my $string = $File::Find::name;
-		print RVT_META "Attachment: $File::Find::name\n";
-		chomp( $string );
-		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
-		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
-	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*Message00001.html/ )  {
-		my $string = $File::Find::name;
-		print RVT_META "Attachment: $File::Find::name\n";
-		chomp( $string );
-		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
-		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
+sub RVT_script_parse_autoparse {
+	# works at disk level. Supports @disks.
+	while( my $disk = shift( @_ ) ) {
+		my $max_passes = 20;
+		$disk = $main::RVT_level->{tag} unless $disk;
+		if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	
+		RVT_images_scan;    
+		RVT_mount_assign( $disk );
+		for( my $i = 1; $i < $max_passes ; $i++ ) {
+			RVT_parse_everything( $disk );
+		}
 	}
-} # end sub parse_attachment
+	return 1;
+}
 
+
+sub RVT_script_parse_export  {
+    # Exports results (from script parse search) to disk.
+    # takes as arguments:
+    #   file with searches: one per line
+    #   one or more disks from the morgue (supports @disks)
+
+    my $searchesfilename = shift( @_ );
+    while( my $disk = shift( @_ ) ) {
+		my $string;
+		$disk = $main::RVT_level->{tag} unless $disk;
+		print "\t launching $disk\n";
+		my $case = RVT_get_casenumber($disk);
+		my $diskpath = RVT_get_morguepath($disk);
+		my $searchespath = "$diskpath/output/parser/searches/";
+		my $exportpath = "$diskpath/output/parser/export/";
+		return 0 if (! $diskpath);
+		if (! -e $exportpath) { mkdir $exportpath or return 0; }
+		
+		open (F, "<:encoding(UTF-8)", RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
+		my @searches = grep {!/^\s*#/} <F>;
+		close (F);
+		
+		for $string ( @searches ) { # For each search string...
+			chomp $string;
+			$string = lc($string);
+			print "-- $string\n";
+			open (FMATCH, "$searchespath/$string");
+			my $opath = "$exportpath/$string";
+			mkdir $opath;
+			mkdir "$opath/files";
+			mkdir "$opath/outlook";
+			while (my $file = <FMATCH>) { # For each line of results...
+				chomp ( $file );
+				$file =~ s/#.*//; # we discard the rest of the sources and re-calculate them:
+				my @results = RVT_get_best_source( $file );
+				while( my $result = shift( @results ) ) {
+					if( $result =~ /.*\/output\/parser\/control\/pff-[0-9]*\..*/ ) { # libpff items are different...
+						my $dest = $result;
+						$dest =~ s/.*\/output\/parser\/control\/(pff-[0-9]*\..*)/\1/;
+						if( -f $result ) {
+							fcopy( $result, "$opath/outlook/$dest" );
+						} elsif( -d $result ) {
+							dircopy( $result, "$opath/outlook/$dest" );
+						}
+					} else { # Common files
+						my $ext = basename( $result );
+						$ext =~ s/.*\.([^.]{1,16})$/\1/;
+						my $name = basename( $result );
+						$name =~ s/(.*)\.[^.]{1,16}$/\1/;
+						my $dest = RVT_create_file( "$opath/files", "$name", "$ext" );
+						if( ! $dest ) { $dest = "$opath/files/" }
+						fcopy( $result, $dest );
+						open( REPORT, ">:encoding(UTF-8)", "$opath/RVT_index.html" );
+						print REPORT "$result -> $dest\n";
+						close( REPORT );
+					}
+				}
+			} # end while ... (for each line of results...)
+		} # end for each string...
+	} # end while( $disk = shift(@_) )
+}
+
+
+sub RVT_script_parse_search  {
+    # launches a search over indexed (PARSEd) files writing results (hits) to a file.
+    # takes as arguments:
+    #   file with searches: one per line
+    #   one or more disks from the morgue (supports @disks)
+
+    my $searchesfilename = shift( @_ );
+    while( my $disk = shift( @_ ) ) {
+		my $string;
+		$disk = $main::RVT_level->{tag} unless $disk;
+		print "\t launching $disk\n";
+		my $case = RVT_get_casenumber($disk);
+		my $diskpath = RVT_get_morguepath($disk);
+		my $parsedfiles = "$diskpath/output/parser/control/text/";
+		my $searchespath = "$diskpath/output/parser/searches/";
+		return 0 if (! $diskpath);
+		return 0 if (! -d $parsedfiles);
+		if (! -e $searchespath) { mkdir $searchespath or return 0; }
+	
+		open (F, "<:encoding(UTF-8)", RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
+		my @searches = grep {!/^\s*#/} <F>;
+		close (F);
+		
+		print "\n\nLaunching searches:\n\n";    
+		for $string ( @searches ) {
+			chomp $string;
+			$string = lc($string);
+			print "-- $string\n";
+			open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
+			open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
+			while (my $file = <FMATCH>) {
+				chomp( $file );
+				my @sources = RVT_get_all_sources( $file );
+				my $line = '';
+				while( my $source = shift( @sources) ) {
+					$line = "$line$source#";
+				}
+				print FOUT "$line\n";
+			}
+			close FMATCH;
+			close FOUT;
+		}
+	}
+    return 1;
+}
 
 
 1;
