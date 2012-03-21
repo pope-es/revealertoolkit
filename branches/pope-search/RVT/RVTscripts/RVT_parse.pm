@@ -72,6 +72,7 @@ use File::Basename;
 use File::Find;
 use Data::Dumper;
 use Date::Manip;
+use Email::MIME; # Needed by RVT_parse_eml
 use Email::Outlook::Message; # Needed by RVT_parse_msg
 
 sub constructor {
@@ -151,6 +152,7 @@ sub RVT_build_filelists {
 
 	# Declare (our) file lists:
 	our @filelist_bkf;
+	our @filelist_eml;
 	our @filelist_evt;
 	our @filelist_lnk;
 	our @filelist_msg;
@@ -164,6 +166,8 @@ sub RVT_build_filelists {
 	if( -f $File::Find::name ) {
 		# filelist_bkf:
 		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }
+		# filelist_eml:
+		elsif( $File::Find::name =~ /\.eml$/i ) { push( @filelist_eml, $File::Find::name ) }
 		# filelist_evt:
 		elsif( $File::Find::name =~ /\.evt$/i ) { push( @filelist_evt, $File::Find::name ) }
 		# filelist_lnk:
@@ -181,8 +185,6 @@ sub RVT_build_filelists {
 		# filelist_text:
 		elsif( $File::Find::name =~ /\.txt$/i ) { push( @filelist_text, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.csv$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.eml$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.msg$/i ) { push( @filelist_text, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_text, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }
@@ -236,6 +238,7 @@ sub RVT_parse_everything {
 
 		# Initialize file lists:
 		our @filelist_bkf = ( );
+		our @filelist_eml = ( );
 		our @filelist_evt = ( );
 		our @filelist_lnk = ( );
 		our @filelist_msg = ( );
@@ -248,6 +251,7 @@ sub RVT_parse_everything {
 
 		# Parse all known file types:
 		RVT_parse_bkf( $item, $disk );
+		RVT_parse_eml( $item, $disk );
 		RVT_parse_evt( $item, $disk );
 		RVT_parse_lnk( $item, $disk );
 		RVT_parse_msg( $item, $disk );
@@ -263,7 +267,7 @@ sub RVT_parse_everything {
 		open( FLAG, ">:encoding(UTF-8)", $file );
 		close( FLAG );
 
-		print " Finished parsing source $item.\n";
+		print "  Source parsed: $item\n";
 	}	
 	return 1;
 }
@@ -425,9 +429,9 @@ sub RVT_parse_bkf {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
 
-	printf ("  Parsing BKF files... ");
+	printf ("  Parsing BKF files...\n");
     foreach my $f ( our @listbkf) {
-    	print "\n    $f ";
+    	print "    $f\n";
         my $fpath = RVT_create_folder($opath, 'bkf');
 		my $output = `mtftar < "$f" | tar xv -C "$fpath" 2>&1 `;
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
@@ -437,7 +441,177 @@ sub RVT_parse_bkf {
 #        `$command`;
     }
 
-	printf ("done.\n");
+    return 1;
+}
+
+
+
+sub RVT_parse_eml {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("  Parsing EML files...\n");
+	if( our @filelist_eml ) {
+		my $emlpath = RVT_create_folder($opath, 'eml');
+		my $fpath = RVT_create_file($emlpath, 'eml', 'html');
+		my $count = $fpath;
+		$count =~ s/.*-([0-9]*).html$/\1/;
+		foreach my $f ( our @filelist_eml ) {
+			$fpath = "$emlpath/eml-$count.html"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+			print "    $f\n";
+			
+			my $meta = $fpath;
+			$meta =~ s/\.html$/.RVT_metadata/;
+			open( RVT_ITEM, ">:encoding(UTF-8)", "$fpath") or warn "WARNING: cannot open file $fpath: $!\n";
+			open( RVT_META, ">:encoding(UTF-8)", "$meta") or warn "WARNING: cannot open file $meta: $!\n";
+			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+
+			open( EML_ITEM, "<:encoding(UTF-8)", "$f" ) or warn "WARNING: cannot open file $f: $!\n";
+			my $message = '';
+			while( my $line = <EML_ITEM> ) {
+				$message = $message.$line;
+			}
+			close( EML_ITEM );
+			
+			my $obj = Email::MIME->new($message);
+			my $from = $obj->header('From');
+			my $to = $obj->header('To');
+			my $cc = $obj->header('Cc');
+			my $bcc = $obj->header('Bcc');
+			my $subject = $obj->header('Subject');
+			my $date = $obj->header('Date');
+			my $flags = '';
+			
+			print "================================================================\nMENSAJE\n";
+			print "Date: $date\n";
+			print "From: $from\n";
+			print "Subject: $subject\n";
+			print "Debug:\n".$obj->debug_structure."\n";
+
+			# Write RVT_ITEM:
+			$from =~ s/</&lt;/g; $from =~ s/>/&gt;/g;
+			$to =~ s/</&lt;/g; $to =~ s/>/&gt;/g;
+			$cc =~ s/</&lt;/g; $cc =~ s/>/&gt;/g;
+			$bcc =~ s/</&lt;/g; $bcc =~ s/>/&gt;/g;
+			my $source = $f;
+			$source =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9]\/.*)/\1/;
+			$source =~ s/\/output\/parser\/control//;
+			print RVT_ITEM "<HTML><!--#$from#$date#$subject#$to#$cc#$bcc#$flags#-->
+<HEAD>
+	<TITLE>
+		$subject
+	</TITLE>
+	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+</HEAD>
+<BODY>
+	<TABLE border=1 rules=all frame=box>
+		<tr><td><b>Item</b></td><td>e-mail message&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $meta) ,"\" target=\"_blank\">[Headers]</a></td></tr>
+		<tr><td><b>Source</b></td><td>$source</td></tr>
+";
+			if( $date ne '' ) {print RVT_ITEM "		<tr><td><b>Sent</b></td><td>$date</td></tr>\n" }
+			if( $from ne '' ) {print RVT_ITEM "		<tr><td><b>From</b></td><td>$from</td></tr>\n" }
+			if( $subject ne '' ) {print RVT_ITEM "		<tr><td><b>Subject</b></td><td>$subject</td></tr>\n" }
+			if( $to ne '' ) { print RVT_ITEM "		<tr><td><b>To</b></td><td>$to</td></tr>\n" }
+			if( $cc ne '' ) { print RVT_ITEM "		<tr><td><b>CC</b></td><td>$cc</td></tr>\n" }
+			if( $bcc ne '' ) { print RVT_ITEM "		<tr><td><b>BCC</b></td><td>$bcc</td></tr>\n" }			
+			
+			my $msgbody = 0; # we will set this when we reach the first TEXT part.
+			my @parts = ( );
+			if( $obj->content_type =~ /^multipart\/alternative/ ) {
+				my @alternatives = $obj->parts;
+				my $plain = 0;
+				my $html = 0;
+				my $rtf = 0;
+				foreach my $alt ( @alternatives ) {
+					if( ($alt->content_type =~ /^text\/plain/) && (! $plain) ) { $plain = $alt }
+					elsif( ($alt->content_type =~ /^text\/html/) && (! $html) ) { $html = $alt }
+					elsif( ($alt->content_type =~ /^application\/rtf/) && (! $rtf) ) { $rtf = $alt }
+				}
+				if( $html ) { push( @parts, $html ) }
+				elsif( $plain ) { push( @parts, $plain ) }
+				elsif( $rtf ) { push( @parts, $rtf ) }
+				else { push( @parts, @alternatives ) } # fallback resource
+			} else { @parts = $obj->parts } # These are all Email::MIME objects too.
+
+			while( my $part = shift(@parts) ) {
+				print "-- Part:\n";
+				my $ctype = $part->content_type;
+				my $filename = $part->filename;
+				print "  Content-type: $ctype\n";				
+				my $is_attach = 0;				
+				if( $ctype =~ /^multipart\/alternative/ ) {
+					# This code does its best at delivering the content in HTML, text, or RTF (in that order).
+					# If it does not know what to do, it will pass all the objects back to the parts queue and
+					# they will (most probably) be treated as unnamed attachments.
+					my @alternatives = $part->parts;
+					my $plain = 0;
+					my $html = 0;
+					my $rtf = 0;
+					foreach my $alt ( @alternatives ) {
+						if( ($alt->content_type =~ /^text\/plain/) && (! $plain) ) { $plain = $alt }
+						elsif( ($alt->content_type =~ /^text\/html/) && (! $html) ) { $html = $alt }
+						elsif( ($alt->content_type =~ /^application\/rtf/) && (! $rtf) ) { $rtf = $alt }
+					}
+					if( $html ) { push( @parts, $html ) }
+					elsif( $plain ) { push( @parts, $plain ) }
+					elsif( $rtf ) { push( @parts, $rtf ) }
+					else { push( @parts, @alternatives ) } # fallback resource
+				} elsif( $ctype =~ /^multipart/ ) { push( @parts, $part->parts ) }
+				elsif( $filename ) { $is_attach = 1 }
+				elsif( ($ctype =~ /^text\//) && (! $msgbody) ) {
+					# This must be the message body
+					print "  This seems to be the message body.\n";
+					if( $ctype =~ /^text\/plain/ ) {
+						$msgbody = $part->body;
+						$msgbody =~ s/\n/<br>\n/g;
+					}
+					elsif( $ctype =~ /^text\/html/ ) { $msgbody = $part->body }
+					else {
+					# XX_Fixme: Parse RTF instead of pasting as-is. However, we should never get here
+					# because a text/plain or text/html alternative should be found.
+						$msgbody = $part->body;
+					}
+				} else {
+					# We will treat it as an attachment.
+					$filename = $part->invent_filename;
+					if( $ctype =~ /.*\/rtf$/ ) { $filename =~ s/\.dat/.rtf/ }
+					elsif( $ctype =~ /^text\/html/ ) { $filename =~ s/\.dat/.html/ }
+					$is_attach = 1;
+				}
+
+				if( $is_attach ) {
+					print "  This is an ATTACHMENT\n";
+					print "  Filename: $filename\n";
+					my $attachfolder = $fpath;
+					$attachfolder =~ s/\.html$/.attach/;
+					mkpath( $attachfolder ); # no "or warn..." to avoid that warning if folder already exists.
+					open( ATTACH, ">:encoding(UTF-8)", "$attachfolder/$filename" ) or warn "WARNING: Cannot open file $attachfolder/$filename: $!";
+					print ATTACH $part->body;
+					close ATTACH;
+					my $string = "$attachfolder/$filename";
+					$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
+					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a></td></tr>\n";
+				}
+				
+			}
+			print RVT_ITEM "</TABLE><br>\n";
+			
+			
+			print RVT_ITEM $msgbody;
+			print RVT_ITEM "	</BODY>\n</HTML>\n";
+			close( RVT_ITEM );
+			close( RVT_META );
+
+
+			$count++;
+		}
+	}
     return 1;
 }
 
@@ -454,7 +628,7 @@ sub RVT_parse_evt {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing EVT files... ");
+	printf ("  Parsing EVT files...\n");
 	if( our @filelist_evt ) {
 		my $evtpath = RVT_create_folder($opath, 'evt');
 		my $fpath = RVT_create_file($evtpath, 'evt', 'txt');
@@ -462,7 +636,7 @@ sub RVT_parse_evt {
 		$count =~ s/.*-([0-9]*).txt$/\1/;
 		foreach my $f ( our @filelist_evt ) {
 			$fpath = "$evtpath/evt-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			print "\n    $f ";
+			print "    $f\n";
 			open (FEVT, "-|", "$EVTPARSE", $f) or die "Error: $!";
 			binmode (FEVT, ":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output file.");
@@ -479,8 +653,6 @@ sub RVT_parse_evt {
 			$count++;
 		}
 	} # end if
-
-	printf ("done.\n");
     return 1;
 }
 
@@ -497,7 +669,7 @@ sub RVT_parse_lnk {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing LNK files... ");
+	printf ("  Parsing LNK files...\n");
 	if( our @filelist_lnk ) {
 		my $lnkpath = RVT_create_folder($opath, 'lnk');
 		my $fpath = RVT_create_file($lnkpath, 'lnk', 'txt');
@@ -505,7 +677,7 @@ sub RVT_parse_lnk {
 		$count =~ s/.*-([0-9]*).txt$/\1/;
 		foreach my $f ( our @filelist_lnk ) {
 			$fpath = "$lnkpath/lnk-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			print "\n    $f ";
+			print "    $f\n";
 			open (FLNK, "-|", "$LNKPARSE", $f);
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
 			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
@@ -515,7 +687,6 @@ sub RVT_parse_lnk {
 			$count++;
 		}
 	}
-	printf ("done.\n");
     return 1;
 }
 
@@ -531,7 +702,7 @@ sub RVT_parse_msg {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing MSG files... ");
+	printf ("  Parsing MSG files...\n");
 	if( our @filelist_msg ) {
 		my $msgpath = RVT_create_folder($opath, 'msg');
 		my $fpath = RVT_create_file($msgpath, 'msg', 'eml');
@@ -539,7 +710,7 @@ sub RVT_parse_msg {
 		$count =~ s/.*-([0-9]*).eml$/\1/;
 		foreach my $f ( our @filelist_msg ) {
 			$fpath = "$msgpath/msg-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			print "\n    $f ";
+			print "    $f\n";
 			my $meta = $fpath;
 			$meta =~ s/\.eml$/.RVT_metadata/;
 			open (META, ">:encoding(UTF-8)", "$meta") or warn ("WARNING: failed to create output file $meta: $!.");
@@ -556,7 +727,6 @@ sub RVT_parse_msg {
 			$count++;
 		}
 	}
-	printf ("done.\n");
     return 1;
 }
 
@@ -572,7 +742,7 @@ sub RVT_parse_pdf {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing PDF files... ");
+	printf ("  Parsing PDF files...\n");
 	if( our @filelist_pdf ) {
 		my $pdfpath = RVT_create_folder($opath, 'pdf');
 		my $fpath = RVT_create_file($pdfpath, 'pdf', 'txt');
@@ -580,7 +750,7 @@ sub RVT_parse_pdf {
 		$count =~ s/.*-([0-9]*).txt$/\1/;
 		foreach my $f ( our @filelist_pdf ) {
 			$fpath = "$pdfpath/pdf-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			print "\n    $f ";
+			print "    $f\n";
 			my $output = `pdftotext "$f" - 2>&1`;
 			open (META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
@@ -594,7 +764,6 @@ sub RVT_parse_pdf {
 			$count++;
 		}
 	}
-	printf ("done.\n");
     return 1;
 }
 
@@ -610,9 +779,9 @@ sub RVT_parse_pff {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing PFF files (PST, OST, PAB)... ");
+	printf ("  Parsing PFF files (PST, OST, PAB)...\n");
     foreach my $f ( our @filelist_pff) {
-    	print "\n    $f ";
+    	print "    $f\n";
     	my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');    	
         open (META,">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
@@ -622,7 +791,6 @@ sub RVT_parse_pff {
         system(@args);        
         foreach my $mode ('export','orphan','recovered') { finddepth( \&RVT_sanitize_libpff_item, "$fpath.$mode" ) }
     }
-	printf ("done.\n");
     return 1;
 }
 
@@ -638,9 +806,9 @@ sub RVT_parse_rar {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing RAR files... ");
+	printf ("  Parsing RAR files...\n");
     foreach my $f ( our @filelist_rar ) {
-    	print "\n    $f ";
+    	print "    $f\n";
         my $fpath = RVT_create_folder($opath, 'rar');
 		my $output = `unrar x -ppassword "$f" "$fpath" 2>&1`;
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
@@ -653,7 +821,6 @@ sub RVT_parse_rar {
 			close( REPORT );
 		}
     }
-	printf ("done.\n");
     return 1;
 }
 
@@ -670,7 +837,7 @@ sub RVT_parse_text {
     mkpath $opath unless (-d $opath);
 	my $FSTRINGS = "f-strings";
 
-	printf ("  Parsing text files... ");
+	printf ("  Parsing text files...\n");
 	my $fpath = RVT_create_file($opath, 'text', 'txt');
 	my $count = $fpath;
 	$count =~ s/.*-([0-9]*).txt$/\1/;
@@ -689,7 +856,6 @@ sub RVT_parse_text {
 		close (FOUT);
 		$count++;
 	}
-	printf ("done.\n");
     return 1;
 }
 
@@ -705,9 +871,9 @@ sub RVT_parse_zip {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing ZIP files (and ODF, OOXML)... ");
+	printf ("  Parsing ZIP files (and ODF, OOXML)...\n");
     foreach my $f ( our @filelist_zip ) {
-    	print "\n    $f ";
+    	print "    $f\n";
         my $fpath = RVT_create_folder($opath, 'zip');
 		my $output = `unzip -P password "$f" -d "$fpath" 2>&1`;
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
@@ -720,22 +886,143 @@ sub RVT_parse_zip {
 			close( REPORT );
 		}
     }
-	printf ("done.\n");
     return 1;
 }
 
 
 
 
+
+
 ##########################################################################
-# Subs for additional treatment of certain data types
+# Other stuff
 ##########################################################################
+
+
+
+sub RVT_get_all_sources {
+	# Traces an object origin, recursively, using RVT metadata.
+	# Returns a list containing the filename of the original item, and its parent objects,
+	# up to a final (/mnt) path.
+	my $file = shift;
+	chomp( $file );
+	my $source = RVT_get_source( $file );
+	if( $source ) {
+		return( $file, RVT_get_all_sources( $source ) );
+	} else {
+		return( $file, 0 );
+	}
+}
+
+
+
+sub RVT_get_best_source { 
+	my $file = shift( @_ );
+	my $found = 0;
+	my @results = ( );
+	my @sources = RVT_get_all_sources( $file );
+	while( (not $found) && (my $source = shift(@sources)) ) {
+		if( $source =~ /.*\/output\/parser\/control\/pff.*/ ) {
+			# libpff items are treated differently:
+			$source =~ s/(\/[A-Z][a-z]*[0-9]{5}).*/\1/;
+			push( @results, "$source.html" );
+			push( @results, "$source.RVT_metadata" );
+			if( -d "$source.attach" ) { push( @results, "$source.attach" ) }
+			$found = 1;
+		} elsif( $source =~ /\/mnt\/p0[0-9]\// ) {
+			push( @results, "$source" );
+			$found = 1;
+		}
+	}
+	return( @results );
+}
+
+
+
+sub RVT_get_source { 
+	my $file = shift;
+	my $source = 0;
+	my $source_type;
+	my $got_source = 0;
+	
+	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/rar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/zip-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	
+	if( $source_type eq 'infolder' ) {
+		$file =~ s/(.*\/output\/parser\/control\/[a-z]*-[0-9]*)\/.*/\1\/RVT_metadata/;
+		$source_type = 'infile';
+	} elsif( $source_type eq 'special_pff' ) {
+		if( $file =~ /[0-9]{5}\.attach\/[^\/]*$/ ) { # If an attachment, point its parent.
+			$source = $file;
+			$source =~ s/([0-9]{5})\.attach\/[^\/]*$/\1.html/;
+			$got_source = 1;
+		}
+		else {
+			$file =~ s/(.*\/output\/parser\/control\/pff-[0-9]*)\..*/\1.RVT_metadata/;
+			$source_type = 'infile';
+		}
+	}
+	
+	if( $source_type eq 'infile' ) {
+		if ( ! -e $file ) {print "ERROR $file does not exist!!\n"; } #exit }
+		open (FILE, "<:encoding(UTF-8)", $file);	
+		my $count = 0;
+		while ( $source = <FILE>) {
+			if ($source =~ s/# Source file: //) { $got_source = 1; last; }
+			if ($count > 5) { last; } ## THIS is the number of lines that will be read when looking for the RVT_Source metadata.
+			$count++ ;
+		}
+		close (FILE);
+		if ( $got_source == 0 ) {print "  RVT_get_source: ERROR, SOURCE not found.\n"}
+	}
+	if( $got_source == 0 || $source_type eq 'final' ) { $source = 0 }	
+	
+	if( $source ) {
+		chomp ($source);
+		return( $source );
+	} else {
+		return 0;
+	}
+}
+
+
+
+sub RVT_get_unique_filename ($$) {
+	# Given a folder and a filename, checks that the filename is not already present in
+	# that folder. If it is, it returns an alternate filename.
+	my ( $file, $mother ) = @_;
+	$file = basename( $file );
+	my $result;
+	if ( -e "$mother/$file" ) {
+		my $ext = $file;
+		$ext =~ s/.*\.([^.]{1,16})$/\1/;
+		my $name = $file;
+		$name =~ s/(.*)\.[^.]{1,16}$/\1/;
+		my $count=1;
+		$result = "$mother/$name RVT_Duplicate_$count.$ext";
+		while( -e $result ) {
+			$count++;
+			$result = "$mother/$name RVT_Duplicate_$count.$ext";
+		}
+	} else {
+		$result = "$mother/$file";
+	}
+	return $result;
+}
 
 
 
 sub RVT_sanitize_libpff_attachment {
 # WARNING!!! This function is to be called ONLY from within RVT_sanitize_libpff_item.
-# File descriptors RVT_META and RVT_ITEM are expected to be open when entering this sub.
+# File descriptors RVT_META and RVT_ITEM are expected to be open when entering this sub,
+# and $wanted_depth is expected to be correctly set.
 	return if ( -d ); # We only want to act on FILES.
 	my $item_depth = $File::Find::dir =~ tr[/][];
 	our $wanted_depth;
@@ -956,8 +1243,19 @@ sub RVT_sanitize_libpff_item {
 	if( $field_values{'Flags'} eq '0x00000001 (Read)' ) { undef $field_values{'Flags'} }
 	else { $field_values{'Flags'} =~ s/.*Read, (.*)\)/\1/ }
 	# Write RVT_ITEM:
-	print RVT_ITEM "<HTML><!--#$field_values{'Sender name'}#$field_values{'Client submit time'}#$field_values{'Subject'}#$to#$cc#$bcc#$field_values{'Flags'}#-->
-<HEAD>\n	<TITLE>\n		$field_values{'Subject'}\n	</TITLE>\n	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n</HEAD>\n<BODY>\n	<TABLE border=1 rules=all frame=box>\n		<tr><td><b>Outlook item</b></td><td>$item_type&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>\n		<tr><td><b>Source</b></td><td>$source</td></tr>\n";
+	print RVT_ITEM "<HTML>
+<!--#$field_values{'Sender name'}#$field_values{'Client submit time'}#$field_values{'Subject'}#$to#$cc#$bcc#$field_values{'Flags'}#-->
+<HEAD>
+	<TITLE>
+		$field_values{'Subject'}
+	</TITLE>
+	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+</HEAD>
+<BODY>
+	<TABLE border=1 rules=all frame=box>
+		<tr><td><b>Item</b></td><td>Outlook item ($item_type)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>
+		<tr><td><b>Source</b></td><td>$source</td></tr>
+";
 	foreach my $k ( @sortorder ) { # Write headers to RVT_ITEM:
 		if( defined( $field_values{$k} ) && defined( $field_names{$item_type}{$k} ) ) {
 			print RVT_ITEM "		<tr><td><b>$field_names{$item_type}{$k}</b></td><td>$field_values{$k}</td></tr>\n";
@@ -1007,131 +1305,6 @@ sub RVT_sanitize_libpff_item {
 	rmdir( $folder ) || warn( "WARNING: Cannot delete $folder\n" );
 }
 
-
-
-
-##########################################################################
-# Other stuff
-##########################################################################
-
-
-
-sub RVT_get_all_sources {
-	# Traces an object origin, recursively, using RVT metadata.
-	# Returns a list containing the filename of the original item, and its parent objects,
-	# up to a final (/mnt) path.
-	my $file = shift;
-	chomp( $file );
-	my $source = RVT_get_source( $file );
-	if( $source ) {
-		return( $file, RVT_get_all_sources( $source ) );
-	} else {
-		return( $file, 0 );
-	}
-}
-
-
-
-sub RVT_get_best_source { 
-	my $file = shift( @_ );
-	my $found = 0;
-	my @results = ( );
-	my @sources = RVT_get_all_sources( $file );
-	while( (not $found) && (my $source = shift(@sources)) ) {
-		if( $source =~ /.*\/output\/parser\/control\/pff.*/ ) {
-			# libpff items are treated differently:
-			$source =~ s/(\/[A-Z][a-z]*[0-9]{5}).*/\1/;
-			push( @results, "$source.html" );
-			push( @results, "$source.RVT_metadata" );
-			if( -d "$source.attach" ) { push( @results, "$source.attach" ) }
-			$found = 1;
-		} elsif( $source =~ /\/mnt\/p0[0-9]\// ) {
-			push( @results, "$source" );
-			$found = 1;
-		}
-	}
-	return( @results );
-}
-
-
-
-sub RVT_get_source { 
-	my $file = shift;
-	my $source = 0;
-	my $source_type;
-	my $got_source = 0;
-	
-	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/rar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/zip-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
-	
-	if( $source_type eq 'infolder' ) {
-		$file =~ s/(.*\/output\/parser\/control\/[a-z]*-[0-9]*)\/.*/\1\/RVT_metadata/;
-		$source_type = 'infile';
-	} elsif( $source_type eq 'special_pff' ) {
-		if( $file =~ /[0-9]{5}\.attach\/[^\/]*$/ ) { # If an attachment, point its parent.
-			$source = $file;
-			$source =~ s/([0-9]{5})\.attach\/[^\/]*$/\1.html/;
-			$got_source = 1;
-		}
-		else {
-			$file =~ s/(.*\/output\/parser\/control\/pff-[0-9]*)\..*/\1.RVT_metadata/;
-			$source_type = 'infile';
-		}
-	}
-	
-	if( $source_type eq 'infile' ) {
-		if ( ! -e $file ) {print "ERROR $file does not exist!!\n"; } #exit }
-		open (FILE, "<:encoding(UTF-8)", $file);	
-		my $count = 0;
-		while ( $source = <FILE>) {
-			if ($source =~ s/# Source file: //) { $got_source = 1; last; }
-			if ($count > 5) { last; } ## THIS is the number of lines that will be read when looking for the RVT_Source metadata.
-			$count++ ;
-		}
-		close (FILE);
-		if ( $got_source == 0 ) {print "  RVT_get_source: ERROR, SOURCE not found.\n"}
-	}
-	if( $got_source == 0 || $source_type eq 'final' ) { $source = 0 }	
-	
-	if( $source ) {
-		chomp ($source);
-		return( $source );
-	} else {
-		return 0;
-	}
-}
-
-
-
-sub RVT_get_unique_filename ($$) {
-	# Given a folder and a filename, checks that the filename is not already present in
-	# that folder. If it is, it returns an alternate filename.
-	my ( $file, $mother ) = @_;
-	$file = basename( $file );
-	my $result;
-	if ( -e "$mother/$file" ) {
-		my $ext = $file;
-		$ext =~ s/.*\.([^.]{1,16})$/\1/;
-		my $name = $file;
-		$name =~ s/(.*)\.[^.]{1,16}$/\1/;
-		my $count=1;
-		$result = "$mother/$name RVT_Duplicate_$count.$ext";
-		while( -e $result ) {
-			$count++;
-			$result = "$mother/$name RVT_Duplicate_$count.$ext";
-		}
-	} else {
-		$result = "$mother/$file";
-	}
-	return $result;
-}
 
 
 
