@@ -33,7 +33,10 @@ package RVTscripts::RVT_parse;
 #
 # 3) In RVT_parse_everything, initialize the empty file list in block "Initialize file
 # lists", and call your new plugin in block "Parse all known file types".
-#
+# 
+# 4) Modify RVT_get_source (and optionally RVT_get_best_source) to have them understand
+# the output of your new plugin.
+# 
 # That's all.
 #
 
@@ -51,6 +54,7 @@ BEGIN {
    						&RVT_script_parse_autoparse
 						&RVT_script_parse_search
 						&RVT_script_parse_export
+   						&RVT_script_parse_index
 					);
 }
 
@@ -136,6 +140,8 @@ sub constructor {
                                                     script parse search <search file> <disk>";
    $main::RVT_functions{RVT_script_parse_export } = "Export search results to disk\n
                                                     script parse export <search file> <disk>";
+   $main::RVT_functions{RVT_script_parse_index } = "Creates an index of exported items\n
+                                                    script parse index <folder>";
 }
 
 
@@ -387,9 +393,10 @@ sub RVT_script_parse_export  {
 				$file =~ s/#.*//; # we discard the rest of the sources and re-calculate them:
 				my @results = RVT_get_best_source( $file );
 				while( my $result = shift( @results ) ) {
-					if( $result =~ /.*\/output\/parser\/control\/pff-[0-9]*\..*/ ) { # libpff items are different...
+					if( ($result =~ /.*\/output\/parser\/control\/pff-[0-9]*\..*/) or ($result =~ /.*\/output\/parser\/control\/eml-[0-9]+\/eml-[0-9].*/) ) { # libpff items are different...
 						my $dest = $result;
 						$dest =~ s/.*\/output\/parser\/control\/(pff-[0-9]*\..*)/\1/;
+						$dest =~ s/.*\/output\/parser\/control\/(eml-[0-9]+\/.*)/\1/;
 						if( -f $result ) {
 							fcopy( $result, "$opath/outlook/$dest" );
 						} elsif( -d $result ) {
@@ -404,9 +411,62 @@ sub RVT_script_parse_export  {
 					}
 				}
 			} # end while ... (for each line of results...)
+			RVT_script_parse_index( $opath );
 		} # end for each string...
 		$disk = shift( @_ );
 	} # end while( $disk )
+	return 1;
+}
+
+
+
+sub RVT_script_parse_index {
+	our $folder_to_index = shift( @_ ); # this parameter is accessed by RVT_index_outlook_item
+	if( ! -d $folder_to_index ) {
+		warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: create index $folder_to_index\n";
+		return;
+	}
+	my $index = "$folder_to_index/RVT_index.html";
+	if( -f $index ) { print "WARNING: Overwriting existing index.\n" }
+	my $searchterm = basename( $folder_to_index );
+	open( RVT_INDEX, ">:encoding(UTF-8)", "$index" ) or warn "WARNING: cannot open $index for writing.\n$!\n";
+	print RVT_INDEX "<HTML>
+<HEAD>
+<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+<script type=\"text/javascript\">
+<!--
+// Based on version 1.7 of the script Table_Sort - The following code is Copyright 2007 - 2009 Gennadiy Shvets, distributed under GPL 3.0 - See http://www.allmyscripts.com/Table_Sort/index.html for usage details.
+var TSort_Store;
+var TSort_All;
+function TSort_StoreDef () { this.sorting = []; this.nodes = []; this.rows = []; this.row_clones = []; this.sort_state = []; this.initialized = 0; this.history = []; this.sort_keys = []; this.sort_colors = [ '#FF0000', '#800080', '#0000FF' ]; };
+function tsInitOnload () { if (TSort_All == null) tsRegister(); for (var id in TSort_All) { tsSetTable (id); tsInit(); } if	(window.onload_sort_table) window.onload_sort_table(); }
+function tsInit() { if	(TSort_Data.push == null) return; var table_id = TSort_Data[0]; var table = document.getElementById(table_id); var thead = table.getElementsByTagName('thead')[0]; if (thead == null) { alert ('Cannot find THEAD tag!'); return; } var tr = thead.getElementsByTagName('tr'); var cols, i, node, len; if (tr.length > 1) { var	cols0 = tr[0].getElementsByTagName('th'); if (cols0.length == 0) cols0 = tr[0].getElementsByTagName('td'); var cols1; var cols1 = tr[1].getElementsByTagName('th'); if	(cols1.length == 0) cols1 = tr[1].getElementsByTagName('td'); cols = new Array (); var j0, j1, n; len = cols0.length; for (j0 = 0, j1 = 0; j0 < len; j0++) { node = cols0[j0]; n = node.colSpan; if	(n > 1) { while (n > 0) { cols.push (cols1[j1++]); n--; } } else { if	(node.rowSpan == 1) j1++; cols.push (node); } } } else { cols = tr[0].getElementsByTagName('th'); if	(cols.length == 0) cols = tr[0].getElementsByTagName('td'); } len = cols.length; for (var i = 0; i < len; i++) { if	(i >= TSort_Data.length - 1) break; node = cols[i]; var sorting = TSort_Data[i + 1].toLowerCase(); if	(sorting == null)  sorting = ''; TSort_Store.sorting.push(sorting); if	((sorting != null)&&(sorting != '')) { node.innerHTML = \"<a href='' onClick=\\\"tsDraw(\" + i + \",'\" + table_id + \"'); return false\\\">\" + node.innerHTML + '</a><b><span id=\"TS_' + i + '_' + table_id + '\"></span></b>'; node.style.cursor = \"pointer\"; } } var tbody = table.getElementsByTagName('tbody')[0]; var rows = tbody.getElementsByTagName('tr'); var date = new Date (); var len, text, a; for (i = 0; i < rows.length; i++) { var row = rows[i]; var cols = row.getElementsByTagName('td'); var row_data = []; for (j = 0; j < cols.length; j++) { text = cols[j].innerHTML.replace(/^\s+/, ''); text = text.replace(/\s+$/, ''); var sorting = TSort_Store.sorting[j]; if	(sorting == 'h') { text = text.replace(/<[^>]+>/g, ''); text = text.toLowerCase(); } else if	(sorting == 's') text = text.toLowerCase(); else if (sorting == 'i') { text = parseInt(text); if	(isNaN(text))	text = 0; } else if (sorting == 'n') { text = text.replace(/(\d)\,(?=\d\d\d)/g, \"$1\"); text = parseInt(text); if	(isNaN(text))	text = 0; } else if (sorting == 'f') { text = parseFloat(text); if	(isNaN(text))	text = 0; } else if (sorting == 'g') { text = text.replace(/(\d)\,(?=\d\d\d)/g, \"$1\"); text = parseFloat(text); if	(isNaN(text))	text = 0; } else if (sorting == 'd') { if	(text.match(/^\d\d\d\d\-\d\d?\-\d\d?(?: \d\d?:\d\d?:\d\d?)?$/)) { a = text.split (/[\s\-:]/); text = (a[3] == null)? Date.UTC(a[0], a[1] - 1, a[2],    0,    0,    0, 0): Date.UTC(a[0], a[1] - 1, a[2], a[3], a[4], a[5], 0); } else text = Date.parse(text); } row_data.push(text); } TSort_Store.rows.push(row_data); var new_row = row.cloneNode(true); new_row.tsort_row_id = i; TSort_Store.row_clones[i] = new_row; } TSort_Store.initialized = 1; if	(TSort_Store.cookie) { var allc = document.cookie; i = allc.indexOf (TSort_Store.cookie + '='); if	(i != -1) { i += TSort_Store.cookie.length + 1; len = allc.indexOf (\";\", i); text = decodeURIComponent (allc.substring (i, (len == -1)? allc.length: len)); TSort_Store.initial = (text == '')? null: text.split(/\s*,\s*/); } } var	initial = TSort_Store.initial; if	(initial != null) { var itype = typeof initial; if	((itype == 'number')||(itype == 'string')) tsDraw(initial); else { for (i = initial.length - 1; i >= 0; i--) tsDraw(initial[i]); } } }
+function tsDraw(p_id, p_table) { if	(p_table != null) tsSetTable (p_table); if	((TSort_Store == null)||(TSort_Store.initialized == 0)) return; var i = 0; var sort_keys = TSort_Store.sort_keys; var id; var new_order = ''; if	(p_id != null) { if	(typeof p_id == 'number') id = p_id; else	if	((typeof p_id == 'string')&&(p_id.match(/^\d+[ADU]$/i))) { id = p_id.replace(/^(\d+)[ADU]$/i, \"$1\"); new_order = p_id.replace(/^\d+([ADU])$/i, \"$1\").toUpperCase(); } } if	(id == null) { id = this.tsort_col_id; if	((p_table == null)&&(this.tsort_table_id != null)) tsSetTable (this.tsort_table_id); } var table_id = TSort_Data[0]; var order = TSort_Store.sort_state[id]; if	(new_order == 'U') { if	(order != null) { TSort_Store.sort_state[id] = null; obj = document.getElementById ('TS_' + id + '_' + table_id); if	(obj != null)	obj.innerHTML = ''; } } else if	(new_order != '') { TSort_Store.sort_state[id] = (new_order == 'A')? true: false; sort_keys.unshift(id); i = 1; } else { if	((order == null)||(order == true)) { TSort_Store.sort_state[id] = (order == null)? true: false; sort_keys.unshift(id); i = 1; } else { TSort_Store.sort_state[id] = null; obj = document.getElementById ('TS_' + id + '_' + table_id); if	(obj != null)	obj.innerHTML = ''; } } var len = sort_keys.length; while (i < len) { if	(sort_keys[i] == id) { sort_keys.splice(i, 1); len--; break; } i++; } if	(len > 3) { i = sort_keys.pop(); obj = document.getElementById ('TS_' + i + '_' + table_id); if	(obj != null)	obj.innerHTML = ''; TSort_Store.sort_state[i] = null; } TSort_Store.row_clones.sort(tsSort); var new_tbody = document.createElement('tbody'); var row_clones = TSort_Store.row_clones; len = row_clones.length; var classes = TSort_Store.classes; if	(classes == null) { for (i = 0; i < len; i++) new_tbody.appendChild (row_clones[i].cloneNode(true)); } else { var clone; var j = 0; var cl_len = classes.length; for (i = 0; i < len; i++) { clone = row_clones[i].cloneNode(true); clone.className = classes[j++]; if	(j >= cl_len)  j = 0; new_tbody.appendChild (clone); } } var table = document.getElementById(table_id); var tbody = table.getElementsByTagName('tbody')[0]; table.removeChild(tbody); table.appendChild(new_tbody); var obj, color, icon, state; len = sort_keys.length; var sorting = new Array (); for (i = 0; i < len; i++) { id = sort_keys[i]; obj = document.getElementById ('TS_' + id + '_' + table_id); if	(obj == null)  continue; state = (TSort_Store.sort_state[id])? 0: 1; icon = TSort_Store.icons[state]; obj.innerHTML = (icon.match(/</))? icon: '<font color=\"' + TSort_Store.sort_colors[i] + '\">' + icon + '</font>'; sorting.push(id + ((state)? 'D': 'A')); } if	(TSort_Store.cookie) { var date = new Date(); date.setTime (date.getTime () + 2592000); document.cookie = TSort_Store.cookie + \"=\" + encodeURIComponent (sorting.join(',')) + \"; expires=\" + date.toGMTString () + \"; path=/\"; } }
+function tsSort(a, b) { var data_a = TSort_Store.rows[a.tsort_row_id]; var data_b = TSort_Store.rows[b.tsort_row_id]; var sort_keys = TSort_Store.sort_keys; var len = sort_keys.length; var id; var type; var order; var result; for (var i = 0; i < len; i++) { id = sort_keys[i]; type = TSort_Store.sorting[id]; var v_a = data_a[id]; var v_b = data_b[id]; if	(v_a == v_b)  continue; if	((type == 'i')||(type == 'f')||(type == 'd')) result = v_a - v_b; else result = (v_a < v_b)? -1: 1; order = TSort_Store.sort_state[id]; return (order)? result: 0 - result; } return (a.tsort_row_id < b.tsort_row_id)? -1: 1; }
+function tsRegister() { if	(TSort_All == null) TSort_All = new Object(); var ts_obj = new TSort_StoreDef(); ts_obj.sort_data = TSort_Data; TSort_Data = null; if	(typeof TSort_Classes != 'undefined') { ts_obj.classes = TSort_Classes; TSort_Classes = null; } if	(typeof TSort_Initial != 'undefined') { ts_obj.initial = TSort_Initial; TSort_Initial = null; } if	(typeof TSort_Cookie != 'undefined') { ts_obj.cookie = TSort_Cookie; TSort_Cookie = null; } if	(typeof TSort_Icons != 'undefined') { ts_obj.icons = TSort_Icons; TSort_Icons = null; } if	(ts_obj.icons == null) ts_obj.icons = new Array (\"\u2193\", \"\u2191\"); TSort_All[ts_obj.sort_data[0]] = ts_obj; }
+function	tsSetTable (p_id) { TSort_Store = TSort_All[p_id]; if	(TSort_Store == null) { alert (\"Cannot set table '\" + p_id + \"' - table is not registered\"); return; } TSort_Data = TSort_Store.sort_data; }
+if	(window.addEventListener) window.addEventListener(\"load\", tsInitOnload, false); else if (window.attachEvent) window.attachEvent (\"onload\", tsInitOnload); else { if ((window.onload_sort_table == null)&&(window.onload != null)) window.onload_sort_table = window.onload; window.onload = tsInitOnload; }
+// End of script code by Gennadiy Shvets
+var TSort_Data = new Array ('my_table', '', 's', 'd', 's', 's', 's', 's', 's');
+tsRegister();
+// -->
+</script>
+<TITLE>$searchterm</TITLE>
+</HEAD>
+<BODY>Index of $folder_to_index";
+
+ 	if( ( -d "$folder_to_index/files" ) or ( -d "$folder_to_index/outlook" ) ) {
+ 		# We are indexing an EXPORT folder
+ 	}
+	print RVT_INDEX "<h1>Outlook / e-mail:</h1>
+<TABLE id=\"my_table\" border=1 rules=all frame=box>
+<THEAD>
+<tr><th width=\"1%\">Item</th><th width=\"10%\">From</th><th width=\"10%\">____________Date____________</th><th width=\"10%\">Subject</th><th width=\"10%\">To</th><th width=\"10%\">Cc</th><th width=\"10%\">Bcc</th><th width=\"10%\">Notes</th></tr>
+</THEAD>
+";
+	find( \&RVT_index_outlook_item, "$folder_to_index" );
+	print RVT_INDEX "</TABLE>";
+	print RVT_INDEX "</BODY>\n</HTML>\n";
 	return 1;
 }
 
@@ -437,10 +497,7 @@ sub RVT_parse_bkf {
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
         close (META);
-#        my $command = 'mtftar < "'.$f.'" | tar xv -C '.$fpath;
-#        `$command`;
     }
-
     return 1;
 }
 
@@ -474,12 +531,21 @@ sub RVT_parse_eml {
 
 			open( EML_ITEM, "<:encoding(UTF-8)", "$f" ) or warn "WARNING: cannot open file $f: $!\n";
 			my $message = '';
-			while( my $line = <EML_ITEM> ) {
+			my $i_am_in_headers = 1;
+			while( my $line = <EML_ITEM> ) { # Read eml. Write headers to RVT_META.
+				$line =~ s/\r\n/\n/; # to handle DOS line endings.
 				$message = $message.$line;
+				if( $i_am_in_headers ) { 
+					print RVT_META $line;
+					if( $line =~ /^$/ ) { $i_am_in_headers = 0 }
+				}
 			}
 			close( EML_ITEM );
-			
 			my $obj = Email::MIME->new($message);
+
+			# Print object headers to RVT_META:
+#			foreach my $k ( $obj->header_names ) { print RVT_META "$k: ".$obj->header($k)."\n" }
+
 			my $from = $obj->header('From');
 			my $to = $obj->header('To');
 			my $cc = $obj->header('Cc');
@@ -487,13 +553,11 @@ sub RVT_parse_eml {
 			my $subject = $obj->header('Subject');
 			my $date = $obj->header('Date');
 			my $flags = '';
-			
-			print "================================================================\nMENSAJE\n";
-			print "Date: $date\n";
-			print "From: $from\n";
-			print "Subject: $subject\n";
-			print "Debug:\n".$obj->debug_structure."\n";
-
+			if( $obj->content_type =~ /^multipart\/mixed/ ) { $flags = 'Has attachments' }
+#print "================================================================\nMENSAJE\n";
+#print "From: $from\n";
+#print "Subject: $subject\n";
+#print "Debug:\n".$obj->debug_structure."\n";
 			# Write RVT_ITEM:
 			$from =~ s/</&lt;/g; $from =~ s/>/&gt;/g;
 			$to =~ s/</&lt;/g; $to =~ s/>/&gt;/g;
@@ -524,6 +588,8 @@ sub RVT_parse_eml {
 			my $msgbody = 0; # we will set this when we reach the first TEXT part.
 			my @parts = ( );
 			if( $obj->content_type =~ /^multipart\/alternative/ ) {
+				# This is to handle messages which consist only of a multipart/alt block.
+				# Its content is the body in different formats.
 				my @alternatives = $obj->parts;
 				my $plain = 0;
 				my $html = 0;
@@ -540,10 +606,10 @@ sub RVT_parse_eml {
 			} else { @parts = $obj->parts } # These are all Email::MIME objects too.
 
 			while( my $part = shift(@parts) ) {
-				print "-- Part:\n";
+#print "-- Part:\n";
 				my $ctype = $part->content_type;
 				my $filename = $part->filename;
-				print "  Content-type: $ctype\n";				
+#print "  Content-type: $ctype\n";				
 				my $is_attach = 0;				
 				if( $ctype =~ /^multipart\/alternative/ ) {
 					# This code does its best at delivering the content in HTML, text, or RTF (in that order).
@@ -566,7 +632,7 @@ sub RVT_parse_eml {
 				elsif( $filename ) { $is_attach = 1 }
 				elsif( ($ctype =~ /^text\//) && (! $msgbody) ) {
 					# This must be the message body
-					print "  This seems to be the message body.\n";
+#print "  This seems to be the message body.\n";
 					if( $ctype =~ /^text\/plain/ ) {
 						$msgbody = $part->body;
 						$msgbody =~ s/\n/<br>\n/g;
@@ -580,35 +646,34 @@ sub RVT_parse_eml {
 				} else {
 					# We will treat it as an attachment.
 					$filename = $part->invent_filename;
+					# Adjustments for certain extensions:
 					if( $ctype =~ /.*\/rtf$/ ) { $filename =~ s/\.dat/.rtf/ }
 					elsif( $ctype =~ /^text\/html/ ) { $filename =~ s/\.dat/.html/ }
 					$is_attach = 1;
 				}
-
+				
+				# Attachments:
 				if( $is_attach ) {
-					print "  This is an ATTACHMENT\n";
-					print "  Filename: $filename\n";
+#print "  Attachment: $filename\n";
 					my $attachfolder = $fpath;
 					$attachfolder =~ s/\.html$/.attach/;
 					mkpath( $attachfolder ); # no "or warn..." to avoid that warning if folder already exists.
-					open( ATTACH, ">:encoding(UTF-8)", "$attachfolder/$filename" ) or warn "WARNING: Cannot open file $attachfolder/$filename: $!";
+					open( ATTACH, ">", "$attachfolder/$filename" ) or warn "WARNING: Cannot open file $attachfolder/$filename: $!";
 					print ATTACH $part->body;
 					close ATTACH;
 					my $string = "$attachfolder/$filename";
+					print RVT_META "Attachment: $string\n";
 					$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
 					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a></td></tr>\n";
 				}
 				
-			}
+			} # end while( $part=shift(@parts) )
 			print RVT_ITEM "</TABLE><br>\n";
-			
 			
 			print RVT_ITEM $msgbody;
 			print RVT_ITEM "	</BODY>\n</HTML>\n";
 			close( RVT_ITEM );
 			close( RVT_META );
-
-
 			$count++;
 		}
 	}
@@ -716,9 +781,8 @@ sub RVT_parse_msg {
 			open (META, ">:encoding(UTF-8)", "$meta") or warn ("WARNING: failed to create output file $meta: $!.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			close (META);
-			open( STDERR, ">>:encoding(UTF-8)", "$meta" ); # Temporary redirection of STDERR to capture messages from Email::Outlook::Message
-			# 2nd parm (1) is VERBOSE. Those error messages are printed to stderr (now RVT_meta):
-			my $mail = new Email::Outlook::Message($f, 1)->to_email_mime->as_string; # Taken from msgconvert.pl by Matijs van Zuijlen (http://www.matijs.net/software/msgconv/)
+			open( STDERR, ">>:encoding(UTF-8)", "$meta" ); # Temp redirection of STDERR to RVT_META, to capture output from Email::Outlook::Message.
+			my $mail = new Email::Outlook::Message( $f )->to_email_mime->as_string; # Taken from msgconvert.pl by Matijs van Zuijlen (http://www.matijs.net/software/msgconv/)
 			close( STDERR ); # End of STDERR redirection.
 			open( RVT_ITEM, ">:encoding(UTF-8)", "$fpath" ) or warn ("WARNING: failed to create output file $fpath: $!.");
 			print RVT_ITEM $mail;
@@ -929,6 +993,13 @@ sub RVT_get_best_source {
 			push( @results, "$source.RVT_metadata" );
 			if( -d "$source.attach" ) { push( @results, "$source.attach" ) }
 			$found = 1;
+		} elsif( $source =~ /.*\/output\/parser\/control\/eml-[0-9]+\/.*/ ) {
+			# The results of the EML parser are also treated differently:
+			$source =~ s/(\/eml-[0-9]+\/eml-[0-9]+).*/\1/;
+			push( @results, "$source.html" );
+			push( @results, "$source.RVT_metadata" );
+			if( -d "$source.attach" ) { push( @results, "$source.attach" ) }
+			$found = 1;
 		} elsif( $source =~ /\/mnt\/p0[0-9]\// ) {
 			push( @results, "$source" );
 			$found = 1;
@@ -947,13 +1018,16 @@ sub RVT_get_source {
 	
 	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/eml-[0-9]*/ ) { $source_type = 'special_eml'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/msg-[0-9]*\/msg-[0-9]*\.eml/ ) { $source_type = 'special_msg'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/rar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/zip-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	else { warn "WARNING: RVT_get_source called on unknown source type: $file\n" }
 	
 	if( $source_type eq 'infolder' ) {
 		$file =~ s/(.*\/output\/parser\/control\/[a-z]*-[0-9]*)\/.*/\1\/RVT_metadata/;
@@ -963,11 +1037,22 @@ sub RVT_get_source {
 			$source = $file;
 			$source =~ s/([0-9]{5})\.attach\/[^\/]*$/\1.html/;
 			$got_source = 1;
-		}
-		else {
+		} else { # Point to RVT_META on top pst-XX folder, which indicates the source.
 			$file =~ s/(.*\/output\/parser\/control\/pff-[0-9]*)\..*/\1.RVT_metadata/;
 			$source_type = 'infile';
 		}
+	} elsif( $source_type eq 'special_eml' ) {
+		if( $file =~ /eml-[0-9]+\.attach\/[^\/]*$/ ) { # If an attachment, point its parent.
+			$source = $file;
+			$source =~ s/(eml-[0-9]+)\.attach\/[^\/]*$/\1.html/;
+			$got_source = 1;
+		} else { # Point to the RVT_META for this particular EML, which indicates the source.
+			$file =~ s/(.*\/output\/parser\/control\/eml-[0-9]+\/eml-[0-9]+)\..*/\1.RVT_metadata/;
+			$source_type = 'infile';
+		}
+	} elsif( $source_type eq 'special_msg' ) {
+		$file =~ s/\.eml$/.RVT_metadata/;
+		$source_type = 'infile';
 	}
 	
 	if( $source_type eq 'infile' ) {
@@ -1019,6 +1104,41 @@ sub RVT_get_unique_filename ($$) {
 
 
 
+sub RVT_index_outlook_item {
+# WARNING!!! This function is to be called ONLY from within RVT_create_index.
+# $folder_to_index and RVT_INDEX are expected to be initialized.
+	return if ( -d ); # We only want to act on FILES.
+	our $folder_to_index;
+	if( ($File::Find::name =~ /.*\/[A-Z][a-z]+[0-9]{5}.html/) or ($File::Find::name =~ /.*\/eml-[0-9]+.html/) ) {
+		open( ITEM, "<:encoding(UTF-8)", $File::Find::name );
+		my $line = <ITEM>;
+		close ITEM;
+		chomp( $line );
+		$line =~ s/^[^#]*#//;
+		$line =~ s/#-->$//;
+		$line =~ s/#/<\/td><td>/g;
+		my $item_type;
+		if( $File::Find::name =~ /.*\/eml-[0-9]+.html/) { $item_type = 'Message' }
+		else {
+			$item_type = basename( $File::Find::name );
+			$item_type =~ s/[0-9]{5}.*//;
+		}
+		my $path = $File::Find::name;
+		$path =~ s/$folder_to_index\/?//; # make paths relative.	
+		print RVT_INDEX "<tr><td><a href=\"file:$path\" target=\"_blank\">$item_type</a><td>$line</td></tr>\n";
+	}
+	return 1;
+}
+
+
+
+sub RVT_index_regular_item {
+	
+	return 1;
+}
+
+
+
 sub RVT_sanitize_libpff_attachment {
 # WARNING!!! This function is to be called ONLY from within RVT_sanitize_libpff_item.
 # File descriptors RVT_META and RVT_ITEM are expected to be open when entering this sub,
@@ -1039,6 +1159,7 @@ sub RVT_sanitize_libpff_attachment {
 		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
 	}
+	return 1;
 }
 
 
@@ -1243,8 +1364,7 @@ sub RVT_sanitize_libpff_item {
 	if( $field_values{'Flags'} eq '0x00000001 (Read)' ) { undef $field_values{'Flags'} }
 	else { $field_values{'Flags'} =~ s/.*Read, (.*)\)/\1/ }
 	# Write RVT_ITEM:
-	print RVT_ITEM "<HTML>
-<!--#$field_values{'Sender name'}#$field_values{'Client submit time'}#$field_values{'Subject'}#$to#$cc#$bcc#$field_values{'Flags'}#-->
+	print RVT_ITEM "<HTML><!--#$field_values{'Sender name'}#$field_values{'Client submit time'}#$field_values{'Subject'}#$to#$cc#$bcc#$field_values{'Flags'}#-->
 <HEAD>
 	<TITLE>
 		$field_values{'Subject'}
