@@ -685,6 +685,7 @@ sub RVT_parse_eml {
 					my $string = "$attachfolder/$filename";
 					print RVT_META "Attachment: $string\n";
 					$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
+					$string =~ s/#/%23/g;
 					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a></td></tr>\n";
 				}
 				
@@ -1191,12 +1192,14 @@ sub RVT_sanitize_libpff_attachment {
 		print RVT_META "Attachment: $File::Find::name\n";
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
+		$string =~ s/#/%23/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
 	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*Message00001.html/ )  {
 		my $string = $File::Find::name;
 		print RVT_META "Attachment: $File::Find::name\n";
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
+		$string =~ s/#/%23/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
 	}
 	return 1;
