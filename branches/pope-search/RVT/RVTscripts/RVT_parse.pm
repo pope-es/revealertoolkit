@@ -1197,15 +1197,17 @@ sub RVT_index_regular_file {
 	( my $basename = basename($File::Find::name) ) =~ s/(.*)\.[^.]{1,16}$/\1/;
 	( my $ext = uc(basename($File::Find::name)) ) =~ s/.*\.([^.]{1,16})$/.\1/;
 	
-	open( ORIGIN, "<:encoding(UTF-8)", $File::Find::name.".RVT_metadata" );
-	my $folder = <ORIGIN>;
-	close ORIGIN;
-	$folder =~ s/^.*\/[0-9]{6}-([0-9]{2}-[0-9]\/mnt\/p[0-9]{2}\/.*$)/\1/;
-	
-	my $size = -s "$File::Find::name";
-	my $sb = stat( $File::Find::name );
-	my $mtime = ctime( stat($File::Find::name)->mtime );
-	my $atime = ctime( stat($File::Find::name)->atime );
+	open( SOURCE, "<:encoding(UTF-8)", $File::Find::name.".RVT_metadata" );
+	my $original = <SOURCE>;
+	close SOURCE;
+#	chomp( $folder );
+#	my $original = "$folder/".basename($File::Find::name);
+	( my $folder = $original ) =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9]\/mnt\/p[0-9]{2}\/.*$)/\1/;
+	print "ORIGINAL: $original\n";
+	my $size = stat($original)->size;
+#	my $sb = stat( $File::Find::name );
+	my $atime = ctime( stat($original)->atime );
+	my $mtime = ctime( stat($original)->mtime );
 
 	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"file:$link\" target=\"_blank\">$basename</a></td><td>$ext</td><td>$folder</td><td>$size</td><td>$mtime</td><td>$atime</td><td></td></tr>\n";
 	$count_regular++;
