@@ -50,9 +50,10 @@ echo "<TABLE id=\"my_table\" border=1 rules=all frame=box>" >> $index
 echo "<THEAD>" >> $index
 echo "<tr><th width=\"1%\">Item</th><th width=\"10%\">From</th><th width=\"10%\">____________Date____________</th><th width=\"10%\">Subject</th><th width=\"10%\">To</th><th width=\"10%\">Cc</th><th width=\"10%\">Bcc</th><th width=\"10%\">Notes</th></tr>" >>$index
 echo "</THEAD>" >> $index
-for item in $( find . -type f -regex ".*\/[A-Z][a-z]*[0-9][0-9][0-9][0-9][0-9].html" ); do
+for item in $( find . -type f -regex ".*\/[A-Z][a-z]*[0-9][0-9][0-9][0-9][0-9].html" -or -regex ".*\/eml-[0-9]*.html" ); do
 	item_type="$( echo $item | sed 's/.*\/\([A-Z][a-z]*\)[0-9][0-9][0-9][0-9][0-9].html/\1/g' )"
-	echo "<tr><td><a href=\"file:$item\" target=\"_blank\">$item_type</a></td><td>$(head -n 1 "$item" | cut -d\# -f2-8 | sed 's/\([^#]\{120\}\)[^#]*/\1<i>... (more...)<\/i>/g' | sed 's/\#/<\/td><td>/g')</td></tr>" >> $index
+#	echo "<tr><td><a href=\"file:$item\" target=\"_blank\">$item_type</a></td><td>$(head -n 1 "$item" | cut -d\# -f2-8 | sed 's/\([^#]\{120\}\)[^#]*/\1<i>... (more...)<\/i>/g' | sed 's/\#/<\/td><td>/g')</td></tr>" >> $index
+	echo "<tr><td><a href=\"file:$item\" target=\"_blank\">$item_type</a></td><td>$(head -n 1 "$item" | cut -d\# -f2-8 | sed 's/\([^#]\{140\}\)[^#]*/\1<i><u> (...)<\/u><\/i>/g' | sed 's/^\([^#]\{80\}\)[^#]*/\1<i><u> (...)<\/u><\/i>/' | sed 's/\#/<\/td><td>/g')</td></tr>" >> $index
 done
 echo "</TABLE>" >>$index
 echo "</BODY>" >> $index
