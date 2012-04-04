@@ -172,7 +172,7 @@ sub RVT_build_filelists {
 	# Populate the file lists with files with certain extensions:
 	if( -f $File::Find::name ) {
 		# filelist_bkf:
-		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }
+		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# Windows backups
 		# filelist_dbx:
 		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_dbx, $File::Find::name ) }
 		# filelist_eml:
@@ -186,35 +186,46 @@ sub RVT_build_filelists {
 		# filelist_pdf:
 		elsif( $File::Find::name =~ /\.pdf$/i ) { push( @filelist_pdf, $File::Find::name ) }
 		# filelist_pff:
+		elsif( $File::Find::name =~ /\.pab$/i ) { push( @filelist_pff, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.pst$/i ) { push( @filelist_pff, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.ost$/i ) { push( @filelist_pff, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.pab$/i ) { push( @filelist_pff, $File::Find::name ) }
 		# filelist_rar:
 		elsif( $File::Find::name =~ /\.rar$/i ) { push( @filelist_rar, $File::Find::name ) }
 		# filelist_text:
-		elsif( $File::Find::name =~ /\.txt$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.accdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007
+		elsif( $File::Find::name =~ /\.asp$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.bak$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.bat$/i ) { push( @filelist_text, $File::Find::name ) }	# MS-DOS batch file
+		elsif( $File::Find::name =~ /\.cmd$/i ) { push( @filelist_text, $File::Find::name ) }	# MS-DOS batch file
 		elsif( $File::Find::name =~ /\.csv$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.ppt$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.pps$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.rtf$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Word
 		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.asp$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.json$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.log$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.mdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access
+		elsif( $File::Find::name =~ /\.nfo$/i ) { push( @filelist_text, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.php$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.ppt$/i ) { push( @filelist_text, $File::Find::name ) }	# MS PowerPoint
+		elsif( $File::Find::name =~ /\.pps$/i ) { push( @filelist_text, $File::Find::name ) }	# MS PowerPoint
+		elsif( $File::Find::name =~ /\.ps1$/i ) { push( @filelist_text, $File::Find::name ) }	# PowerShell
+		elsif( $File::Find::name =~ /\.rtf$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.tmp$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.txt$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.vbs$/i ) { push( @filelist_text, $File::Find::name ) }	# VisualBasic Script
+		elsif( $File::Find::name =~ /\.wpd$/i ) { push( @filelist_text, $File::Find::name ) }	# Corel WordPerfect
+		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel
 		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }
 		# filelist_zip:
 		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.xlsx$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.pptx$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.ppsx$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Word 2007
+		elsif( $File::Find::name =~ /\.xlsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Excel 2007
+		elsif( $File::Find::name =~ /\.pptx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS PowerPoint 2007
+		elsif( $File::Find::name =~ /\.ppsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS PowerPoint 2007
+		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (text)
+		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (spreadsheet)
+		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (presentation)
+		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (drawing)
 	}
 }
 
@@ -493,7 +504,7 @@ tsRegister();
 	if( $count_outlook ) {
 		print RVT_INDEX "<script type=\"text/javascript\">
 <!--
-var TSort_Data = new Array ('table_outlook', 'h', 's', 'd', 's', 's', 's', 's', 's');
+var TSort_Data = new Array ('table_outlook', 'h', 's', 'd', 's', 's', 's', 's', 's', 's');
 var TSort_Classes = new Array ('row1', 'row2');
 var TSort_Initial = 2;
 tsRegister();
@@ -507,7 +518,7 @@ tsRegister();
 		print RVT_INDEX "<h3>Regular files: $count_regular items</h3>
 <TABLE id=\"table_regular\" border=1 rules=all frame=box>
 <THEAD>
-<tr><th>File name</th><th>ext</th><th>Path</th><th>Size</th><th>Last modified</th><th>Last accessed</th><th>Remarks</th></tr>
+<tr><th>File name</th><th>ext</th><th>Path</th><th>Size</th><th>Last modified</th><th>Last accessed</th><th>Remarks</th><th>Remarks</th></tr>
 </THEAD>
 $buffer_index_regular
 </TABLE>
@@ -518,7 +529,7 @@ $buffer_index_regular
 		print RVT_INDEX "<h3>Outlook / e-mail: $count_outlook items</h3>
 <TABLE id=\"table_outlook\">
 <THEAD>
-<tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th></tr>
+<tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th><th>&nbsp;Attachments&nbsp;</th></tr>
 </THEAD>
 $buffer_index_outlook
 </TABLE>
@@ -1226,7 +1237,7 @@ sub RVT_get_unique_filename ($$) {
 
 sub RVT_index_outlook_item {
 # WARNING!!! This function is to be called ONLY from within RVT_create_index.
-# $folder_to_index, buffer_index_outlook and $count_outlook are expected to be initialized.
+# $folder_to_index, $buffer_index_outlook and $count_outlook are expected to be initialized.
 	return if ( -d ); # We only want to act on FILES.
 	return if ( $File::Find::dir =~ /.*\.attach.*/ ); # messages attached to other messages are not indexed. Their parent messages will be.
 	# however i dunno if EMLs are totally being well parsed
@@ -1249,10 +1260,24 @@ sub RVT_index_outlook_item {
 			$item_type = basename( $File::Find::name );
 			$item_type =~ s/[0-9]{5}.*//;
 		}
-		( my $path = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.	
-		$buffer_index_outlook = $buffer_index_outlook."<tr><td><a href=\"file:$path\" target=\"_blank\">$item_type</a><td>$line</td></tr>\n";
+		( my $path = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.
+		(my $attachpath = $File::Find::name) =~ s/\.html$/.attach/;
+		our $attachments = '';
+		find( \&RVT_index_outlook_attachments, $attachpath );
+		$buffer_index_outlook = $buffer_index_outlook."<tr><td><a href=\"file:$path\" target=\"_blank\">$item_type</a><td>$line</td><td>$attachments</td></tr>\n";
 		$count_outlook++;
 	}
+	return 1;
+}
+
+
+
+sub RVT_index_outlook_attachments {
+# WARNING!!! This function is to be called ONLY from within RVT_index_outlook_item
+# $attachments is expected to be initialized.
+	
+	our $attachments;
+	if( -f $File::Find::name ) { $attachments = $attachments."[".basename($File::Find::name)."] " }
 	return 1;
 }
 
