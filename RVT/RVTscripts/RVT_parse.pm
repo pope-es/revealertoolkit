@@ -95,6 +95,7 @@ sub constructor {
 	my $pffexport = `pffexport -V`;
 	my $unrar = `unrar --help`;
 	my $unzip = `unzip -v`;
+	my $z7 = `7z`; # would Perl support a variable called $7z ?
    
 	if (!$bunzip2) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find bunzip2)'); return }
 	if (!$evtparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
@@ -106,17 +107,19 @@ sub constructor {
 	if (!$pffexport) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pffexport)'); return }
 	if (!$unrar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unrar)'); return }
 	if (!$unzip) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unzip)'); return }
+	if (!$z7) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find 7z)'); return }
 
-
-
-   $main::RVT_requirements{'pffexport'} = $pffexport;
-   $main::RVT_requirements{'pdftotext'} = $pdftotext;
-   $main::RVT_requirements{'mtftar'} = $mtftar;
-   $main::RVT_requirements{'unzip'} = $unzip;
-   $main::RVT_requirements{'unrar'} = $unrar;
-   $main::RVT_requirements{'fstrings'} = $fstrings;
-   $main::RVT_requirements{'lnkparse'} = $lnkparse;
+   $main::RVT_requirements{'bunzip2'} = $bunzip2;
    $main::RVT_requirements{'evtparse'} = $evtparse;
+   $main::RVT_requirements{'fstrings'} = $fstrings;
+   $main::RVT_requirements{'gunzip'} = $gunzip;
+   $main::RVT_requirements{'lnkparse'} = $lnkparse;
+   $main::RVT_requirements{'mtftar'} = $mtftar;
+   $main::RVT_requirements{'pdftotext'} = $pdftotext;
+   $main::RVT_requirements{'pffexport'} = $pffexport;
+   $main::RVT_requirements{'unrar'} = $unrar;
+   $main::RVT_requirements{'unzip'} = $unzip;
+   $main::RVT_requirements{'7z'} = $z7;
 
    $main::RVT_functions{RVT_script_parse_autoparse } = "Parse a disk automagically\n
                                                     script parse autoparse <disk>";
@@ -153,6 +156,7 @@ sub RVT_build_filelists {
 	our @filelist_tar;
 	our @filelist_text;
 	our @filelist_zip;
+	our @filelist_7z;
 
 	# Populate the file lists with files with certain extensions:
 	if( -f $File::Find::name ) {
@@ -284,6 +288,8 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.xltm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (spreadsheet, macro-enabled)
 		elsif( $File::Find::name =~ /\.xltx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (spreadsheet)
 		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }	# ZIP files
+		# filelist_7z:
+		elsif( $File::Find::name =~ /\.7z$/i ) { push( @filelist_7z, $File::Find::name ) }
 	}
 }
 
@@ -328,8 +334,9 @@ sub RVT_parse_everything {
 		our @filelist_pff = ( );
 		our @filelist_rar = ( );
 		our @filelist_tar = ( );
-		our @filelist_zip = ( );
 		our @filelist_text = ( );
+		our @filelist_zip = ( );
+		our @filelist_7z = ( );
 		find( \&RVT_build_filelists, $item );
 
 		# Parse all known file types:
@@ -346,8 +353,9 @@ sub RVT_parse_everything {
 		RVT_parse_pff( $item, $disk );
 		RVT_parse_rar( $item, $disk );
 		RVT_parse_tar( $item, $disk );
-		RVT_parse_zip( $item, $disk );
 		RVT_parse_text( $item, $disk );
+		RVT_parse_zip( $item, $disk );
+		RVT_parse_7z( $item, $disk );
 		
 		# Flag source as parsed.
 		if( $item =~ /.*\/mnt$/ ) { $file = "$parsepath/__mnt_is_parsed.RVT_flag" }
@@ -1286,6 +1294,38 @@ sub RVT_parse_zip {
     return 1;
 }
 
+
+
+sub RVT_parse_7z {
+	my $Z7 = "7z";
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("  Parsing 7z files...\n");
+    foreach my $f ( our @filelist_7z ) {
+    	print "    $f\n";
+        my $fpath = RVT_create_folder($opath, '7z');
+		my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+		print META $output;
+        close (META);
+		if( $output =~ /Wrong password/ ) {
+			( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+			if( ! -d $reportpath ) { mkdir $reportpath };
+			open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
+			print REPORT "$f\n";
+			close( REPORT );
+		}
+    }
+    return 1;
+}
 
 
 
