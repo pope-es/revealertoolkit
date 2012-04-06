@@ -83,48 +83,28 @@ use Time::localtime; # needed by RVT_index_regular_file
 use Mail::Transport::Dbx;
 
 sub constructor {
+
+	my $bunzip2 = `bunzip2 -V 2>&1`;
+	my $evtparse = `evtparse.pl`;
+	my $fstrings = `f-strings -h`;
+	my $gunzip = `gunzip -V`;
+	my $lnkparse = `lnk-parse-1.0.pl`;
+	my $mtftar = `mtftar 2>&1`;
+	my $pdftotext = `pdftotext -v 2>&1`;
+	my $pffexport = `pffexport -V`;
+	my $unrar = `unrar --help`;
+	my $unzip = `unzip -v`;
    
-   my $pdftotext = `pdftotext -v 2>&1`;
-   my $pffexport = `pffexport -V`;
-   my $mtftar = `mtftar 2>&1`;
-   my $unzip = `unzip -v`;
-   my $unrar = `unrar --help`;
-   my $fstrings = `f-strings -h`;
-   my $lnkparse = `lnk-parse-1.0.pl`;
-   my $evtparse = `evtparse.pl`;
-   
-   if (!$pdftotext) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pdftotext)');
-        return;
-   }
-   if (!$pffexport) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pffexport)');
-        return;
-   }
-   if (!$mtftar) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find mtftar)');
-        return;
-   }
-      if (!$unzip) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unzip)');
-        return;
-   }
-      if (!$unrar) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unrar)');
-        return;
-   }
-      if (!$fstrings) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, compile (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)');
-        return;
-   }
-      if (!$lnkparse) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Jacob Cunningham\'s lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
-        return;
-   }
-      if (!$evtparse) {
-        RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)');
-        return;
-   }
+	if (!$bunzip2) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find bunzip2)'); return }
+	if (!$evtparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
+	if (!$fstrings) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, compile (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)'); return }
+	if (!$gunzip) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find gunzip)'); return }
+	if (!$lnkparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Jacob Cunningham\'s lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
+	if (!$mtftar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find mtftar)'); return }
+	if (!$pdftotext) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pdftotext)'); return }
+	if (!$pffexport) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pffexport)'); return }
+	if (!$unrar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unrar)'); return }
+	if (!$unzip) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unzip)'); return }
 
 
 
@@ -158,6 +138,7 @@ sub RVT_build_filelists {
 
 	# Declare (our) file lists:
 	our @filelist_bkf;
+	our @filelist_bz;
 	our @filelist_dbx;
 	our @filelist_eml;
 	our @filelist_evt;
@@ -167,6 +148,7 @@ sub RVT_build_filelists {
 	our @filelist_pdf;
 	our @filelist_pff;
 	our @filelist_rar;
+	our @filelist_tar;
 	our @filelist_text;
 	our @filelist_zip;
 
@@ -174,6 +156,11 @@ sub RVT_build_filelists {
 	if( -f $File::Find::name ) {
 		# filelist_bkf:
 		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# MS Windows backup
+		# filelist_bz:
+		elsif( $File::Find::name =~ /\.bz$/i ) { push( @filelist_bz, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.bz2$/i ) { push( @filelist_bz, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.tbz$/i ) { push( @filelist_bz, $File::Find::name ) }		# .tar.bz
+		elsif( $File::Find::name =~ /\.tbz2$/i ) { push( @filelist_bz, $File::Find::name ) }	# .tar.bz2
 		# filelist_dbx:
 		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_dbx, $File::Find::name ) }
 		# filelist_eml:
@@ -195,6 +182,8 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.ost$/i ) { push( @filelist_pff, $File::Find::name ) }
 		# filelist_rar:
 		elsif( $File::Find::name =~ /\.rar$/i ) { push( @filelist_rar, $File::Find::name ) }
+		# filelist_tar:
+		elsif( $File::Find::name =~ /\.tar$/i ) { push( @filelist_tar, $File::Find::name ) }
 		# filelist_text:
 		elsif( $File::Find::name =~ /\.accdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 database
 		elsif( $File::Find::name =~ /\.accde$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 "execute-only" database
@@ -323,6 +312,7 @@ sub RVT_parse_everything {
 
 		# Initialize file lists:
 		our @filelist_bkf = ( );
+		our @filelist_bz = ( );
 		our @filelist_dbx = ( );
 		our @filelist_eml = ( );
 		our @filelist_evt = ( );
@@ -332,12 +322,14 @@ sub RVT_parse_everything {
 		our @filelist_pdf = ( );
 		our @filelist_pff = ( );
 		our @filelist_rar = ( );
+		our @filelist_tar = ( );
 		our @filelist_zip = ( );
 		our @filelist_text = ( );
 		find( \&RVT_build_filelists, $item );
 
 		# Parse all known file types:
 		RVT_parse_bkf( $item, $disk );
+		RVT_parse_bz( $item, $disk );
 		RVT_parse_dbx( $item, $disk );
 		RVT_parse_eml( $item, $disk );
 		RVT_parse_evt( $item, $disk );
@@ -347,6 +339,7 @@ sub RVT_parse_everything {
 		RVT_parse_pdf( $item, $disk );
 		RVT_parse_pff( $item, $disk );
 		RVT_parse_rar( $item, $disk );
+		RVT_parse_tar( $item, $disk );
 		RVT_parse_zip( $item, $disk );
 		RVT_parse_text( $item, $disk );
 		
@@ -618,6 +611,7 @@ $buffer_index_outlook
 
 
 sub RVT_parse_bkf {
+	my $MTFTAR = "mtftar";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -628,12 +622,45 @@ sub RVT_parse_bkf {
     mkpath $opath unless (-d $opath);
 
 	printf ("  Parsing BKF files...\n");
-    foreach my $f ( our @listbkf) {
+    foreach my $f ( our @filelist_bkf) {
     	print "    $f\n";
         my $fpath = RVT_create_folder($opath, 'bkf');
-		my $output = `mtftar < "$f" | tar xv -C "$fpath" 2>&1 `;
+		my $output = `$MTFTAR < "$f" | tar x -C "$fpath" 2>&1 `;
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+        print META $output;
+        close (META);
+    }
+    return 1;
+}
+
+
+
+sub RVT_parse_bz {
+	my $BUNZIP2 = "bunzip2";
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("  Parsing bzip / bzip2 files...\n");
+    foreach my $f ( our @filelist_bz ) {
+    	print "    $f\n";
+        my $fpath = RVT_create_folder($opath, 'bz');
+        my $basename = basename( $f );
+        my $target = $basename;
+        if( $basename =~ /\.bz2?$/ ) { $target =~ s/\.bz2?$// }
+        elsif( $basename =~ /\.tbz2?$/ ) { $target =~ s/\.tbz2?$/.tar/ }
+        #else {  }
+
+        my $output = `cat "$f" | $BUNZIP2 > "$fpath/$target" `;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+		print META $output;
         close (META);
     }
     return 1;
@@ -665,7 +692,7 @@ sub RVT_parse_dbx {
 		(my $count = $fpath) =~ s/.*-([0-9]*).eml$/\1/;
 		# Code taken from dbx2eml by Colin Moller - http://code.google.com/p/dbx2eml
 		my $dbx = eval { Mail::Transport::Dbx->new("$f") };
-	    if( $@ ) { warn $@; next }
+	    if( $@ ) { warn "$@: $!\n"; next }
 
 		if ( $dbx->emails ) {
 			for my $eml ($dbx->emails) {
@@ -915,6 +942,7 @@ sub RVT_parse_evt {
 
 
 sub RVT_parse_gz {
+	my $GUNZIP = "gunzip";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -924,7 +952,7 @@ sub RVT_parse_gz {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing gzipped files...\n");
+	printf ("  Parsing GZ files...\n");
     foreach my $f ( our @filelist_gz ) {
     	print "    $f\n";
         my $fpath = RVT_create_folder($opath, 'gz');
@@ -934,8 +962,7 @@ sub RVT_parse_gz {
         elsif( $basename =~ /\.tgz$/ ) { $target =~ s/\.tgz$/.tar/ }
         #else {  }
 
-        my $output = `cat "$f" | gunzip > "$fpath/$target" `;
-# XX		my $output = `unzip -P password "$f" -d "$fpath" 2>&1`;
+        my $output = `cat "$f" | $GUNZIP > "$fpath/$target" `;
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 		print META $output;
@@ -1030,6 +1057,7 @@ sub RVT_parse_msg {
 
 
 sub RVT_parse_pdf {
+	my $PDFTOTEXT = "pdftotext";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -1047,7 +1075,7 @@ sub RVT_parse_pdf {
 		foreach my $f ( our @filelist_pdf ) {
 			print "    $f\n";
 			$fpath = "$pdfpath/pdf-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			my $output = `pdftotext "$f" - 2>&1`;
+			my $output = `$PDFTOTEXT "$f" - 2>&1`;
 			open (META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
@@ -1068,6 +1096,7 @@ sub RVT_parse_pdf {
 
 
 sub RVT_parse_pff {
+	my $PFFEXPORT = "pffexport";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -1085,7 +1114,7 @@ sub RVT_parse_pff {
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
         close (META);
         $fpath =~ s/.RVT_metadata//; 
-        my @args = ('pffexport', '-f', 'text', '-m', 'all', '-q', '-t', "$fpath", $f); # -f text and -m all are in fact default options.
+        my @args = ("$PFFEXPORT", '-f', 'text', '-m', 'all', '-q', '-t', "$fpath", $f); # -f text and -m all are in fact default options.
         system(@args);        
         foreach my $mode ('export','orphan','recovered') { finddepth( \&RVT_sanitize_libpff_item, "$fpath.$mode" ) }
     }
@@ -1095,6 +1124,7 @@ sub RVT_parse_pff {
 
 
 sub RVT_parse_rar {
+	my $UNRAR = "unrar";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -1108,7 +1138,7 @@ sub RVT_parse_rar {
     foreach my $f ( our @filelist_rar ) {
     	print "    $f\n";
         my $fpath = RVT_create_folder($opath, 'rar');
-		my $output = `unrar x -ppassword "$f" "$fpath" 2>&1`;
+		my $output = `$UNRAR x -ppassword "$f" "$fpath" 2>&1`;
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 		print META $output;
@@ -1126,7 +1156,34 @@ sub RVT_parse_rar {
 
 
 
+sub RVT_parse_tar {
+	my $TAR = "tar";
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+
+	printf ("  Parsing TAR files...\n");
+    foreach my $f ( our @filelist_tar) {
+    	print "    $f\n";
+        my $fpath = RVT_create_folder($opath, 'tar');
+		my $output = `$TAR xf "$f" -C "$fpath" 2>&1 `;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+        print META $output;
+        close (META);
+    }
+    return 1;
+}
+
+
+
 sub RVT_parse_text {
+	my $FSTRINGS = "f-strings";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -1135,14 +1192,13 @@ sub RVT_parse_text {
 	my $morguepath = RVT_get_morguepath($disk);
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control/text';
     mkpath $opath unless (-d $opath);
-	my $FSTRINGS = "f-strings";
 
 	printf ("  Parsing text files...\n");
 	my $fpath = RVT_create_file($opath, 'text', 'txt');
 	( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
 	foreach my $f (our @filelist_text) {
 		$fpath = "$opath/text-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-		my $normalized = `echo "$f" | f-strings`;
+		my $normalized = `echo "$f" | $FSTRINGS`;
 		chomp ($normalized);
 
 		open (FTEXT, "-|", "$FSTRINGS", "$f") or die ("ERROR: Failed to open input file $f\n");
@@ -1161,6 +1217,7 @@ sub RVT_parse_text {
 
 
 sub RVT_parse_zip {
+	my $UNZIP = "unzip";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -1174,7 +1231,7 @@ sub RVT_parse_zip {
     foreach my $f ( our @filelist_zip ) {
     	print "    $f\n";
         my $fpath = RVT_create_folder($opath, 'zip');
-		my $output = `unzip -P password "$f" -d "$fpath" 2>&1`;
+		my $output = `$UNZIP -P password "$f" -d "$fpath" 2>&1`;
         open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
         print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 		print META $output;
@@ -1252,6 +1309,7 @@ sub RVT_get_source {
 	
 	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/bz-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/dbx-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/eml-[0-9]*/ ) { $source_type = 'special_eml'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
@@ -1261,6 +1319,7 @@ sub RVT_get_source {
 	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/rar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/tar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/zip-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	else { warn "WARNING: RVT_get_source called on unknown source type: $file\n" }
