@@ -172,7 +172,7 @@ sub RVT_build_filelists {
 	# Populate the file lists with files with certain extensions:
 	if( -f $File::Find::name ) {
 		# filelist_bkf:
-		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# Windows backups
+		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# MS Windows backup
 		# filelist_dbx:
 		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_dbx, $File::Find::name ) }
 		# filelist_eml:
@@ -192,40 +192,101 @@ sub RVT_build_filelists {
 		# filelist_rar:
 		elsif( $File::Find::name =~ /\.rar$/i ) { push( @filelist_rar, $File::Find::name ) }
 		# filelist_text:
-		elsif( $File::Find::name =~ /\.accdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007
-		elsif( $File::Find::name =~ /\.asp$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.bak$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.accdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 database
+		elsif( $File::Find::name =~ /\.accde$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 "execute-only" database
+		elsif( $File::Find::name =~ /\.accdr$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 database "runtime"
+		elsif( $File::Find::name =~ /\.accdt$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 database template
+		elsif( $File::Find::name =~ /\.asp$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
+		elsif( $File::Find::name =~ /\.bak$/i ) { push( @filelist_text, $File::Find::name ) }	# Typical MS-DOS backup file
 		elsif( $File::Find::name =~ /\.bat$/i ) { push( @filelist_text, $File::Find::name ) }	# MS-DOS batch file
 		elsif( $File::Find::name =~ /\.cmd$/i ) { push( @filelist_text, $File::Find::name ) }	# MS-DOS batch file
-		elsif( $File::Find::name =~ /\.csv$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Word
-		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.json$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.log$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.mdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access
-		elsif( $File::Find::name =~ /\.nfo$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.php$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.ppt$/i ) { push( @filelist_text, $File::Find::name ) }	# MS PowerPoint
-		elsif( $File::Find::name =~ /\.pps$/i ) { push( @filelist_text, $File::Find::name ) }	# MS PowerPoint
+		elsif( $File::Find::name =~ /\.csv$/i ) { push( @filelist_text, $File::Find::name ) }	# CSV, comma-separated values
+		elsif( $File::Find::name =~ /\.dbf$/i ) { push( @filelist_text, $File::Find::name ) }	# dBASE
+		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Word document
+		elsif( $File::Find::name =~ /\.fodb$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (database)
+		elsif( $File::Find::name =~ /\.fodc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (chart)
+		elsif( $File::Find::name =~ /\.fodf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (formula)
+		elsif( $File::Find::name =~ /\.fodg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (graphics/drawing)
+		elsif( $File::Find::name =~ /\.fodi$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (image)
+		elsif( $File::Find::name =~ /\.fodm$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (master document)
+		elsif( $File::Find::name =~ /\.fodp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (presentation)
+		elsif( $File::Find::name =~ /\.fods$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (spreadsheet)
+		elsif( $File::Find::name =~ /\.fodt$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (text)
+		elsif( $File::Find::name =~ /\.fotc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (chart)
+		elsif( $File::Find::name =~ /\.fotf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (formula)
+		elsif( $File::Find::name =~ /\.fotg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (graphics/drawing)
+		elsif( $File::Find::name =~ /\.foth$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (web page)
+		elsif( $File::Find::name =~ /\.foti$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (image)
+		elsif( $File::Find::name =~ /\.fotp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (presentation)
+		elsif( $File::Find::name =~ /\.fots$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (spreadsheet)
+		elsif( $File::Find::name =~ /\.fott$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (text)
+		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
+		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
+		elsif( $File::Find::name =~ /\.json$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
+		elsif( $File::Find::name =~ /\.log$/i ) { push( @filelist_text, $File::Find::name ) }	# Log files
+		elsif( $File::Find::name =~ /\.mdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access database
+		elsif( $File::Find::name =~ /\.nfo$/i ) { push( @filelist_text, $File::Find::name ) }	# Usually text files
+		elsif( $File::Find::name =~ /\.php$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
+		elsif( $File::Find::name =~ /\.ppt$/i ) { push( @filelist_text, $File::Find::name ) }	# MS PowerPoint presentation
+		elsif( $File::Find::name =~ /\.pps$/i ) { push( @filelist_text, $File::Find::name ) }	# MS PowerPoint presentation show
 		elsif( $File::Find::name =~ /\.ps1$/i ) { push( @filelist_text, $File::Find::name ) }	# PowerShell
-		elsif( $File::Find::name =~ /\.rtf$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.tmp$/i ) { push( @filelist_text, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.txt$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.rtf$/i ) { push( @filelist_text, $File::Find::name ) }	# RTF, rich text format
+		elsif( $File::Find::name =~ /\.tmp$/i ) { push( @filelist_text, $File::Find::name ) }	# Temp files
+		elsif( $File::Find::name =~ /\.txt$/i ) { push( @filelist_text, $File::Find::name ) }	# Text files
+		elsif( $File::Find::name =~ /\.uof$/i ) { push( @filelist_text, $File::Find::name ) }	# Unified Office Format -- these are XML
+		elsif( $File::Find::name =~ /\.uop$/i ) { push( @filelist_text, $File::Find::name ) }	# Unified Office Format presentation
+		elsif( $File::Find::name =~ /\.uos$/i ) { push( @filelist_text, $File::Find::name ) }	# Unified Office Format spreadsheet
+		elsif( $File::Find::name =~ /\.uot$/i ) { push( @filelist_text, $File::Find::name ) }	# Unified Office Format text
 		elsif( $File::Find::name =~ /\.vbs$/i ) { push( @filelist_text, $File::Find::name ) }	# VisualBasic Script
 		elsif( $File::Find::name =~ /\.wpd$/i ) { push( @filelist_text, $File::Find::name ) }	# Corel WordPerfect
-		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel
-		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel spreadsheet
+		elsif( $File::Find::name =~ /\.xlsb$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Excel 2007 binary workbook
+		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }	# XML
 		# filelist_zip:
-		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Word 2007
-		elsif( $File::Find::name =~ /\.xlsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Excel 2007
-		elsif( $File::Find::name =~ /\.pptx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS PowerPoint 2007
-		elsif( $File::Find::name =~ /\.ppsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS PowerPoint 2007
-		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (text)
-		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (spreadsheet)
-		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (presentation)
-		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenDocumentFormat (drawing)
+		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (text)
+		elsif( $File::Find::name =~ /\.docm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (text, macro-enabled document)
+		elsif( $File::Find::name =~ /\.dotm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text, macro-enabled)
+		elsif( $File::Find::name =~ /\.dotx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text)
+		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (database)
+		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (chart)
+		elsif( $File::Find::name =~ /\.odf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (formula)
+		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (graphics/drawing)
+		elsif( $File::Find::name =~ /\.odi$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (image)
+		elsif( $File::Find::name =~ /\.odm$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (master document)
+		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (presentation)
+		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (spreadsheet)
+		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (text)
+		elsif( $File::Find::name =~ /\.otc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (chart)
+		elsif( $File::Find::name =~ /\.otf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (formula)
+		elsif( $File::Find::name =~ /\.otg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (graphics/drawing)
+		elsif( $File::Find::name =~ /\.oth$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (web page)
+		elsif( $File::Find::name =~ /\.oti$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (image)
+		elsif( $File::Find::name =~ /\.otp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (presentation)
+		elsif( $File::Find::name =~ /\.ots$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (spreadsheet)
+		elsif( $File::Find::name =~ /\.ott$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (text)
+		elsif( $File::Find::name =~ /\.potx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (presentation)
+		elsif( $File::Find::name =~ /\.potm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (presentation, macro-enabled)
+		elsif( $File::Find::name =~ /\.ppam$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (PowerPoint 2007 macro-enabled add-in)
+		elsif( $File::Find::name =~ /\.pptm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation, macro-enabled document)
+		elsif( $File::Find::name =~ /\.pptx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation)
+		elsif( $File::Find::name =~ /\.ppsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation show)
+		elsif( $File::Find::name =~ /\.ppsm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation show, macro-enabled document)
+		elsif( $File::Find::name =~ /\.stc$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (spreadsheet)
+		elsif( $File::Find::name =~ /\.std$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (graphics/drawing)
+		elsif( $File::Find::name =~ /\.sti$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (presentation)
+		elsif( $File::Find::name =~ /\.stw$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (text)
+		elsif( $File::Find::name =~ /\.sxc$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (spreadsheet)
+		elsif( $File::Find::name =~ /\.sxd$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (graphics/drawing)
+		elsif( $File::Find::name =~ /\.sxg$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (master document)
+		elsif( $File::Find::name =~ /\.sxi$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (presentation)
+		elsif( $File::Find::name =~ /\.sxm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (formula)
+		elsif( $File::Find::name =~ /\.sxw$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (text)
+		elsif( $File::Find::name =~ /\.xlam$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (MS Excel 2007 macro-enabled add-in)
+		elsif( $File::Find::name =~ /\.xlsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (spreadsheet)
+		elsif( $File::Find::name =~ /\.xlsm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (spreadsheet, macro-enabled document)
+		elsif( $File::Find::name =~ /\.xltm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (spreadsheet, macro-enabled)
+		elsif( $File::Find::name =~ /\.xltx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (spreadsheet)
+		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }	# ZIP files
 	}
 }
 
@@ -1153,6 +1214,7 @@ sub RVT_get_source {
 	
 	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/dbx-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/eml-[0-9]*/ ) { $source_type = 'special_eml'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
