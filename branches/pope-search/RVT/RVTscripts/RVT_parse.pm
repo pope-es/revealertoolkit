@@ -248,6 +248,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.docm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (text, macro-enabled document)
 		elsif( $File::Find::name =~ /\.dotm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text, macro-enabled)
 		elsif( $File::Find::name =~ /\.dotx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text)
+		elsif( $File::Find::name =~ /\.jar$/i ) { push( @filelist_zip, $File::Find::name ) }	# Java ARchive
 		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (database)
 		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (chart)
 		elsif( $File::Find::name =~ /\.odf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (formula)
@@ -289,6 +290,15 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.xltx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (spreadsheet)
 		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }	# ZIP files
 		# filelist_7z:
+		elsif( $File::Find::name =~ /\.cab$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.cpio$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.dmg$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.hfs$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.iso$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.lha$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.lzh$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.rpm$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.xz$/i ) { push( @filelist_7z, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.7z$/i ) { push( @filelist_7z, $File::Find::name ) }
 	}
 }
