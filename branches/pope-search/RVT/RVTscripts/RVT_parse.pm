@@ -161,6 +161,7 @@ sub RVT_build_filelists {
 	our @filelist_dbx;
 	our @filelist_eml;
 	our @filelist_evt;
+	our @filelist_gz;
 	our @filelist_lnk;
 	our @filelist_msg;
 	our @filelist_pdf;
@@ -179,6 +180,9 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.eml$/i ) { push( @filelist_eml, $File::Find::name ) }
 		# filelist_evt:
 		elsif( $File::Find::name =~ /\.evt$/i ) { push( @filelist_evt, $File::Find::name ) }
+		# filelist_gz:
+		elsif( $File::Find::name =~ /\.gz$/i ) { push( @filelist_gz, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.tgz$/i ) { push( @filelist_gz, $File::Find::name ) }		# .tar.gz
 		# filelist_lnk:
 		elsif( $File::Find::name =~ /\.lnk$/i ) { push( @filelist_lnk, $File::Find::name ) }
 		# filelist_msg:
@@ -203,23 +207,23 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.csv$/i ) { push( @filelist_text, $File::Find::name ) }	# CSV, comma-separated values
 		elsif( $File::Find::name =~ /\.dbf$/i ) { push( @filelist_text, $File::Find::name ) }	# dBASE
 		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Word document
-		elsif( $File::Find::name =~ /\.fodb$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (database)
-		elsif( $File::Find::name =~ /\.fodc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (chart)
-		elsif( $File::Find::name =~ /\.fodf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (formula)
-		elsif( $File::Find::name =~ /\.fodg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (graphics/drawing)
-		elsif( $File::Find::name =~ /\.fodi$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (image)
-		elsif( $File::Find::name =~ /\.fodm$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (master document)
-		elsif( $File::Find::name =~ /\.fodp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (presentation)
-		elsif( $File::Find::name =~ /\.fods$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (spreadsheet)
-		elsif( $File::Find::name =~ /\.fodt$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format flat (text)
-		elsif( $File::Find::name =~ /\.fotc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (chart)
-		elsif( $File::Find::name =~ /\.fotf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (formula)
-		elsif( $File::Find::name =~ /\.fotg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (graphics/drawing)
-		elsif( $File::Find::name =~ /\.foth$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (web page)
-		elsif( $File::Find::name =~ /\.foti$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (image)
-		elsif( $File::Find::name =~ /\.fotp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (presentation)
-		elsif( $File::Find::name =~ /\.fots$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (spreadsheet)
-		elsif( $File::Find::name =~ /\.fott$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template flat (text)
+		elsif( $File::Find::name =~ /\.fodb$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (database)
+		elsif( $File::Find::name =~ /\.fodc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (chart)
+		elsif( $File::Find::name =~ /\.fodf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (formula)
+		elsif( $File::Find::name =~ /\.fodg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (graphics/drawing)
+		elsif( $File::Find::name =~ /\.fodi$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (image)
+		elsif( $File::Find::name =~ /\.fodm$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (master document)
+		elsif( $File::Find::name =~ /\.fodp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (presentation)
+		elsif( $File::Find::name =~ /\.fods$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (spreadsheet)
+		elsif( $File::Find::name =~ /\.fodt$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (text)
+		elsif( $File::Find::name =~ /\.fotc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (chart)
+		elsif( $File::Find::name =~ /\.fotf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (formula)
+		elsif( $File::Find::name =~ /\.fotg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (graphics/drawing)
+		elsif( $File::Find::name =~ /\.foth$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (web page)
+		elsif( $File::Find::name =~ /\.foti$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (image)
+		elsif( $File::Find::name =~ /\.fotp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (presentation)
+		elsif( $File::Find::name =~ /\.fots$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (spreadsheet)
+		elsif( $File::Find::name =~ /\.fott$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (text)
 		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.json$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
@@ -231,7 +235,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.pps$/i ) { push( @filelist_text, $File::Find::name ) }	# MS PowerPoint presentation show
 		elsif( $File::Find::name =~ /\.ps1$/i ) { push( @filelist_text, $File::Find::name ) }	# PowerShell
 		elsif( $File::Find::name =~ /\.rtf$/i ) { push( @filelist_text, $File::Find::name ) }	# RTF, rich text format
-		elsif( $File::Find::name =~ /\.tmp$/i ) { push( @filelist_text, $File::Find::name ) }	# Temp files
+		elsif( $File::Find::name =~ /\.tmp$/i ) { push( @filelist_text, $File::Find::name ) }	# Temporary files, hopefully will contain text strings
 		elsif( $File::Find::name =~ /\.txt$/i ) { push( @filelist_text, $File::Find::name ) }	# Text files
 		elsif( $File::Find::name =~ /\.uof$/i ) { push( @filelist_text, $File::Find::name ) }	# Unified Office Format -- these are XML
 		elsif( $File::Find::name =~ /\.uop$/i ) { push( @filelist_text, $File::Find::name ) }	# Unified Office Format presentation
@@ -247,23 +251,23 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.docm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (text, macro-enabled document)
 		elsif( $File::Find::name =~ /\.dotm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text, macro-enabled)
 		elsif( $File::Find::name =~ /\.dotx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text)
-		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (database)
-		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (chart)
-		elsif( $File::Find::name =~ /\.odf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (formula)
-		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (graphics/drawing)
-		elsif( $File::Find::name =~ /\.odi$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (image)
-		elsif( $File::Find::name =~ /\.odm$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (master document)
-		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (presentation)
-		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (spreadsheet)
-		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document Format (text)
-		elsif( $File::Find::name =~ /\.otc$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (chart)
-		elsif( $File::Find::name =~ /\.otf$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (formula)
-		elsif( $File::Find::name =~ /\.otg$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (graphics/drawing)
-		elsif( $File::Find::name =~ /\.oth$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (web page)
-		elsif( $File::Find::name =~ /\.oti$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (image)
-		elsif( $File::Find::name =~ /\.otp$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (presentation)
-		elsif( $File::Find::name =~ /\.ots$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (spreadsheet)
-		elsif( $File::Find::name =~ /\.ott$/i ) { push( @filelist_zip, $File::Find::name ) }	# Open Document template (text)
+		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (database)
+		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (chart)
+		elsif( $File::Find::name =~ /\.odf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (formula)
+		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (graphics/drawing)
+		elsif( $File::Find::name =~ /\.odi$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (image)
+		elsif( $File::Find::name =~ /\.odm$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (master document)
+		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (presentation)
+		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (spreadsheet)
+		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (text)
+		elsif( $File::Find::name =~ /\.otc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (chart)
+		elsif( $File::Find::name =~ /\.otf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (formula)
+		elsif( $File::Find::name =~ /\.otg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (graphics/drawing)
+		elsif( $File::Find::name =~ /\.oth$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (web page)
+		elsif( $File::Find::name =~ /\.oti$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (image)
+		elsif( $File::Find::name =~ /\.otp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (presentation)
+		elsif( $File::Find::name =~ /\.ots$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (spreadsheet)
+		elsif( $File::Find::name =~ /\.ott$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (text)
 		elsif( $File::Find::name =~ /\.potx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (presentation)
 		elsif( $File::Find::name =~ /\.potm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (presentation, macro-enabled)
 		elsif( $File::Find::name =~ /\.ppam$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (PowerPoint 2007 macro-enabled add-in)
@@ -322,6 +326,7 @@ sub RVT_parse_everything {
 		our @filelist_dbx = ( );
 		our @filelist_eml = ( );
 		our @filelist_evt = ( );
+		our @filelist_gz = ( );
 		our @filelist_lnk = ( );
 		our @filelist_msg = ( );
 		our @filelist_pdf = ( );
@@ -336,6 +341,7 @@ sub RVT_parse_everything {
 		RVT_parse_dbx( $item, $disk );
 		RVT_parse_eml( $item, $disk );
 		RVT_parse_evt( $item, $disk );
+		RVT_parse_gz( $item, $disk );
 		RVT_parse_lnk( $item, $disk );
 		RVT_parse_msg( $item, $disk );
 		RVT_parse_pdf( $item, $disk );
@@ -908,6 +914,38 @@ sub RVT_parse_evt {
 
 
 
+sub RVT_parse_gz {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("  Parsing gzipped files...\n");
+    foreach my $f ( our @filelist_gz ) {
+    	print "    $f\n";
+        my $fpath = RVT_create_folder($opath, 'gz');
+        my $basename = basename( $f );
+        my $target = $basename;
+        if( $basename =~ /\.gz$/ ) { $target =~ s/\.gz$// }
+        elsif( $basename =~ /\.tgz$/ ) { $target =~ s/\.tgz$/.tar/ }
+        #else {  }
+
+        my $output = `cat "$f" | gunzip > "$fpath/$target" `;
+# XX		my $output = `unzip -P password "$f" -d "$fpath" 2>&1`;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+		print META $output;
+        close (META);
+    }
+    return 1;
+}
+
+
+
 sub RVT_parse_lnk {
 	my $LNKPARSE = "lnk-parse-1.0.pl";
     my $folder = shift(@_);
@@ -1217,6 +1255,7 @@ sub RVT_get_source {
 	elsif( $file =~ /.*\/output\/parser\/control\/dbx-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/eml-[0-9]*/ ) { $source_type = 'special_eml'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/gz-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/msg-[0-9]*\/msg-[0-9]*\.eml/ ) { $source_type = 'special_msg'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
