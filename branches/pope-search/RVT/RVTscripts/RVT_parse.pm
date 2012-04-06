@@ -84,6 +84,7 @@ use Mail::Transport::Dbx;
 
 sub constructor {
 
+	my $arj = `arj`;
 	my $bunzip2 = `bunzip2 -V 2>&1`;
 	my $evtparse = `evtparse.pl`;
 	my $fstrings = `f-strings -h`;
@@ -137,6 +138,7 @@ sub constructor {
 sub RVT_build_filelists {
 
 	# Declare (our) file lists:
+	our @filelist_arj;
 	our @filelist_bkf;
 	our @filelist_bz;
 	our @filelist_dbx;
@@ -154,6 +156,8 @@ sub RVT_build_filelists {
 
 	# Populate the file lists with files with certain extensions:
 	if( -f $File::Find::name ) {
+		# filelist_arj:
+		if( $File::Find::name =~ /\.arj$/i ) { push( @filelist_arj, $File::Find::name ) }		# ARJ compressed file
 		# filelist_bkf:
 		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# MS Windows backup
 		# filelist_bz:
@@ -311,6 +315,7 @@ sub RVT_parse_everything {
 		print "Parsing source: $item\n";
 
 		# Initialize file lists:
+		our @filelist_arj = ( );
 		our @filelist_bkf = ( );
 		our @filelist_bz = ( );
 		our @filelist_dbx = ( );
@@ -328,6 +333,7 @@ sub RVT_parse_everything {
 		find( \&RVT_build_filelists, $item );
 
 		# Parse all known file types:
+		RVT_parse_arj( $item, $disk );
 		RVT_parse_bkf( $item, $disk );
 		RVT_parse_bz( $item, $disk );
 		RVT_parse_dbx( $item, $disk );
@@ -607,6 +613,39 @@ $buffer_index_outlook
 ##########################################################################
 # Subs for parsing each file type
 ##########################################################################
+
+
+
+sub RVT_parse_arj {
+	my $ARJ = "arj";
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+
+	printf ("  Parsing ARJ files...\n");
+    foreach my $f ( our @filelist_arj) {
+    	print "    $f\n";
+        my $fpath = RVT_create_folder($opath, 'arj');
+		my $output = `$ARJ x -y "$f" "$fpath" 2>&1 `;
+        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+        print META $output;
+        close (META);
+		if( $output =~ /File is password encrypted/ ) {
+			( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+			if( ! -d $reportpath ) { mkdir $reportpath };
+			open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
+			print REPORT "$f\n";
+			close( REPORT );
+		}
+    }
+    return 1;
+}
 
 
 
@@ -1308,6 +1347,7 @@ sub RVT_get_source {
 	my $got_source = 0;
 	
 	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/arj-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/bz-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/dbx-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
