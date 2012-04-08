@@ -291,9 +291,10 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }	# ZIP files
 		# filelist_7z:
 		elsif( $File::Find::name =~ /\.cab$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.cgz$/i ) { push( @filelist_7z, $File::Find::name ) }		# .cpio.gz
 		elsif( $File::Find::name =~ /\.cpio$/i ) { push( @filelist_7z, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.dmg$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.hfs$/i ) { push( @filelist_7z, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.hfs$/i ) { push( @filelist_7z, $File::Find::name ) }		# HFS filesystems, usually contained within DMG images extracted with 7z.
 		elsif( $File::Find::name =~ /\.iso$/i ) { push( @filelist_7z, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.lha$/i ) { push( @filelist_7z, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.lzh$/i ) { push( @filelist_7z, $File::Find::name ) }
@@ -328,7 +329,9 @@ sub RVT_parse_everything {
 		push( @sources, "$morguepath/mnt" );
 	}
 	foreach my $item (@sources) {
-		print "Parsing source: $item\n";
+		my $fancyname = RVT_shorten_fs_path( $item );
+		print "Source: $fancyname\n";
+		print "Parsing: ";
 
 		# Initialize file lists:
 		our @filelist_arj = ( );
@@ -373,7 +376,7 @@ sub RVT_parse_everything {
 		open( FLAG, ">:encoding(UTF-8)", $file );
 		close( FLAG );
 
-		print "  Source parsed: $item\n";
+		print "Done\n\n";
 	}	
 	return 1;
 }
@@ -645,21 +648,26 @@ sub RVT_parse_arj {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
 
-	printf ("  Parsing ARJ files...\n");
-    foreach my $f ( our @filelist_arj) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, 'arj');
-		my $output = `$ARJ x -y "$f" "$fpath" 2>&1 `;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-        print META $output;
-        close (META);
-		if( $output =~ /File is password encrypted/ ) {
-			( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-			if( ! -d $reportpath ) { mkdir $reportpath };
-			open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-			print REPORT "$f\n";
-			close( REPORT );
+	printf ("ARJ... ");
+	if( our @filelist_arj ) {
+		print "\n";
+		foreach my $f ( our @filelist_arj) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'arj');
+			my $output = `$ARJ x -y "$f" "$fpath" 2>&1 `;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+			if( $output =~ /File is password encrypted/ ) {
+				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+				if( ! -d $reportpath ) { mkdir $reportpath };
+				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
+				print REPORT "$f\n";
+				close( REPORT );
+				print "   * Item is encrypted or password-protected. Reported.\n";
+				print RVT_META "      Item is encrypted or password-protected. Reported.\n";
+			}
 		}
     }
     return 1;
@@ -678,16 +686,20 @@ sub RVT_parse_bkf {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
 
-	printf ("  Parsing BKF files...\n");
-    foreach my $f ( our @filelist_bkf) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, 'bkf');
-		my $output = `$MTFTAR < "$f" | tar x -C "$fpath" 2>&1 `;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-        print META $output;
-        close (META);
-    }
+	printf ("BKF... ");
+	
+	if( our @filelist_bkf ) {
+		print "\n";
+		foreach my $f ( our @filelist_bkf ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'bkf');
+			my $output = `$MTFTAR < "$f" | tar x -C "$fpath" 2>&1 `;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+		}
+	}
     return 1;
 }
 
@@ -704,22 +716,25 @@ sub RVT_parse_bz {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing bzip / bzip2 files...\n");
-    foreach my $f ( our @filelist_bz ) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, 'bz');
-        my $basename = basename( $f );
-        my $target = $basename;
-        if( $basename =~ /\.bz2?$/ ) { $target =~ s/\.bz2?$// }
-        elsif( $basename =~ /\.tbz2?$/ ) { $target =~ s/\.tbz2?$/.tar/ }
-        #else {  }
-
-        my $output = `cat "$f" | $BUNZIP2 > "$fpath/$target" `;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		print META $output;
-        close (META);
-    }
+	printf ("BZIP... ");
+	if( our @filelist_bz ) {
+		print "\n";
+		foreach my $f ( our @filelist_bz ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'bz');
+			my $basename = basename( $f );
+			my $target = $basename;
+			if( $basename =~ /\.bz2?$/ ) { $target =~ s/\.bz2?$// }
+			elsif( $basename =~ /\.tbz2?$/ ) { $target =~ s/\.tbz2?$/.tar/ }
+			#else {  }
+	
+			my $output = `cat "$f" | $BUNZIP2 > "$fpath/$target" `;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+		}
+	}
     return 1;
 }
 
@@ -735,45 +750,49 @@ sub RVT_parse_dbx {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing DBX files...\n");
-    foreach my $f ( our @filelist_dbx) {
-    	next if $f =~ /Folders.dbx$/;
-    	print "    $f\n";
-    	my $dbxpath = RVT_create_folder($opath, 'dbx');
-    	my $meta = "$dbxpath/RVT_metadata";
-        open (META,">:encoding(UTF-8)", "$meta") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-        close (META);
-
-        my $fpath = RVT_create_file($dbxpath, 'dbx', 'eml');
-		(my $count = $fpath) =~ s/.*-([0-9]*).eml$/\1/;
-		# Code taken from dbx2eml by Colin Moller - http://code.google.com/p/dbx2eml
-		my $dbx = eval { Mail::Transport::Dbx->new("$f") };
-	    if( $@ ) { warn "$@: $!\n"; next }
-
-		if ( $dbx->emails ) {
-			for my $eml ($dbx->emails) {
-				$fpath = "$dbxpath/dbx-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-				open( EML, ">:encoding(UTF-8)", $fpath );
-				print EML $eml->header."\n\n".$eml->body;
-				close EML;
-				$count++;
-			}
-		} else {
-	        for my $sub ($dbx->subfolders) {
-				if (my $d = $sub->dbx) {
-					for my $eml ($d->emails) {
-						$fpath = "$dbxpath/dbx-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-						open( EML, ">:encoding(UTF-8)", $fpath );
-						print EML $eml->header."\n\n".$eml->body;
-						close EML;
-						$count++;
-					}
+	printf ("DBX... ");
+	if( our @filelist_dbx ) {
+		print "\n";
+		foreach my $f ( our @filelist_dbx) {
+## NOS ATREVEMOS CON FOLDERS.DBX?
+			next if $f =~ /Folders.dbx$/; # XX_FIXME: 
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $dbxpath = RVT_create_folder($opath, 'dbx');
+			my $meta = "$dbxpath/RVT_metadata";
+			open (META,">:encoding(UTF-8)", "$meta") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			close (META);
+	
+			my $fpath = RVT_create_file($dbxpath, 'dbx', 'eml');
+			(my $count = $fpath) =~ s/.*-([0-9]*).eml$/\1/;
+			# Code taken from dbx2eml by Colin Moller - http://code.google.com/p/dbx2eml
+			my $dbx = eval { Mail::Transport::Dbx->new("$f") };
+			if( $@ ) { warn "$@: $!\n"; next }
+	
+			if ( $dbx->emails ) {
+				for my $eml ($dbx->emails) {
+					$fpath = "$dbxpath/dbx-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+					open( EML, ">:encoding(UTF-8)", $fpath );
+					print EML $eml->header."\n\n".$eml->body;
+					close EML;
+					$count++;
 				}
-     	   }
-		}
-
-    } # end foreach my $f ( our @filelist_dbx )
+			} else {
+				for my $sub ($dbx->subfolders) {
+					if (my $d = $sub->dbx) {
+						for my $eml ($d->emails) {
+							$fpath = "$dbxpath/dbx-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+							open( EML, ">:encoding(UTF-8)", $fpath );
+							print EML $eml->header."\n\n".$eml->body;
+							close EML;
+							$count++;
+						}
+					}
+			   }
+			}
+	
+		} # end foreach my $f ( our @filelist_dbx )
+	}
     return 1;
 }
 
@@ -789,13 +808,14 @@ sub RVT_parse_eml {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing EML files...\n");
+	printf ("EML... ");
 	if( our @filelist_eml ) {
+		print "\n";
 		my $emlpath = RVT_create_folder($opath, 'eml');
 		my $fpath = RVT_create_file($emlpath, 'eml', 'html');
 		( my $count = $fpath ) =~ s/.*-([0-9]*).html$/\1/;
 		foreach my $f ( our @filelist_eml ) {
-			print "    $f\n";
+			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$emlpath/eml-$count.html"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			( my $meta = $fpath ) =~ s/\.html$/.RVT_metadata/;
 			
@@ -863,6 +883,7 @@ sub RVT_parse_eml {
 			
 			my $msgbody = 0; # we will set this when we reach the first TEXT part.
 			my @parts = ( );
+
 			if( $obj->content_type =~ /^multipart\/alternative/ ) {
 				# This is to handle messages which consist only of a multipart/alt block.
 				# Its content is the body in different formats.
@@ -878,7 +899,15 @@ sub RVT_parse_eml {
 				if( $html ) { push( @parts, $html ) }
 				elsif( $plain ) { push( @parts, $plain ) }
 				elsif( $rtf ) { push( @parts, $rtf ) }
-				else { push( @parts, @alternatives ) } # fallback resource
+				else {
+					( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+					if( ! -d $reportpath ) { mkdir $reportpath };
+					open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
+					print REPORT "$f\n";
+					close( REPORT );
+					print "   * Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
+					print RVT_META "# Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
+				}
 			} else { @parts = $obj->parts } # These are all Email::MIME objects too.
 
 			while( my $part = shift(@parts) ) {
@@ -903,7 +932,15 @@ sub RVT_parse_eml {
 					if( $html ) { push( @parts, $html ) }
 					elsif( $plain ) { push( @parts, $plain ) }
 					elsif( $rtf ) { push( @parts, $rtf ) }
-					else { push( @parts, @alternatives ) } # fallback resource
+					else { 
+						( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+						if( ! -d $reportpath ) { mkdir $reportpath };
+						open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
+						print REPORT "$f\n";
+						close( REPORT );
+						print "   * Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
+						print RVT_META "# Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
+					}
 				} elsif( $ctype =~ /^multipart/ ) { push( @parts, $part->parts ) }
 				elsif( $filename ) { $is_attach = 1 }
 				elsif( ($ctype =~ /^text\//) && (! $msgbody) ) {
@@ -969,13 +1006,14 @@ sub RVT_parse_evt {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing EVT files...\n");
+	printf ("EVT... ");
 	if( our @filelist_evt ) {
+		print "\n";
 		my $evtpath = RVT_create_folder($opath, 'evt');
 		my $fpath = RVT_create_file($evtpath, 'evt', 'txt');
 		( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
 		foreach my $f ( our @filelist_evt ) {
-			print "    $f\n";
+			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$evtpath/evt-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			open (FEVT, "-|", "$EVTPARSE", $f) or die "Error: $!";
 			binmode (FEVT, ":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
@@ -1009,22 +1047,25 @@ sub RVT_parse_gz {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing GZ files...\n");
-    foreach my $f ( our @filelist_gz ) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, 'gz');
-        my $basename = basename( $f );
-        my $target = $basename;
-        if( $basename =~ /\.gz$/ ) { $target =~ s/\.gz$// }
-        elsif( $basename =~ /\.tgz$/ ) { $target =~ s/\.tgz$/.tar/ }
-        #else {  }
-
-        my $output = `cat "$f" | $GUNZIP > "$fpath/$target" `;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		print META $output;
-        close (META);
-    }
+	printf ("GZ... ");
+	if( our @filelist_gz ) {
+		print "\n";
+		foreach my $f ( our @filelist_gz ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'gz');
+			my $basename = basename( $f );
+			my $target = $basename;
+			if( $basename =~ /\.gz$/ ) { $target =~ s/\.gz$// }
+			elsif( $basename =~ /\.tgz$/ ) { $target =~ s/\.tgz$/.tar/ }
+			#else {  }
+	
+			my $output = `cat "$f" | $GUNZIP > "$fpath/$target" `;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+		}
+	}
     return 1;
 }
 
@@ -1041,13 +1082,14 @@ sub RVT_parse_lnk {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing LNK files...\n");
+	printf ("LNK... ");
 	if( our @filelist_lnk ) {
+		print "\n";
 		my $lnkpath = RVT_create_folder($opath, 'lnk');
 		my $fpath = RVT_create_file($lnkpath, 'lnk', 'txt');
 		( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
 		foreach my $f ( our @filelist_lnk ) {
-			print "    $f\n";
+			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$lnkpath/lnk-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			open (FLNK, "-|", "$LNKPARSE", $f);
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
@@ -1073,13 +1115,14 @@ sub RVT_parse_msg {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing MSG files...\n");
+	printf ("MSG... ");
 	if( our @filelist_msg ) {
+		print "\n";
 		my $msgpath = RVT_create_folder($opath, 'msg');
 		my $fpath = RVT_create_file($msgpath, 'msg', 'eml');
 		( my $count = $fpath ) =~ s/.*-([0-9]*).eml$/\1/;
 		foreach my $f ( our @filelist_msg ) {
-			print "    $f\n";
+			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$msgpath/msg-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			( my $meta = $fpath ) =~ s/\.eml$/.RVT_metadata/;
 
@@ -1103,6 +1146,8 @@ sub RVT_parse_msg {
 				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
 				print REPORT "$f\n";
 				close( REPORT );
+				print "   * Malformed item. Reported.\n";
+				print RVT_META "# Malformed item. Reported.\n";
 			}
 
 			$count++;
@@ -1124,13 +1169,14 @@ sub RVT_parse_pdf {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing PDF files...\n");
+	printf ("PDF... ");
 	if( our @filelist_pdf ) {
+		print "\n";
 		my $pdfpath = RVT_create_folder($opath, 'pdf');
 		my $fpath = RVT_create_file($pdfpath, 'pdf', 'txt');
 		( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
 		foreach my $f ( our @filelist_pdf ) {
-			print "    $f\n";
+			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$pdfpath/pdf-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			my $output = `$PDFTOTEXT "$f" - 2>&1`;
 			open (META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
@@ -1143,6 +1189,8 @@ sub RVT_parse_pdf {
 				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
 				print REPORT "$f\n";
 				close( REPORT );
+				print "   * Item is encrypted or password-protected. Reported.\n";
+				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
 			}
 			$count++;
 		}
@@ -1163,18 +1211,21 @@ sub RVT_parse_pff {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing PFF files (PST, OST, PAB)...\n");
-    foreach my $f ( our @filelist_pff) {
-    	print "    $f\n";
-    	my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');    	
-        open (META,">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-        close (META);
-        $fpath =~ s/.RVT_metadata//; 
-        my @args = ("$PFFEXPORT", '-f', 'text', '-m', 'all', '-q', '-t', "$fpath", $f); # -f text and -m all are in fact default options.
-        system(@args);        
-        foreach my $mode ('export','orphan','recovered') { finddepth( \&RVT_sanitize_libpff_item, "$fpath.$mode" ) }
-    }
+	printf ("PFF... ");
+	if( our @filelist_pff ) {
+		print "\n";
+		foreach my $f ( our @filelist_pff) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');    	
+			open (META,">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			close (META);
+			$fpath =~ s/.RVT_metadata//; 
+			my @args = ("$PFFEXPORT", '-f', 'text', '-m', 'all', '-q', '-t', "$fpath", $f); # -f text and -m all are in fact default options.
+			system(@args);        
+			foreach my $mode ('export','orphan','recovered') { finddepth( \&RVT_sanitize_libpff_item, "$fpath.$mode" ) }
+		}
+	}
     return 1;
 }
 
@@ -1191,23 +1242,28 @@ sub RVT_parse_rar {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing RAR files...\n");
-    foreach my $f ( our @filelist_rar ) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, 'rar');
-		my $output = `$UNRAR x -ppassword "$f" "$fpath" 2>&1`;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		print META $output;
-        close (META);
-		if( $output =~ /or wrong password./ ) {
-			( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-			if( ! -d $reportpath ) { mkdir $reportpath };
-			open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-			print REPORT "$f\n";
-			close( REPORT );
+	printf ("RAR... ");
+	if( our @filelist_rar ) {
+		print "\n";
+		foreach my $f ( our @filelist_rar ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'rar');
+			my $output = `$UNRAR x -ppassword "$f" "$fpath" 2>&1`;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+			if( $output =~ /or wrong password./ ) {
+				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+				if( ! -d $reportpath ) { mkdir $reportpath };
+				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
+				print REPORT "$f\n";
+				close( REPORT );
+				print "   * Item is encrypted or password-protected. Reported.\n";
+				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
+			}
 		}
-    }
+	}
     return 1;
 }
 
@@ -1224,16 +1280,21 @@ sub RVT_parse_tar {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
 
-	printf ("  Parsing TAR files...\n");
-    foreach my $f ( our @filelist_tar) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, 'tar');
-		my $output = `$TAR xf "$f" -C "$fpath" 2>&1 `;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-        print META $output;
-        close (META);
-    }
+	printf ("TAR... ");
+	if( our @filelist_tar) {
+		print "\n";
+		foreach my $f ( our @filelist_tar) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'tar');
+			my $output = `$TAR xf "$f" -C "$fpath" 2>&1 `;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+			print "   * Item is encrypted or password-protected. Reported.\n";
+			print RVT_META "# Item is encrypted or password-protected. Reported.\n";
+		}
+	}
     return 1;
 }
 
@@ -1250,23 +1311,27 @@ sub RVT_parse_text {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control/text';
     mkpath $opath unless (-d $opath);
 
-	printf ("  Parsing text files...\n");
+	printf ("text... ");
 	my $fpath = RVT_create_file($opath, 'text', 'txt');
 	( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
-	foreach my $f (our @filelist_text) {
-		$fpath = "$opath/text-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-		my $normalized = `echo "$f" | $FSTRINGS`;
-		chomp ($normalized);
-
-		open (FTEXT, "-|", "$FSTRINGS", "$f") or die ("ERROR: Failed to open input file $f\n");
-		open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output files.");
-		print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Normalized name and path: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		while (<FTEXT>){
-			print FOUT $_;
+	if( our @filelist_text ) {
+		print "\n";
+		foreach my $f (our @filelist_text) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			$fpath = "$opath/text-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+			my $normalized = `echo "$f" | $FSTRINGS`;
+			chomp ($normalized);
+	
+			open (FTEXT, "-|", "$FSTRINGS", "$f") or die ("ERROR: Failed to open input file $f\n");
+			open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output files.");
+			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Normalized name and path: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			while (<FTEXT>){
+				print FOUT $_;
+			}
+			close (FTEXT);
+			close (FOUT);
+			$count++;
 		}
-		close (FTEXT);
-		close (FOUT);
-		$count++;
 	}
     return 1;
 }
@@ -1284,23 +1349,28 @@ sub RVT_parse_zip {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing ZIP files (and ODF, OOXML)...\n");
-    foreach my $f ( our @filelist_zip ) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, 'zip');
-		my $output = `$UNZIP -P password "$f" -d "$fpath" 2>&1`;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		print META $output;
-        close (META);
-		if( $output =~ /incorrect password$/ ) {
-			( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-			if( ! -d $reportpath ) { mkdir $reportpath };
-			open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-			print REPORT "$f\n";
-			close( REPORT );
+	printf ("ZIP... ");
+	if( our @filelist_zip ) {
+		print "\n";
+		foreach my $f ( our @filelist_zip ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'zip');
+			my $output = `$UNZIP -P password "$f" -d "$fpath" 2>&1`;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+			if( $output =~ /incorrect password$/ ) {
+				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+				if( ! -d $reportpath ) { mkdir $reportpath };
+				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
+				print REPORT "$f\n";
+				close( REPORT );
+				print "   * Item is encrypted or password-protected. Reported.\n";
+				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
+			}
 		}
-    }
+	}
     return 1;
 }
 
@@ -1317,23 +1387,28 @@ sub RVT_parse_7z {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("  Parsing 7z files...\n");
-    foreach my $f ( our @filelist_7z ) {
-    	print "    $f\n";
-        my $fpath = RVT_create_folder($opath, '7z');
-		my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
-        open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-        print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-		print META $output;
-        close (META);
-		if( $output =~ /Wrong password/ ) {
-			( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-			if( ! -d $reportpath ) { mkdir $reportpath };
-			open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-			print REPORT "$f\n";
-			close( REPORT );
+	printf ("7z... ");
+	if( our @filelist_7z ) {
+		print "\n";
+		foreach my $f ( our @filelist_7z ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, '7z');
+			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
+			if( $output =~ /Wrong password/ ) {
+				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+				if( ! -d $reportpath ) { mkdir $reportpath };
+				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
+				print REPORT "$f\n";
+				close( REPORT );
+				print "   * Item is encrypted or password-protected. Reported.\n";
+				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
+			}
 		}
-    }
+	}
     return 1;
 }
 
@@ -1703,8 +1778,10 @@ sub RVT_sanitize_libpff_item {
 	if( $item_type eq 'Message' ) { $file =~ s/Message/OutlookHeaders/ }
 	return if( $item_type eq 'Attachment' ); # Folders like Attachment00001 must not be treated directly by us; instead they will be treated during the sub parse_attachment of their parent directory.
 	return if( $item_type eq 'Folder' ); # Folders like Folder00001 are likely to be found in recovered structures, but they are not "by themselves" items to be analyzed. Note that the normal items (Message, Contact...) inside WILL be analyzed normally.
+# habría que quitar este print:
 	if( exists $field_names{$item_type} ) { print "Item: $item_type ($source)\n" }
 	else {
+# Y aquí, además, habría que reportar a MALFORMED.
 		warn "WARNING: Skipping unknown item type $item_type ($source)\n";
 		return
 	}
@@ -1857,7 +1934,13 @@ sub RVT_sanitize_libpff_item {
 }
 
 
-
+sub RVT_shorten_fs_path {
+	# Shorten a file name to fit it on screen.
+	my $parm = shift( @_ );
+	$parm =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9]\/.*)/\1/;
+	$parm =~ s/\/output\/parser\/control\// /;	
+	return $parm;
+}
 
 
 1;
