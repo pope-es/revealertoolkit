@@ -270,6 +270,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.fott$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (text)
 		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
+		elsif( $File::Find::name =~ /\.ini$/i ) { push( @filelist_text, $File::Find::name ) }	# Typical text-based configuration file
 		elsif( $File::Find::name =~ /\.json$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.jsp$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.log$/i ) { push( @filelist_text, $File::Find::name ) }	# Log files
