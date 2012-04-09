@@ -143,13 +143,16 @@ sub RVT_build_filelists {
 	our @filelist_text;
 	our @filelist_zip;
 
-	# Populate the file lists with files with certain extensions:
+	# Populate the file lists with files with certain extensions.
+	#  
 	if( -f $File::Find::name ) {
 		# filelist_bkf:
 		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# MS Windows backup
 		# filelist_compressed:
 		elsif( $File::Find::name =~ /\.arj$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ARJ compressed file
 		elsif( $File::Find::name =~ /\.bz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# bzip file
+		elsif( $File::Find::name =~ /\.bzip$/i ) { push( @filelist_compressed, $File::Find::name ) }	# bzip file
+		elsif( $File::Find::name =~ /\.bzip2$/i ) { push( @filelist_compressed, $File::Find::name ) }	# bzip2 file
 		elsif( $File::Find::name =~ /\.bz2$/i ) { push( @filelist_compressed, $File::Find::name ) }		# bzip2 file
 		elsif( $File::Find::name =~ /\.cab$/i ) { push( @filelist_compressed, $File::Find::name ) }		# MS cabinet file
 		elsif( $File::Find::name =~ /\.cgz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# .cpio.gz
@@ -162,12 +165,15 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.dotx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (text)
 		elsif( $File::Find::name =~ /\.fat$/i ) { push( @filelist_compressed, $File::Find::name ) }		# FAT filesystems extracted by 7z from other archives (such as .dd).
 		elsif( $File::Find::name =~ /\.gz$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.gzip$/i ) { push( @filelist_compressed, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.hfs$/i ) { push( @filelist_compressed, $File::Find::name ) }		# HFS filesystems contained within DMG images extracted with 7z.
 		elsif( $File::Find::name =~ /\.iso$/i ) { push( @filelist_compressed, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.jar$/i ) { push( @filelist_compressed, $File::Find::name ) }		# Java ARchive
+		elsif( $File::Find::name =~ /\.keynote$/i ) { push( @filelist_compressed, $File::Find::name ) }	# Apple iWork presentation (Keynote document)
 		elsif( $File::Find::name =~ /\.lha$/i ) { push( @filelist_compressed, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.lzh$/i ) { push( @filelist_compressed, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.ntfs$/i ) { push( @filelist_compressed, $File::Find::name ) }	# NTFS filesystems extracted by 7z from other archives (such as .dd).
+		elsif( $File::Find::name =~ /\.numbers$/i ) { push( @filelist_compressed, $File::Find::name ) }	# Apple iWork spreadsheet (Numbers document)
 		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (database)
 		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (chart)
 		elsif( $File::Find::name =~ /\.odf$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (formula)
@@ -185,6 +191,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.otp$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (presentation)
 		elsif( $File::Find::name =~ /\.ots$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (spreadsheet)
 		elsif( $File::Find::name =~ /\.ott$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (text)
+		elsif( $File::Find::name =~ /\.pages$/i ) { push( @filelist_compressed, $File::Find::name ) }	# Apple iWork text (Pages document)
 		elsif( $File::Find::name =~ /\.potx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (presentation)
 		elsif( $File::Find::name =~ /\.potm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (presentation, macro-enabled)
 		elsif( $File::Find::name =~ /\.ppam$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (PowerPoint 2007 macro-enabled add-in)
@@ -264,6 +271,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.json$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
+		elsif( $File::Find::name =~ /\.jsp$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.log$/i ) { push( @filelist_text, $File::Find::name ) }	# Log files
 		elsif( $File::Find::name =~ /\.mdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access database
 		elsif( $File::Find::name =~ /\.nfo$/i ) { push( @filelist_text, $File::Find::name ) }	# Usually text files
@@ -283,6 +291,8 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel spreadsheet
 		elsif( $File::Find::name =~ /\.xlsb$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Excel 2007 binary workbook
 		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }	# XML
+		elsif( $File::Find::name =~ /\/hiberfil\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
+		elsif( $File::Find::name =~ /\/pagefile\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
 	}
 }
 
