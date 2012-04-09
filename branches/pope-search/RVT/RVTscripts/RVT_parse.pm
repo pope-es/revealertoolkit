@@ -84,41 +84,31 @@ use Mail::Transport::Dbx;
 
 sub constructor {
 
-	my $arj = `arj`;
-	my $bunzip2 = `bunzip2 -V 2>&1`;
 	my $evtparse = `evtparse.pl`;
 	my $fstrings = `f-strings -h`;
-	my $gunzip = `gunzip -V`;
 	my $lnkparse = `lnk-parse-1.0.pl`;
 	my $mtftar = `mtftar 2>&1`;
 	my $pdftotext = `pdftotext -v 2>&1`;
 	my $pffexport = `pffexport -V`;
-	my $unrar = `unrar --help`;
-	my $unzip = `unzip -v`;
+	my $tar = `tar --version`;
 	my $z7 = `7z`; # would Perl support a variable called $7z ?
    
-	if (!$bunzip2) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find bunzip2)'); return }
 	if (!$evtparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
 	if (!$fstrings) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, compile (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)'); return }
-	if (!$gunzip) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find gunzip)'); return }
 	if (!$lnkparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Jacob Cunningham\'s lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
 	if (!$mtftar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find mtftar)'); return }
 	if (!$pdftotext) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pdftotext)'); return }
 	if (!$pffexport) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pffexport)'); return }
-	if (!$unrar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unrar)'); return }
-	if (!$unzip) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find unzip)'); return }
+	if (!$tar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find tar)'); return }
 	if (!$z7) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find 7z)'); return }
 
-   $main::RVT_requirements{'bunzip2'} = $bunzip2;
    $main::RVT_requirements{'evtparse'} = $evtparse;
    $main::RVT_requirements{'fstrings'} = $fstrings;
-   $main::RVT_requirements{'gunzip'} = $gunzip;
    $main::RVT_requirements{'lnkparse'} = $lnkparse;
    $main::RVT_requirements{'mtftar'} = $mtftar;
    $main::RVT_requirements{'pdftotext'} = $pdftotext;
    $main::RVT_requirements{'pffexport'} = $pffexport;
-   $main::RVT_requirements{'unrar'} = $unrar;
-   $main::RVT_requirements{'unzip'} = $unzip;
+   $main::RVT_requirements{'tar'} = $tar;
    $main::RVT_requirements{'7z'} = $z7;
 
    $main::RVT_functions{RVT_script_parse_autoparse } = "Parse a disk automagically\n
@@ -141,43 +131,94 @@ sub constructor {
 sub RVT_build_filelists {
 
 	# Declare (our) file lists:
-	our @filelist_arj;
 	our @filelist_bkf;
-	our @filelist_bz;
+	our @filelist_compressed;
 	our @filelist_dbx;
 	our @filelist_eml;
 	our @filelist_evt;
-	our @filelist_gz;
 	our @filelist_lnk;
 	our @filelist_msg;
 	our @filelist_pdf;
 	our @filelist_pff;
-	our @filelist_rar;
-	our @filelist_tar;
 	our @filelist_text;
 	our @filelist_zip;
-	our @filelist_7z;
 
 	# Populate the file lists with files with certain extensions:
 	if( -f $File::Find::name ) {
-		# filelist_arj:
-		if( $File::Find::name =~ /\.arj$/i ) { push( @filelist_arj, $File::Find::name ) }		# ARJ compressed file
 		# filelist_bkf:
 		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# MS Windows backup
-		# filelist_bz:
-		elsif( $File::Find::name =~ /\.bz$/i ) { push( @filelist_bz, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.bz2$/i ) { push( @filelist_bz, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.tbz$/i ) { push( @filelist_bz, $File::Find::name ) }		# .tar.bz
-		elsif( $File::Find::name =~ /\.tbz2$/i ) { push( @filelist_bz, $File::Find::name ) }	# .tar.bz2
+		# filelist_compressed:
+		elsif( $File::Find::name =~ /\.arj$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ARJ compressed file
+		elsif( $File::Find::name =~ /\.bz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# bzip file
+		elsif( $File::Find::name =~ /\.bz2$/i ) { push( @filelist_compressed, $File::Find::name ) }		# bzip2 file
+		elsif( $File::Find::name =~ /\.cab$/i ) { push( @filelist_compressed, $File::Find::name ) }		# MS cabinet file
+		elsif( $File::Find::name =~ /\.cgz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# .cpio.gz
+		elsif( $File::Find::name =~ /\.cpio$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.dmg$/i ) { push( @filelist_compressed, $File::Find::name ) }		# MacOS Disk iMaGe
+		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (text)
+		elsif( $File::Find::name =~ /\.docm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (text, macro-enabled document)
+		elsif( $File::Find::name =~ /\.dotm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (text, macro-enabled)
+		elsif( $File::Find::name =~ /\.dotx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (text)
+		elsif( $File::Find::name =~ /\.gz$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.hfs$/i ) { push( @filelist_compressed, $File::Find::name ) }		# HFS filesystems, usually contained within DMG images extracted with compressed.
+		elsif( $File::Find::name =~ /\.iso$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.jar$/i ) { push( @filelist_compressed, $File::Find::name ) }		# Java ARchive
+		elsif( $File::Find::name =~ /\.lha$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.lzh$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (database)
+		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (chart)
+		elsif( $File::Find::name =~ /\.odf$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (formula)
+		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (graphics/drawing)
+		elsif( $File::Find::name =~ /\.odi$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (image)
+		elsif( $File::Find::name =~ /\.odm$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (master document)
+		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (presentation)
+		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (spreadsheet)
+		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (text)
+		elsif( $File::Find::name =~ /\.otc$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (chart)
+		elsif( $File::Find::name =~ /\.otf$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (formula)
+		elsif( $File::Find::name =~ /\.otg$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (graphics/drawing)
+		elsif( $File::Find::name =~ /\.oth$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (web page)
+		elsif( $File::Find::name =~ /\.oti$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (image)
+		elsif( $File::Find::name =~ /\.otp$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (presentation)
+		elsif( $File::Find::name =~ /\.ots$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (spreadsheet)
+		elsif( $File::Find::name =~ /\.ott$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF template (text)
+		elsif( $File::Find::name =~ /\.potx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (presentation)
+		elsif( $File::Find::name =~ /\.potm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (presentation, macro-enabled)
+		elsif( $File::Find::name =~ /\.ppam$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (PowerPoint 2007 macro-enabled add-in)
+		elsif( $File::Find::name =~ /\.pptm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (presentation, macro-enabled document)
+		elsif( $File::Find::name =~ /\.pptx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (presentation)
+		elsif( $File::Find::name =~ /\.ppsx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (presentation show)
+		elsif( $File::Find::name =~ /\.ppsm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (presentation show, macro-enabled document)
+		elsif( $File::Find::name =~ /\.rar$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.rpm$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.stc$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML template (spreadsheet)
+		elsif( $File::Find::name =~ /\.std$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML template (graphics/drawing)
+		elsif( $File::Find::name =~ /\.sti$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML template (presentation)
+		elsif( $File::Find::name =~ /\.stw$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML template (text)
+		elsif( $File::Find::name =~ /\.sxc$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML (spreadsheet)
+		elsif( $File::Find::name =~ /\.sxd$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML (graphics/drawing)
+		elsif( $File::Find::name =~ /\.sxg$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML (master document)
+		elsif( $File::Find::name =~ /\.sxi$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML (presentation)
+		elsif( $File::Find::name =~ /\.sxm$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML (formula)
+		elsif( $File::Find::name =~ /\.sxw$/i ) { push( @filelist_compressed, $File::Find::name ) }		# OpenOffice.org XML (text)
+		elsif( $File::Find::name =~ /\.tar$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.tbz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# .tar.bz
+		elsif( $File::Find::name =~ /\.tbz2$/i ) { push( @filelist_compressed, $File::Find::name ) }	# .tar.bz2
+		elsif( $File::Find::name =~ /\.tgz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# .tar.gz
+		elsif( $File::Find::name =~ /\.xlam$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (MS Excel 2007 macro-enabled add-in)
+		elsif( $File::Find::name =~ /\.xlsx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (spreadsheet)
+		elsif( $File::Find::name =~ /\.xlsm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (spreadsheet, macro-enabled document)
+		elsif( $File::Find::name =~ /\.xltm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (spreadsheet, macro-enabled)
+		elsif( $File::Find::name =~ /\.xltx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (spreadsheet)
+		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ZIP files
+		elsif( $File::Find::name =~ /\.xz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# no idea but 7z handles it :)
+		elsif( $File::Find::name =~ /\.7z$/i ) { push( @filelist_compressed, $File::Find::name ) }
 		# filelist_dbx:
 		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_dbx, $File::Find::name ) }
 		# filelist_eml:
 		elsif( $File::Find::name =~ /\.eml$/i ) { push( @filelist_eml, $File::Find::name ) }
 		# filelist_evt:
 		elsif( $File::Find::name =~ /\.evt$/i ) { push( @filelist_evt, $File::Find::name ) }
-		# filelist_gz:
-		elsif( $File::Find::name =~ /\.gz$/i ) { push( @filelist_gz, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.tgz$/i ) { push( @filelist_gz, $File::Find::name ) }		# .tar.gz
 		# filelist_lnk:
 		elsif( $File::Find::name =~ /\.lnk$/i ) { push( @filelist_lnk, $File::Find::name ) }
 		# filelist_msg:
@@ -188,10 +229,6 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.pab$/i ) { push( @filelist_pff, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.pst$/i ) { push( @filelist_pff, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.ost$/i ) { push( @filelist_pff, $File::Find::name ) }
-		# filelist_rar:
-		elsif( $File::Find::name =~ /\.rar$/i ) { push( @filelist_rar, $File::Find::name ) }
-		# filelist_tar:
-		elsif( $File::Find::name =~ /\.tar$/i ) { push( @filelist_tar, $File::Find::name ) }
 		# filelist_text:
 		elsif( $File::Find::name =~ /\.accdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 database
 		elsif( $File::Find::name =~ /\.accde$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 "execute-only" database
@@ -243,64 +280,6 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel spreadsheet
 		elsif( $File::Find::name =~ /\.xlsb$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Excel 2007 binary workbook
 		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }	# XML
-		# filelist_zip:
-		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (text)
-		elsif( $File::Find::name =~ /\.docm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (text, macro-enabled document)
-		elsif( $File::Find::name =~ /\.dotm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text, macro-enabled)
-		elsif( $File::Find::name =~ /\.dotx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (text)
-		elsif( $File::Find::name =~ /\.jar$/i ) { push( @filelist_zip, $File::Find::name ) }	# Java ARchive
-		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (database)
-		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (chart)
-		elsif( $File::Find::name =~ /\.odf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (formula)
-		elsif( $File::Find::name =~ /\.odg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (graphics/drawing)
-		elsif( $File::Find::name =~ /\.odi$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (image)
-		elsif( $File::Find::name =~ /\.odm$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (master document)
-		elsif( $File::Find::name =~ /\.odp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (presentation)
-		elsif( $File::Find::name =~ /\.ods$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (spreadsheet)
-		elsif( $File::Find::name =~ /\.odt$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF (text)
-		elsif( $File::Find::name =~ /\.otc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (chart)
-		elsif( $File::Find::name =~ /\.otf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (formula)
-		elsif( $File::Find::name =~ /\.otg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (graphics/drawing)
-		elsif( $File::Find::name =~ /\.oth$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (web page)
-		elsif( $File::Find::name =~ /\.oti$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (image)
-		elsif( $File::Find::name =~ /\.otp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (presentation)
-		elsif( $File::Find::name =~ /\.ots$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (spreadsheet)
-		elsif( $File::Find::name =~ /\.ott$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template (text)
-		elsif( $File::Find::name =~ /\.potx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (presentation)
-		elsif( $File::Find::name =~ /\.potm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (presentation, macro-enabled)
-		elsif( $File::Find::name =~ /\.ppam$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (PowerPoint 2007 macro-enabled add-in)
-		elsif( $File::Find::name =~ /\.pptm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation, macro-enabled document)
-		elsif( $File::Find::name =~ /\.pptx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation)
-		elsif( $File::Find::name =~ /\.ppsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation show)
-		elsif( $File::Find::name =~ /\.ppsm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (presentation show, macro-enabled document)
-		elsif( $File::Find::name =~ /\.stc$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (spreadsheet)
-		elsif( $File::Find::name =~ /\.std$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (graphics/drawing)
-		elsif( $File::Find::name =~ /\.sti$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (presentation)
-		elsif( $File::Find::name =~ /\.stw$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML template (text)
-		elsif( $File::Find::name =~ /\.sxc$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (spreadsheet)
-		elsif( $File::Find::name =~ /\.sxd$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (graphics/drawing)
-		elsif( $File::Find::name =~ /\.sxg$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (master document)
-		elsif( $File::Find::name =~ /\.sxi$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (presentation)
-		elsif( $File::Find::name =~ /\.sxm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (formula)
-		elsif( $File::Find::name =~ /\.sxw$/i ) { push( @filelist_zip, $File::Find::name ) }	# OpenOffice.org XML (text)
-		elsif( $File::Find::name =~ /\.xlam$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (MS Excel 2007 macro-enabled add-in)
-		elsif( $File::Find::name =~ /\.xlsx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (spreadsheet)
-		elsif( $File::Find::name =~ /\.xlsm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML (spreadsheet, macro-enabled document)
-		elsif( $File::Find::name =~ /\.xltm$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (spreadsheet, macro-enabled)
-		elsif( $File::Find::name =~ /\.xltx$/i ) { push( @filelist_zip, $File::Find::name ) }	# OOXML template (spreadsheet)
-		elsif( $File::Find::name =~ /\.zip$/i ) { push( @filelist_zip, $File::Find::name ) }	# ZIP files
-		# filelist_7z:
-		elsif( $File::Find::name =~ /\.cab$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.cgz$/i ) { push( @filelist_7z, $File::Find::name ) }		# .cpio.gz
-		elsif( $File::Find::name =~ /\.cpio$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.dmg$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.hfs$/i ) { push( @filelist_7z, $File::Find::name ) }		# HFS filesystems, usually contained within DMG images extracted with 7z.
-		elsif( $File::Find::name =~ /\.iso$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.lha$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.lzh$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.rpm$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.xz$/i ) { push( @filelist_7z, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.7z$/i ) { push( @filelist_7z, $File::Find::name ) }
 	}
 }
 
@@ -334,41 +313,29 @@ sub RVT_parse_everything {
 		print "Parsing: ";
 
 		# Initialize file lists:
-		our @filelist_arj = ( );
 		our @filelist_bkf = ( );
-		our @filelist_bz = ( );
+		our @filelist_compressed = ( );
 		our @filelist_dbx = ( );
 		our @filelist_eml = ( );
 		our @filelist_evt = ( );
-		our @filelist_gz = ( );
 		our @filelist_lnk = ( );
 		our @filelist_msg = ( );
 		our @filelist_pdf = ( );
 		our @filelist_pff = ( );
-		our @filelist_rar = ( );
-		our @filelist_tar = ( );
 		our @filelist_text = ( );
-		our @filelist_zip = ( );
-		our @filelist_7z = ( );
 		find( \&RVT_build_filelists, $item );
 
 		# Parse all known file types:
-		RVT_parse_arj( $item, $disk );
 		RVT_parse_bkf( $item, $disk );
-		RVT_parse_bz( $item, $disk );
+		RVT_parse_compressed( $item, $disk );
 		RVT_parse_dbx( $item, $disk );
 		RVT_parse_eml( $item, $disk );
 		RVT_parse_evt( $item, $disk );
-		RVT_parse_gz( $item, $disk );
 		RVT_parse_lnk( $item, $disk );
 		RVT_parse_msg( $item, $disk );
 		RVT_parse_pdf( $item, $disk );
 		RVT_parse_pff( $item, $disk );
-		RVT_parse_rar( $item, $disk );
-		RVT_parse_tar( $item, $disk );
 		RVT_parse_text( $item, $disk );
-		RVT_parse_zip( $item, $disk );
-		RVT_parse_7z( $item, $disk );
 		
 		# Flag source as parsed.
 		if( $item =~ /.*\/mnt$/ ) { $file = "$parsepath/__mnt_is_parsed.RVT_flag" }
@@ -605,7 +572,7 @@ tsRegister();
 		print RVT_INDEX "<h3>Regular files: $count_regular items</h3>
 <TABLE id=\"table_regular\" border=1 rules=all frame=box>
 <THEAD>
-<tr><th>File name</th><th>ext</th><th>Path</th><th>Size</th><th>Last modified</th><th>Last accessed</th><th>Remarks</th><th>Remarks</th></tr>
+<tr><th>File name</th><th>ext</th><th>Path</th><th>Size</th><th>Last modified</th><th>Last accessed</th><th>Remarks</th></tr>
 </THEAD>
 $buffer_index_regular
 </TABLE>
@@ -634,44 +601,6 @@ $buffer_index_outlook
 ##########################################################################
 # Subs for parsing each file type
 ##########################################################################
-
-
-
-sub RVT_parse_arj {
-	my $ARJ = "arj";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
-	my $disk = shift(@_);
-	$disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
-    mkpath $opath unless (-d $opath);
-
-	printf ("ARJ... ");
-	if( our @filelist_arj ) {
-		print "\n";
-		foreach my $f ( our @filelist_arj) {
-			print "  ".RVT_shorten_fs_path( $f )."\n";
-			my $fpath = RVT_create_folder($opath, 'arj');
-			my $output = `$ARJ x -y "$f" "$fpath" 2>&1 `;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-			if( $output =~ /File is password encrypted/ ) {
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Item is encrypted or password-protected. Reported.\n";
-				print RVT_META "      Item is encrypted or password-protected. Reported.\n";
-			}
-		}
-    }
-    return 1;
-}
 
 
 
@@ -705,8 +634,8 @@ sub RVT_parse_bkf {
 
 
 
-sub RVT_parse_bz {
-	my $BUNZIP2 = "bunzip2";
+sub RVT_parse_compressed {
+	my $Z7 = "7z";
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
@@ -716,23 +645,26 @@ sub RVT_parse_bz {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("BZIP... ");
-	if( our @filelist_bz ) {
+	printf ("compressed... ");
+	if( our @filelist_compressed ) {
 		print "\n";
-		foreach my $f ( our @filelist_bz ) {
+		foreach my $f ( our @filelist_compressed ) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
-			my $fpath = RVT_create_folder($opath, 'bz');
-			my $basename = basename( $f );
-			my $target = $basename;
-			if( $basename =~ /\.bz2?$/ ) { $target =~ s/\.bz2?$// }
-			elsif( $basename =~ /\.tbz2?$/ ) { $target =~ s/\.tbz2?$/.tar/ }
-			#else {  }
-	
-			my $output = `cat "$f" | $BUNZIP2 > "$fpath/$target" `;
+			my $fpath = RVT_create_folder($opath, 'compressed');
+			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
 			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
 			close (META);
+			if( $output =~ /Wrong password/ ) {
+				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+				if( ! -d $reportpath ) { mkdir $reportpath };
+				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
+				print REPORT "$f\n";
+				close( REPORT );
+				print "   * Item is encrypted or password-protected. Reported.\n";
+				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
+			}
 		}
 	}
     return 1;
@@ -1036,41 +968,6 @@ sub RVT_parse_evt {
 
 
 
-sub RVT_parse_gz {
-	my $GUNZIP = "gunzip";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
-	my $disk = shift(@_);
-	$disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
-    mkpath $opath unless (-d $opath);
-    
-	printf ("GZ... ");
-	if( our @filelist_gz ) {
-		print "\n";
-		foreach my $f ( our @filelist_gz ) {
-			print "  ".RVT_shorten_fs_path( $f )."\n";
-			my $fpath = RVT_create_folder($opath, 'gz');
-			my $basename = basename( $f );
-			my $target = $basename;
-			if( $basename =~ /\.gz$/ ) { $target =~ s/\.gz$// }
-			elsif( $basename =~ /\.tgz$/ ) { $target =~ s/\.tgz$/.tar/ }
-			#else {  }
-	
-			my $output = `cat "$f" | $GUNZIP > "$fpath/$target" `;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-		}
-	}
-    return 1;
-}
-
-
-
 sub RVT_parse_lnk {
 	my $LNKPARSE = "lnk-parse-1.0.pl";
     my $folder = shift(@_);
@@ -1231,75 +1128,6 @@ sub RVT_parse_pff {
 
 
 
-sub RVT_parse_rar {
-	my $UNRAR = "unrar";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
-	my $disk = shift(@_);
-	$disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
-    mkpath $opath unless (-d $opath);
-    
-	printf ("RAR... ");
-	if( our @filelist_rar ) {
-		print "\n";
-		foreach my $f ( our @filelist_rar ) {
-			print "  ".RVT_shorten_fs_path( $f )."\n";
-			my $fpath = RVT_create_folder($opath, 'rar');
-			my $output = `$UNRAR x -ppassword "$f" "$fpath" 2>&1`;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-			if( $output =~ /or wrong password./ ) {
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Item is encrypted or password-protected. Reported.\n";
-				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
-			}
-		}
-	}
-    return 1;
-}
-
-
-
-sub RVT_parse_tar {
-	my $TAR = "tar";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
-	my $disk = shift(@_);
-	$disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
-    mkpath $opath unless (-d $opath);
-
-	printf ("TAR... ");
-	if( our @filelist_tar) {
-		print "\n";
-		foreach my $f ( our @filelist_tar) {
-			print "  ".RVT_shorten_fs_path( $f )."\n";
-			my $fpath = RVT_create_folder($opath, 'tar');
-			my $output = `$TAR xf "$f" -C "$fpath" 2>&1 `;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-			print "   * Item is encrypted or password-protected. Reported.\n";
-			print RVT_META "# Item is encrypted or password-protected. Reported.\n";
-		}
-	}
-    return 1;
-}
-
-
-
 sub RVT_parse_text {
 	my $FSTRINGS = "f-strings";
     my $folder = shift(@_);
@@ -1338,87 +1166,11 @@ sub RVT_parse_text {
 
 
 
-sub RVT_parse_zip {
-	my $UNZIP = "unzip";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
-	my $disk = shift(@_);
-	$disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
-    mkpath $opath unless (-d $opath);
-    
-	printf ("ZIP... ");
-	if( our @filelist_zip ) {
-		print "\n";
-		foreach my $f ( our @filelist_zip ) {
-			print "  ".RVT_shorten_fs_path( $f )."\n";
-			my $fpath = RVT_create_folder($opath, 'zip');
-			my $output = `$UNZIP -P password "$f" -d "$fpath" 2>&1`;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-			if( $output =~ /incorrect password$/ ) {
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Item is encrypted or password-protected. Reported.\n";
-				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
-			}
-		}
-	}
-    return 1;
-}
-
-
-
-sub RVT_parse_7z {
-	my $Z7 = "7z";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
-	my $disk = shift(@_);
-	$disk = $main::RVT_level->{tag} unless $disk;
-    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
-	my $morguepath = RVT_get_morguepath($disk);
-    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
-    mkpath $opath unless (-d $opath);
-    
-	printf ("7z... ");
-	if( our @filelist_7z ) {
-		print "\n";
-		foreach my $f ( our @filelist_7z ) {
-			print "  ".RVT_shorten_fs_path( $f )."\n";
-			my $fpath = RVT_create_folder($opath, '7z');
-			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-			if( $output =~ /Wrong password/ ) {
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Item is encrypted or password-protected. Reported.\n";
-				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
-			}
-		}
-	}
-    return 1;
-}
-
-
-
-
 
 ##########################################################################
 # Other stuff
 ##########################################################################
+
 
 
 
@@ -1472,21 +1224,16 @@ sub RVT_get_source {
 	my $got_source = 0;
 	
 	if( $file =~ /.*\/mnt\/p[0-9]{2}\// ) { $source_type = 'final'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/arj-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/bkf-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/bz-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/compressed-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/dbx-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/eml-[0-9]*/ ) { $source_type = 'special_eml'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/gz-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/msg-[0-9]*\/msg-[0-9]*\.eml/ ) { $source_type = 'special_msg'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/rar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/tar-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
-	elsif( $file =~ /.*\/output\/parser\/control\/zip-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	else { warn "WARNING: RVT_get_source called on unknown source type: $file\n" }
 	
 	if( $source_type eq 'infolder' ) {
@@ -1602,7 +1349,7 @@ sub RVT_index_outlook_attachments {
 # $attachments is expected to be initialized.
 	
 	our $attachments;
-	if( -f $File::Find::name ) { $attachments = $attachments."[".basename($File::Find::name)."] " }
+	if( -f $File::Find::name ) { $attachments = $attachments.basename($File::Find::name)."<br>" }
 	return 1;
 }
 
