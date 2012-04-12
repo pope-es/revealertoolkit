@@ -79,6 +79,7 @@ use Date::Manip;
 use Mail::Transport::Dbx; # needed by RVT_parse_dbx
 use Email::MIME; # Needed by RVT_parse_eml
 use Encode qw(encode_utf8); # Needed by RVT_parse_eml
+use Mail::Mbox::MessageParser; # needed by RVT_parse_mbox
 use Email::Outlook::Message; # Needed by RVT_parse_msg
 use Time::localtime; # needed by RVT_index_regular_file
 use File::stat; # needed by RVT_index_regular_file
@@ -138,6 +139,7 @@ sub RVT_build_filelists {
 	our @filelist_eml;
 	our @filelist_evt;
 	our @filelist_lnk;
+	our @filelist_mbox;
 	our @filelist_msg;
 	our @filelist_pdf;
 	our @filelist_pff;
@@ -233,6 +235,9 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.evt$/i ) { push( @filelist_evt, $File::Find::name ) }
 		# filelist_lnk:
 		elsif( $File::Find::name =~ /\.lnk$/i ) { push( @filelist_lnk, $File::Find::name ) }
+		# filelist_mbox:
+		elsif( $File::Find::name =~ /\.mbox$/i ) { push( @filelist_mbox, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\/mbox$/i ) { push( @filelist_mbox, $File::Find::name ) }
 		# filelist_msg:
 		elsif( $File::Find::name =~ /\.msg$/i ) { push( @filelist_msg, $File::Find::name ) }
 		# filelist_pdf:
@@ -335,6 +340,7 @@ sub RVT_parse_everything {
 		our @filelist_eml = ( );
 		our @filelist_evt = ( );
 		our @filelist_lnk = ( );
+		our @filelist_mbox = ( );
 		our @filelist_msg = ( );
 		our @filelist_pdf = ( );
 		our @filelist_pff = ( );
@@ -348,6 +354,7 @@ sub RVT_parse_everything {
 		RVT_parse_eml( $item, $disk );
 		RVT_parse_evt( $item, $disk );
 		RVT_parse_lnk( $item, $disk );
+		RVT_parse_mbox( $item, $disk );
 		RVT_parse_msg( $item, $disk );
 		RVT_parse_pdf( $item, $disk );
 		RVT_parse_pff( $item, $disk );
@@ -385,9 +392,11 @@ sub RVT_script_parse_autoparse {
 		for( my $i = 1; $i < $max_passes ; $i++ ) {
 			RVT_parse_everything( $disk );
 		}
+		my $diskpath = RVT_get_morguepath($disk);
+		RVT_script_parse_index("$diskpath/output/parser/control");
+		RVT_script_parse_export( ":allspecial", $disk );
 		$disk = shift( @_ );
 	}
-	RVT_script_parse_export( ":allspecial", $disk );
 	return 1;
 }
 
@@ -1018,6 +1027,56 @@ sub RVT_parse_lnk {
 
 
 
+sub RVT_parse_mbox {
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("mbox... ");
+	if( our @filelist_mbox ) {
+		print "\n";
+		foreach my $f ( our @filelist_mbox) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $mboxpath = RVT_create_folder($opath, 'mbox');
+			my $meta = "$mboxpath/RVT_metadata";
+			open (META,">:encoding(UTF-8)", "$meta") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			
+			Mail::Mbox::MessageParser::SETUP_CACHE( { 'file_name' => '/tmp/RVT_mbox_cache' } );
+			my $fh = new FileHandle($f);
+			my $folder_reader = new Mail::Mbox::MessageParser( {
+				'file_name' => $f,
+				'file_handle' => $fh,
+				'enable_cache' => 1,
+				'enable_grep' => 1,
+			} );
+			warn $folder_reader unless ref $folder_reader;
+			print META $folder_reader->prologue;
+			
+			my $fpath = RVT_create_file($mboxpath, 'mbox', 'eml');
+			(my $count = $fpath) =~ s/.*-([0-9]*).eml$/\1/;
+			# This is the main loop. It's executed once for each email:
+			while(!$folder_reader->end_of_file()) {
+				$fpath = "$mboxpath/mbox-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+				my $email = $folder_reader->read_next_email();
+				open( EML, ">:encoding(UTF-8)", $fpath );
+				print EML $$email;
+				close EML;
+				$count++;
+			}
+			close (META);
+		} # end foreach my $f ( our @filelist_mbox )
+	}
+    return 1;
+}
+
+
+
 sub RVT_parse_msg {
     my $folder = shift(@_);
 	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
@@ -1246,6 +1305,7 @@ sub RVT_get_source {
 	elsif( $file =~ /.*\/output\/parser\/control\/eml-[0-9]*/ ) { $source_type = 'special_eml'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/mbox-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/msg-[0-9]*\/msg-[0-9]*\.eml/ ) { $source_type = 'special_msg'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
