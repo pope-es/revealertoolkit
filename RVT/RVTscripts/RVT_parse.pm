@@ -824,7 +824,7 @@ sub RVT_parse_eml {
 			$cc =~ s/</&lt;/g; $cc =~ s/>/&gt;/g;
 			$bcc =~ s/</&lt;/g; $bcc =~ s/>/&gt;/g;
 			( my $source = $f ) =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9]\/.*)/\1/;
-			$source =~ s/\/output\/parser\/control//;
+			$source =~ s/\/output\/parser\/control\// /;
 			my $index_line = "<!--_XX_RVT_DELIM_".$from."_XX_RVT_DELIM_".$date."_XX_RVT_DELIM_".$subject."_XX_RVT_DELIM_".$to."_XX_RVT_DELIM_".$cc."_XX_RVT_DELIM_".$bcc."_XX_RVT_DELIM_".$flags."_XX_RVT_DELIM_-->";
 			$index_line =~ s/#//g;
 			$index_line =~ s/_XX_RVT_DELIM_/#/g;
@@ -1640,7 +1640,7 @@ sub RVT_sanitize_libpff_item {
 	);
 
 	my $folder = $File::Find::name;
-	( my $source = $folder ) =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9]).output.parser.control/\1/;
+	( my $source = $folder ) =~ s/^.*([0-9]{6}-[0-9]{2}-[0-9])\/output\/parser\/control\//\1 /;
 	( my $item_type = basename($folder) ) =~ s/[0-9]{5}//;
 	( my $file = basename($folder) ) =~ s/[0-9]{5}/.txt/;
 	if( $item_type eq 'Message' ) { $file =~ s/Message/OutlookHeaders/ }
