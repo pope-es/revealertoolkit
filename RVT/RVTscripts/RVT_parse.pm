@@ -92,6 +92,7 @@ sub constructor {
 	my $mtftar = `mtftar 2>&1`;
 	my $pdftotext = `pdftotext -v 2>&1`;
 	my $pffexport = `pffexport -V`;
+	my $sqlite = `sqlite3 -version`;
 	my $tar = `tar --version`;
 	my $z7 = `7z`; # would Perl support a variable called $7z ?
    
@@ -101,6 +102,7 @@ sub constructor {
 	if (!$mtftar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find mtftar)'); return }
 	if (!$pdftotext) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pdftotext)'); return }
 	if (!$pffexport) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pffexport)'); return }
+	if (!$sqlite) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find sqlite)'); return }
 	if (!$tar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find tar)'); return }
 	if (!$z7) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find 7z)'); return }
 
@@ -110,6 +112,7 @@ sub constructor {
    $main::RVT_requirements{'mtftar'} = $mtftar;
    $main::RVT_requirements{'pdftotext'} = $pdftotext;
    $main::RVT_requirements{'pffexport'} = $pffexport;
+   $main::RVT_requirements{'sqlite'} = $sqlite;
    $main::RVT_requirements{'tar'} = $tar;
    $main::RVT_requirements{'7z'} = $z7;
 
@@ -143,8 +146,8 @@ sub RVT_build_filelists {
 	our @filelist_msg;
 	our @filelist_pdf;
 	our @filelist_pff;
+	our @filelist_sqlite;
 	our @filelist_text;
-	our @filelist_zip;
 
 	# Populate the file lists with files with certain extensions.
 	#  
@@ -246,6 +249,10 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.pab$/i ) { push( @filelist_pff, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.pst$/i ) { push( @filelist_pff, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.ost$/i ) { push( @filelist_pff, $File::Find::name ) }
+		# filelist_sqlite:
+		elsif( $File::Find::name =~ /\.sqlite$/i ) { push( @filelist_sqlite, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.sqlitedb$/i ) { push( @filelist_sqlite, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.sqlite3$/i ) { push( @filelist_sqlite, $File::Find::name ) }
 		# filelist_text:
 		elsif( $File::Find::name =~ /\.accdb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 database
 		elsif( $File::Find::name =~ /\.accde$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Access 2007 "execute-only" database
@@ -258,23 +265,23 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.csv$/i ) { push( @filelist_text, $File::Find::name ) }	# CSV, comma-separated values
 		elsif( $File::Find::name =~ /\.dbf$/i ) { push( @filelist_text, $File::Find::name ) }	# dBASE
 		elsif( $File::Find::name =~ /\.doc$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Word document
-		elsif( $File::Find::name =~ /\.fodb$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (database)
-		elsif( $File::Find::name =~ /\.fodc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (chart)
-		elsif( $File::Find::name =~ /\.fodf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (formula)
-		elsif( $File::Find::name =~ /\.fodg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (graphics/drawing)
-		elsif( $File::Find::name =~ /\.fodi$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (image)
-		elsif( $File::Find::name =~ /\.fodm$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (master document)
-		elsif( $File::Find::name =~ /\.fodp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (presentation)
-		elsif( $File::Find::name =~ /\.fods$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (spreadsheet)
-		elsif( $File::Find::name =~ /\.fodt$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF flat (text)
-		elsif( $File::Find::name =~ /\.fotc$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (chart)
-		elsif( $File::Find::name =~ /\.fotf$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (formula)
-		elsif( $File::Find::name =~ /\.fotg$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (graphics/drawing)
-		elsif( $File::Find::name =~ /\.foth$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (web page)
-		elsif( $File::Find::name =~ /\.foti$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (image)
-		elsif( $File::Find::name =~ /\.fotp$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (presentation)
-		elsif( $File::Find::name =~ /\.fots$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (spreadsheet)
-		elsif( $File::Find::name =~ /\.fott$/i ) { push( @filelist_zip, $File::Find::name ) }	# ODF template flat (text)
+		elsif( $File::Find::name =~ /\.fodb$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (database)
+		elsif( $File::Find::name =~ /\.fodc$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (chart)
+		elsif( $File::Find::name =~ /\.fodf$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (formula)
+		elsif( $File::Find::name =~ /\.fodg$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (graphics/drawing)
+		elsif( $File::Find::name =~ /\.fodi$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (image)
+		elsif( $File::Find::name =~ /\.fodm$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (master document)
+		elsif( $File::Find::name =~ /\.fodp$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (presentation)
+		elsif( $File::Find::name =~ /\.fods$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (spreadsheet)
+		elsif( $File::Find::name =~ /\.fodt$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF flat (text)
+		elsif( $File::Find::name =~ /\.fotc$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (chart)
+		elsif( $File::Find::name =~ /\.fotf$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (formula)
+		elsif( $File::Find::name =~ /\.fotg$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (graphics/drawing)
+		elsif( $File::Find::name =~ /\.foth$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (web page)
+		elsif( $File::Find::name =~ /\.foti$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (image)
+		elsif( $File::Find::name =~ /\.fotp$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (presentation)
+		elsif( $File::Find::name =~ /\.fots$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (spreadsheet)
+		elsif( $File::Find::name =~ /\.fott$/i ) { push( @filelist_text, $File::Find::name ) }	# ODF template flat (text)
 		elsif( $File::Find::name =~ /\.htm$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.html$/i ) { push( @filelist_text, $File::Find::name ) }	# Likely to be found in browser caches
 		elsif( $File::Find::name =~ /\.ini$/i ) { push( @filelist_text, $File::Find::name ) }	# Typical text-based configuration file
@@ -297,7 +304,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.vbs$/i ) { push( @filelist_text, $File::Find::name ) }	# VisualBasic Script
 		elsif( $File::Find::name =~ /\.wpd$/i ) { push( @filelist_text, $File::Find::name ) }	# Corel WordPerfect
 		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel spreadsheet
-		elsif( $File::Find::name =~ /\.xlsb$/i ) { push( @filelist_zip, $File::Find::name ) }	# MS Excel 2007 binary workbook
+		elsif( $File::Find::name =~ /\.xlsb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel 2007 binary workbook
 		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }	# XML
 		elsif( $File::Find::name =~ /\/hiberfil\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
 		elsif( $File::Find::name =~ /\/pagefile\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
@@ -344,6 +351,7 @@ sub RVT_parse_everything {
 		our @filelist_msg = ( );
 		our @filelist_pdf = ( );
 		our @filelist_pff = ( );
+		our @filelist_sqlite = ( );
 		our @filelist_text = ( );
 		find( \&RVT_build_filelists, $item );
 
@@ -358,6 +366,7 @@ sub RVT_parse_everything {
 		RVT_parse_msg( $item, $disk );
 		RVT_parse_pdf( $item, $disk );
 		RVT_parse_pff( $item, $disk );
+		RVT_parse_sqlite( $item, $disk );
 		RVT_parse_text( $item, $disk );
 		
 		# Flag source as parsed.
@@ -919,7 +928,9 @@ sub RVT_parse_eml {
 					# Adjustments for certain extensions:
 					if( $ctype =~ /.*\/rtf$/ ) { $filename =~ s/\.dat/.rtf/ }
 					elsif( $ctype =~ /^text\/html/ ) { $filename =~ s/\.dat/.html/ }
+					elsif( $ctype =~ /^text\/plain/ ) { $filename =~ s/\.dat/.txt/ }
 					$is_attach = 1;
+					print "$ctype $filename\n";
 				}
 				
 				# Attachments:
@@ -1203,6 +1214,39 @@ sub RVT_parse_pff {
 
 
 
+sub RVT_parse_sqlite {
+	my $SQLITE = "sqlite3";
+    my $folder = shift(@_);
+	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("sqlite... ");
+	if( our @filelist_sqlite ) {
+		print "\n";
+		my $sqlitepath = RVT_create_folder($opath, 'sqlite');
+		my $fpath = RVT_create_file($sqlitepath, 'sqlite', 'txt');
+		( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
+		foreach my $f ( our @filelist_sqlite ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			$fpath = "$sqlitepath/sqlite-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+			my $output = `echo ".dump" | sqlite3 -batch "$f"`;
+			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
+			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print FOUT $output;
+			close FOUT;
+			$count++;
+		}
+	}
+    return 1;
+}
+
+
+
 sub RVT_parse_text {
 	my $FSTRINGS = "f-strings";
     my $folder = shift(@_);
@@ -1309,6 +1353,7 @@ sub RVT_get_source {
 	elsif( $file =~ /.*\/output\/parser\/control\/msg-[0-9]*\/msg-[0-9]*\.eml/ ) { $source_type = 'special_msg'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pdf-[0-9]*\/pdf-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/sqlite-[0-9]*\/sqlite-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	else { warn "WARNING: RVT_get_source called on unknown source type: $file\n" }
 	
