@@ -76,11 +76,12 @@ use File::Basename;
 use File::Find;
 use Data::Dumper;
 use Date::Manip;
+use Mail::Transport::Dbx; # needed by RVT_parse_dbx
 use Email::MIME; # Needed by RVT_parse_eml
+use Encode qw(encode_utf8); # Needed by RVT_parse_eml
 use Email::Outlook::Message; # Needed by RVT_parse_msg
-use File::stat; # needed by RVT_index_regular_file
 use Time::localtime; # needed by RVT_index_regular_file
-use Mail::Transport::Dbx;
+use File::stat; # needed by RVT_index_regular_file
 
 sub constructor {
 
@@ -227,6 +228,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.dbx$/i ) { push( @filelist_dbx, $File::Find::name ) }
 		# filelist_eml:
 		elsif( $File::Find::name =~ /\.eml$/i ) { push( @filelist_eml, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.emlx$/i ) { push( @filelist_eml, $File::Find::name ) }
 		# filelist_evt:
 		elsif( $File::Find::name =~ /\.evt$/i ) { push( @filelist_evt, $File::Find::name ) }
 		# filelist_lnk:
@@ -781,7 +783,7 @@ sub RVT_parse_eml {
 				}
 			}
 			close( EML_ITEM );
-			my $obj = Email::MIME->new($message);
+			my $obj = Email::MIME->new(encode_utf8($message)); # encode_utf8 to avoid croaking with some EMLX containing multibyte characters.
 
 			# Print object headers to RVT_META:
 #			foreach my $k ( $obj->header_names ) { print RVT_META "$k: ".$obj->header($k)."\n" }
