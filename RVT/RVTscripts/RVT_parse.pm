@@ -1351,7 +1351,7 @@ sub RVT_index_outlook_item {
 		( my $path = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.
 		(my $attachpath = $File::Find::name) =~ s/\.html$/.attach/;
 		our $attachments = '';
-		find( \&RVT_index_outlook_attachments, $attachpath );
+		find( \&RVT_index_outlook_attachment, $attachpath );
 		$buffer_index_outlook = $buffer_index_outlook."<tr><td><a href=\"file:$path\" target=\"_blank\">$item_type</a><td>$line</td><td>$attachments</td></tr>\n";
 		$count_outlook++;
 	}
@@ -1360,7 +1360,7 @@ sub RVT_index_outlook_item {
 
 
 
-sub RVT_index_outlook_attachments {
+sub RVT_index_outlook_attachment {
 # WARNING!!! This function is to be called ONLY from within RVT_index_outlook_item
 # $attachments is expected to be initialized.
 	
