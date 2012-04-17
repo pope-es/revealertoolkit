@@ -849,40 +849,14 @@ sub RVT_parse_eml {
 			
 			my $msgbody = 0; # we will set this when we reach the first TEXT part.
 			my @parts = ( );
-#print "Message Content-type: " . $obj->content_type . "\n";
-my $debug = $obj->debug_structure;
-print "$debug";
-			if( $obj->content_type =~ /^multipart\/alternative/ ) {
-				# This is to handle messages which consist only of a multipart/alt block.
-				# Its content is the body in different formats.
-				my @alternatives = $obj->parts;
-				my $plain = 0;
-				my $html = 0;
-				my $rtf = 0;
-				foreach my $alt ( @alternatives ) {
-					if( ($alt->content_type =~ /^text\/plain/) && (! $plain) ) { $plain = $alt }
-					elsif( ($alt->content_type =~ /^text\/html/) && (! $html) ) { $html = $alt }
-					elsif( ($alt->content_type =~ /^application\/rtf/) && (! $rtf) ) { $rtf = $alt }
-				}
-				if( $html ) { push( @parts, $html ) }
-				elsif( $plain ) { push( @parts, $plain ) }
-				elsif( $rtf ) { push( @parts, $rtf ) }
-				else {
-					( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-					if( ! -d $reportpath ) { mkdir $reportpath };
-					open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
-					print REPORT "$f\n";
-					close( REPORT );
-					print "   * Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
-					print RVT_META "# Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
-				}
-			} elsif( $obj->content_type =~ /^multipart\/mixed/ ) { @parts = $obj->parts } # These are all Email::MIME objects too.
+#my $debug = $obj->debug_structure;
+#print "$debug";
+			if( $obj->content_type =~ /^multipart\// ) { @parts = $obj->parts } # These are all Email::MIME objects too.
 			elsif( ! $obj->content_type ) { # Typical in no-MIME emails: plaintext bodies without specifying content type.
 				$obj->content_type_set ( 'text/plain' );
 #print "I set this new content type: ". $obj->content_type ."\n";
-				@parts = $obj->parts;
-			}
-			else { @parts = $obj->parts } # Fallback resource
+				@parts = $obj;
+			} else { @parts = $obj->parts } # Fallback resource
 
 			while( my $part = shift(@parts) ) {
 #print "-- Part:\n";
@@ -938,7 +912,7 @@ print "$debug";
 					elsif( $ctype =~ /^text\/html/ ) { $filename =~ s/\.dat/.html/ }
 					elsif( $ctype =~ /^text\/plain/ ) { $filename =~ s/\.dat/.txt/ }
 					$is_attach = 1;
-					print "$ctype $filename\n";
+#print "$ctype $filename\n";
 				}
 				
 				# Attachments:
