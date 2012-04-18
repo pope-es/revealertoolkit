@@ -250,6 +250,7 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.pst$/i ) { push( @filelist_pff, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.ost$/i ) { push( @filelist_pff, $File::Find::name ) }
 		# filelist_sqlite:
+		elsif( $File::Find::name =~ /\.db$/i ) { push( @filelist_sqlite, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.sqlite$/i ) { push( @filelist_sqlite, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.sqlitedb$/i ) { push( @filelist_sqlite, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.sqlite3$/i ) { push( @filelist_sqlite, $File::Find::name ) }
@@ -1449,10 +1450,15 @@ sub RVT_index_outlook_item {
 
 sub RVT_index_outlook_attachment {
 # WARNING!!! This function is to be called ONLY from within RVT_index_outlook_item
-# $attachments is expected to be initialized.
+# $attachments and $folder_to_index are expected to be initialized.
 	
 	our $attachments;
-	if( -f $File::Find::name ) { $attachments = $attachments.basename($File::Find::name)."<br>" }
+	our $folder_to_index;
+	if( -f $File::Find::name ) {
+		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
+		$link =~ s/#/%23/g;
+		$attachments = $attachments ."<a href=\"file:$link\">". basename($File::Find::name) ."</a><br>";
+	}
 	return 1;
 }
 
