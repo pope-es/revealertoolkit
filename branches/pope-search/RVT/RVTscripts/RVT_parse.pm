@@ -1678,7 +1678,7 @@ sub RVT_sanitize_libpff_item {
 	return if( $item_type eq 'Attachment' ); # Folders like Attachment00001 must not be treated directly by us; instead they will be treated during the sub parse_attachment of their parent directory.
 	return if( $item_type eq 'Folder' ); # Folders like Folder00001 are likely to be found in recovered structures, but they are not "by themselves" items to be analyzed. Note that the normal items (Message, Contact...) inside WILL be analyzed normally.
 # habría que quitar este print:
-	if( exists $field_names{$item_type} ) { print "Item: $item_type ($source)\n" }
+	if( exists $field_names{$item_type} ) { }#print "Item: $item_type ($source)\n" }
 	else {
 # Y aquí, además, habría que reportar a MALFORMED.
 		warn "WARNING: Skipping unknown item type $item_type ($source)\n";
@@ -1796,7 +1796,6 @@ sub RVT_sanitize_libpff_item {
 	
 	# Attachments:
 	if( -d "$folder/Attachments" ) {
-		print "    Attachments: $folder/Attachments\n";
 		move( "$folder/Attachments", "$folder.attach" );
 		print RVT_META "\n\n## Attachment information follows:\n\n";
 		our $wanted_depth = "$folder" =~ tr[/][];
