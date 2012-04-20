@@ -26,7 +26,7 @@ package RVTscripts::RVT_parse;
 # These are the necessary steps for a new plugin to work:
 #
 # 1) Write the code for your new plugin (for instance: RVT_parse_bmp). Depending on the
-# wanted behavior, you can use any of the existing modules (zip, pdf...) as a template.
+# wanted behavior, you can use any of the existing modules (lnk, evt, pdf...) as a template.
 #
 # 2) In "RVT_build_filelists", declare your file list in block "Declare (our) file lists"
 # and populate it in block "Populate the file lists with files with certain extensions".
@@ -94,6 +94,7 @@ sub constructor {
 	my $pffexport = `pffexport -V`;
 	my $sqlite = `sqlite3 -version`;
 	my $tar = `tar --version`;
+	my $tsk_recover = `tsk_recover -V`;
 	my $z7 = `7z`; # would Perl support a variable called $7z ?
    
 	if (!$evtparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
@@ -104,6 +105,7 @@ sub constructor {
 	if (!$pffexport) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find pffexport)'); return }
 	if (!$sqlite) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find sqlite)'); return }
 	if (!$tar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find tar)'); return }
+	if (!$tsk_recover) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find tsk_recover)'); return }
 	if (!$z7) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find 7z)'); return }
 
    $main::RVT_requirements{'evtparse'} = $evtparse;
@@ -114,6 +116,7 @@ sub constructor {
    $main::RVT_requirements{'pffexport'} = $pffexport;
    $main::RVT_requirements{'sqlite'} = $sqlite;
    $main::RVT_requirements{'tar'} = $tar;
+   $main::RVT_requirements{'tsk_recover'} = $tsk_recover;
    $main::RVT_requirements{'7z'} = $z7;
 
    $main::RVT_functions{RVT_script_parse_autoparse } = "Parse a disk automagically\n
@@ -148,13 +151,13 @@ sub RVT_build_filelists {
 	our @filelist_pff;
 	our @filelist_sqlite;
 	our @filelist_text;
+	our @filelist_undelete;
 
 	# Populate the file lists with files with certain extensions.
-	#  
 	if( -f $File::Find::name ) {
 		# filelist_bkf:
 		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# MS Windows backup
-		# filelist_compressed:
+		# filelist_compressed - fs images are also pushed to @filelist_undelete, to be parsed with tsk_recover
 		elsif( $File::Find::name =~ /\.arj$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ARJ compressed file
 		elsif( $File::Find::name =~ /\.bz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# bzip file
 		elsif( $File::Find::name =~ /\.bzip$/i ) { push( @filelist_compressed, $File::Find::name ) }	# bzip file
@@ -163,22 +166,37 @@ sub RVT_build_filelists {
 		elsif( $File::Find::name =~ /\.cab$/i ) { push( @filelist_compressed, $File::Find::name ) }		# MS cabinet file
 		elsif( $File::Find::name =~ /\.cgz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# .cpio.gz
 		elsif( $File::Find::name =~ /\.cpio$/i ) { push( @filelist_compressed, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.dd$/i ) { push( @filelist_compressed, $File::Find::name ) }		# UNIX dd raw image
+		elsif( $File::Find::name =~ /\.dd$/i ) {	# UNIX dd raw image
+			push( @filelist_compressed, $File::Find::name );
+			push( @filelist_undelete, $File::Find::name );
+		}		
 		elsif( $File::Find::name =~ /\.dmg$/i ) { push( @filelist_compressed, $File::Find::name ) }		# MacOS Disk iMaGe
 		elsif( $File::Find::name =~ /\.docx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (text)
 		elsif( $File::Find::name =~ /\.docm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML (text, macro-enabled document)
 		elsif( $File::Find::name =~ /\.dotm$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (text, macro-enabled)
 		elsif( $File::Find::name =~ /\.dotx$/i ) { push( @filelist_compressed, $File::Find::name ) }	# OOXML template (text)
-		elsif( $File::Find::name =~ /\.fat$/i ) { push( @filelist_compressed, $File::Find::name ) }		# FAT filesystems extracted by 7z from other archives (such as .dd).
+		elsif( $File::Find::name =~ /\.fat$/i ) {	# FAT filesystems extracted by 7z from other archives (such as .dd).
+			push( @filelist_compressed, $File::Find::name );
+			push( @filelist_undelete, $File::Find::name );
+		}
 		elsif( $File::Find::name =~ /\.gz$/i ) { push( @filelist_compressed, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.gzip$/i ) { push( @filelist_compressed, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.hfs$/i ) { push( @filelist_compressed, $File::Find::name ) }		# HFS filesystems contained within DMG images extracted with 7z.
-		elsif( $File::Find::name =~ /\.iso$/i ) { push( @filelist_compressed, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.hfs$/i ) { # HFS filesystems contained within DMG images extracted with 7z.
+			push( @filelist_compressed, $File::Find::name );
+			push( @filelist_undelete, $File::Find::name );
+		}
+		elsif( $File::Find::name =~ /\.iso$/i ) {	# ISO 9660 filesystems
+			push( @filelist_compressed, $File::Find::name );
+			push( @filelist_undelete, $File::Find::name );
+		}
 		elsif( $File::Find::name =~ /\.jar$/i ) { push( @filelist_compressed, $File::Find::name ) }		# Java ARchive
 		elsif( $File::Find::name =~ /\.keynote$/i ) { push( @filelist_compressed, $File::Find::name ) }	# Apple iWork presentation (Keynote document)
 		elsif( $File::Find::name =~ /\.lha$/i ) { push( @filelist_compressed, $File::Find::name ) }
 		elsif( $File::Find::name =~ /\.lzh$/i ) { push( @filelist_compressed, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\.ntfs$/i ) { push( @filelist_compressed, $File::Find::name ) }	# NTFS filesystems extracted by 7z from other archives (such as .dd).
+		elsif( $File::Find::name =~ /\.ntfs$/i ) { # NTFS filesystems extracted by 7z from other archives (such as .dd).
+			push( @filelist_compressed, $File::Find::name );
+			push( @filelist_undelete, $File::Find::name );
+		}
 		elsif( $File::Find::name =~ /\.numbers$/i ) { push( @filelist_compressed, $File::Find::name ) }	# Apple iWork spreadsheet (Numbers document)
 		elsif( $File::Find::name =~ /\.odb$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (database)
 		elsif( $File::Find::name =~ /\.odc$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ODF (chart)
@@ -324,6 +342,7 @@ sub RVT_parse_everything {
 	my $parsepath = "$morguepath/output/parser/control";
 	my @sources;
 	my $file;
+	
 	# Build list of not-yet-parsed sources:
 	mkpath $parsepath unless (-d $parsepath);
 	opendir( my $dir, $parsepath ) or warn "WARNING: cannot open dir $parsepath: $!";
@@ -333,9 +352,8 @@ sub RVT_parse_everything {
 		}
 	}
 	closedir( $dir );
-	if( not -f "$parsepath/__mnt_is_parsed.RVT_flag" ) {
-		push( @sources, "$morguepath/mnt" );
-	}
+	if( not -f "$parsepath/__mnt_is_parsed.RVT_flag" ) { push( @sources, "$morguepath/mnt" ) }
+
 	foreach my $item (@sources) {
 		my $fancyname = RVT_shorten_fs_path( $item );
 		print "Source: $fancyname\n";
@@ -354,21 +372,29 @@ sub RVT_parse_everything {
 		our @filelist_pff = ( );
 		our @filelist_sqlite = ( );
 		our @filelist_text = ( );
+		our @filelist_undelete = ( );
+
+		# Populate them:
 		find( \&RVT_build_filelists, $item );
+		if( $item =~ /.*\/mnt$/ ) { # Special case (we push the image file itself):
+			my $image = RVT_get_imagepath( $disk );
+			push( @filelist_undelete, $image );
+		}
 
 		# Parse all known file types:
-		RVT_parse_bkf( $item, $disk );
-		RVT_parse_compressed( $item, $disk );
-		RVT_parse_dbx( $item, $disk );
-		RVT_parse_eml( $item, $disk );
-		RVT_parse_evt( $item, $disk );
-		RVT_parse_lnk( $item, $disk );
-		RVT_parse_mbox( $item, $disk );
-		RVT_parse_msg( $item, $disk );
-		RVT_parse_pdf( $item, $disk );
-		RVT_parse_pff( $item, $disk );
-		RVT_parse_sqlite( $item, $disk );
-		RVT_parse_text( $item, $disk );
+		RVT_parse_bkf( $disk );
+		RVT_parse_compressed( $disk );
+		RVT_parse_dbx( $disk );
+		RVT_parse_eml( $disk );
+		RVT_parse_evt( $disk );
+		RVT_parse_lnk( $disk );
+		RVT_parse_mbox( $disk );
+		RVT_parse_msg( $disk );
+		RVT_parse_pdf( $disk );
+		RVT_parse_pff( $disk );
+		RVT_parse_sqlite( $disk );
+		RVT_parse_text( $disk );
+		RVT_parse_undelete( $disk );
 		
 		# Flag source as parsed.
 		if( $item =~ /.*\/mnt$/ ) { $file = "$parsepath/__mnt_is_parsed.RVT_flag" }
@@ -641,8 +667,6 @@ $buffer_index_outlook
 
 sub RVT_parse_bkf {
 	my $MTFTAR = "mtftar";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -671,8 +695,6 @@ sub RVT_parse_bkf {
 
 sub RVT_parse_compressed {
 	my $Z7 = "7z";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -700,6 +722,15 @@ sub RVT_parse_compressed {
 				print "   * Item is encrypted or password-protected. Reported.\n";
 				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
 			}
+			if( $output =~ /Error: Can not open file as archive/ ) {
+				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
+				if( ! -d $reportpath ) { mkdir $reportpath };
+				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
+				print REPORT "$f\n";
+				close( REPORT );
+				print "   * Malformed item. Reported.\n";
+				print RVT_META "# Malformed item. Reported.\n";
+			}
 		}
 	}
     return 1;
@@ -708,8 +739,6 @@ sub RVT_parse_compressed {
 
 
 sub RVT_parse_dbx {
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -766,8 +795,6 @@ sub RVT_parse_dbx {
 
 
 sub RVT_parse_eml {
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -948,8 +975,6 @@ sub RVT_parse_eml {
 
 sub RVT_parse_evt {
 	my $EVTPARSE = "evtparse.pl";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -989,8 +1014,6 @@ sub RVT_parse_evt {
 
 sub RVT_parse_lnk {
 	my $LNKPARSE = "lnk-parse-1.0.pl";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1022,8 +1045,6 @@ sub RVT_parse_lnk {
 
 
 sub RVT_parse_mbox {
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1072,8 +1093,6 @@ sub RVT_parse_mbox {
 
 
 sub RVT_parse_msg {
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1126,8 +1145,6 @@ sub RVT_parse_msg {
 
 sub RVT_parse_pdf {
 	my $PDFTOTEXT = "pdftotext";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1168,8 +1185,6 @@ sub RVT_parse_pdf {
 
 sub RVT_parse_pff {
 	my $PFFEXPORT = "pffexport";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1199,8 +1214,6 @@ sub RVT_parse_pff {
 
 sub RVT_parse_sqlite {
 	my $SQLITE = "sqlite3";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1232,8 +1245,6 @@ sub RVT_parse_sqlite {
 
 sub RVT_parse_text {
 	my $FSTRINGS = "f-strings";
-    my $folder = shift(@_);
-	if( not -d $folder ) { RVT_log ( 'WARNING' , 'parameter is not a directory'); return 0; }
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1261,6 +1272,34 @@ sub RVT_parse_text {
 			close (FTEXT);
 			close (FOUT);
 			$count++;
+		}
+	}
+    return 1;
+}
+
+
+
+sub RVT_parse_undelete {
+	my $TSK_RECOVER = "tsk_recover";
+	my $disk = shift(@_);
+	$disk = $main::RVT_level->{tag} unless $disk;
+    if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
+	my $morguepath = RVT_get_morguepath($disk);
+    my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
+    mkpath $opath unless (-d $opath);
+    
+	printf ("undelete... ");
+	if( our @filelist_undelete ) {
+		print "\n";
+		foreach my $f ( our @filelist_undelete ) {
+			print "  ".RVT_shorten_fs_path( $f )."\n";
+			my $fpath = RVT_create_folder($opath, 'undelete');
+			mkpath $fpath;
+			my $output = `$TSK_RECOVER -v "$f" "$fpath" 2>&1`;
+			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META $output;
+			close (META);
 		}
 	}
     return 1;
@@ -1309,6 +1348,9 @@ sub RVT_get_best_source {
 			push( @results, "$source.RVT_metadata" );
 			if( -d "$source.attach" ) { push( @results, "$source.attach" ) }
 			$found = 1;
+		} elsif( $source =~ /^.*\/output\/parser\/control\/undelete-[0-9]+\/.*$/ ) {
+			push( @results, "$source" );
+			$found = 1;
 		} elsif( $source =~ /\/mnt\/p0[0-9]\// ) {
 			push( @results, "$source" );
 			$found = 1;
@@ -1338,6 +1380,7 @@ sub RVT_get_source {
 	elsif( $file =~ /.*\/output\/parser\/control\/pff-[0-9]*/ ) { $source_type = 'special_pff'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/sqlite-[0-9]*\/sqlite-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/text\/text-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/undelete-[0-9]*/ ) { $source_type = 'infolder'; }
 	else { warn "WARNING: RVT_get_source called on unknown source type: $file\n" }
 	
 	if( $source_type eq 'infolder' ) {
