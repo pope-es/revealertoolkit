@@ -1295,7 +1295,7 @@ sub RVT_parse_undelete {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_folder($opath, 'undelete');
 			mkpath $fpath;
-			my $output = `$TSK_RECOVER -v "$f" "$fpath" 2>&1`;
+			my $output = `$TSK_RECOVER "$f" "$fpath" 2>&1`;
 			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
