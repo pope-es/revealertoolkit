@@ -527,7 +527,7 @@ sub RVT_script_parse_export  {
 			my $opath = "$exportpath/$string";
 			mkdir $opath;
 			mkdir "$opath/files";
-			mkdir "$opath/outlook";
+			mkdir "$opath/email";
 			my %copied;
 			open( FILEINDEX, ">>:encoding(UTF-8)", "$opath/files/__file_index.RVT_metadata" );
 			while (my $file = <FMATCH>) { # For each line of results...
@@ -541,9 +541,9 @@ sub RVT_script_parse_export  {
 							$dest =~ s/.*\/output\/parser\/control\/(pff-[0-9]*\..*)/\1/;
 							$dest =~ s/.*\/output\/parser\/control\/(eml-[0-9]+\/.*)/\1/;
 							if( -f $result ) {
-								fcopy( $result, "$opath/outlook/$dest" );
+								fcopy( $result, "$opath/email/$dest" );
 							} elsif( -d $result ) {
-								dircopy( $result, "$opath/outlook/$dest" );
+								dircopy( $result, "$opath/email/$dest" );
 							}
 						} else { # Common files
 							my $dest = RVT_get_unique_filename( $result, "$opath/files" );
@@ -568,7 +568,7 @@ sub RVT_script_parse_export  {
 
 
 sub RVT_script_parse_index {
-	our $folder_to_index = shift( @_ ); # this parameter is accessed by RVT_index_outlook_item
+	our $folder_to_index = shift( @_ ); # this parameter is accessed by RVT_index_email_item
 	print "  Creating $folder_to_index/RVT_index.html ... ";
 	if( ! -d $folder_to_index ) {
 		warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: create index $folder_to_index\n";
@@ -576,7 +576,7 @@ sub RVT_script_parse_index {
 	}
 	
 	my $index_type;
- 	if( ( -d "$folder_to_index/files" ) or ( -d "$folder_to_index/outlook" ) ) { $index_type = 'search_results' }
+ 	if( ( -d "$folder_to_index/files" ) or ( -d "$folder_to_index/email" ) ) { $index_type = 'search_results' }
  	else { $index_type = 'misc' }
 	
 	my $index = "$folder_to_index/RVT_index.html";
@@ -609,17 +609,17 @@ tsRegister();
 </script>";
 	}
 
-	our $buffer_index_outlook = '';
-	our $count_outlook = 0;
-	if( -d "$folder_to_index/outlook" ) { find( \&RVT_index_outlook_item, "$folder_to_index/outlook" ) }
+	our $buffer_index_email = '';
+	our $count_email = 0;
+	if( -d "$folder_to_index/email" ) { find( \&RVT_index_email_item, "$folder_to_index/email" ) }
 	elsif( ! -d "$folder_to_index/files" ) {
-		# This is not a normal export folder (no files/, no outlook/ ?). Index all outlook items in here.
-		find( \&RVT_index_outlook_item, "$folder_to_index" )
+		# This is not a normal export folder (no files/, no email/ ?). Index all email items in here.
+		find( \&RVT_index_email_item, "$folder_to_index" )
 	}
-	if( $count_outlook ) {
+	if( $count_email ) {
 		print RVT_INDEX "<script type=\"text/javascript\">
 <!--
-var TSort_Data = new Array ('table_outlook', 'h', 's', 'd', 's', 's', 's', 's', 's', 's');
+var TSort_Data = new Array ('table_email', 'h', 's', 'd', 's', 's', 's', 's', 's', 's');
 var TSort_Classes = new Array ('row1', 'row2');
 var TSort_Initial = 2;
 tsRegister();
@@ -640,13 +640,13 @@ $buffer_index_regular
 ";
 	}
 	
-	if( $count_outlook ) {
-		print RVT_INDEX "<h3>Outlook / e-mail: $count_outlook items</h3>
-<TABLE id=\"table_outlook\">
+	if( $count_email ) {
+		print RVT_INDEX "<h3>e-mail and related elements: $count_email items</h3>
+<TABLE id=\"table_email\">
 <THEAD>
-<tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th><th>&nbsp;Attachments&nbsp;</th></tr>
+<tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th><th>&nbsp;Attachments&nbsp;</th></tr>
 </THEAD>
-$buffer_index_outlook
+$buffer_index_email
 </TABLE>
 ";
 	}
@@ -702,7 +702,7 @@ sub RVT_parse_compressed {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("compressed... ");
+	printf ("compressed files... ");
 	if( our @filelist_compressed ) {
 		print "\n";
 		foreach my $f ( our @filelist_compressed ) {
@@ -853,7 +853,7 @@ sub RVT_parse_eml {
 			$bcc =~ s/</&lt;/g; $bcc =~ s/>/&gt;/g;
 			( my $source = $f ) =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9]\/.*)/\1/;
 			$source =~ s/\/output\/parser\/control\// /;
-			my $index_line = "<!--_XX_RVT_DELIM_".$from."_XX_RVT_DELIM_".$date."_XX_RVT_DELIM_".$subject."_XX_RVT_DELIM_".$to."_XX_RVT_DELIM_".$cc."_XX_RVT_DELIM_".$bcc."_XX_RVT_DELIM_".$flags."_XX_RVT_DELIM_-->";
+			my $index_line = "<!--_XX_RVT_DELIM_".$date."_XX_RVT_DELIM_".$from."_XX_RVT_DELIM_".$subject."_XX_RVT_DELIM_".$to."_XX_RVT_DELIM_".$cc."_XX_RVT_DELIM_".$bcc."_XX_RVT_DELIM_".$flags."_XX_RVT_DELIM_-->";
 			$index_line =~ s/#//g;
 			$index_line =~ s/_XX_RVT_DELIM_/#/g;
 			print RVT_ITEM "<HTML>$index_line
@@ -865,7 +865,7 @@ sub RVT_parse_eml {
 </HEAD>
 <BODY>
 	<TABLE border=1 rules=all frame=box>
-		<tr><td><b>Item</b></td><td>e-mail message&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $meta) ,"\" target=\"_blank\">[Headers]</a></td></tr>
+		<tr><td><b>Item</b></td><td>e-mail item (Message)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $meta) ,"\" target=\"_blank\">[Headers]</a></td></tr>
 		<tr><td><b>Source</b></td><td>$source</td></tr>
 ";
 			if( $date ne '' ) {print RVT_ITEM "		<tr><td><b>Sent</b></td><td>$date</td></tr>\n" }
@@ -1288,7 +1288,7 @@ sub RVT_parse_undelete {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("undelete... ");
+	printf ("filesystem undeletion (if possible)... ");
 	if( our @filelist_undelete ) {
 		print "\n";
 		foreach my $f ( our @filelist_undelete ) {
@@ -1454,15 +1454,15 @@ sub RVT_get_unique_filename ($$) {
 
 
 
-sub RVT_index_outlook_item {
+sub RVT_index_email_item {
 # WARNING!!! This function is to be called ONLY from within RVT_create_index.
-# $folder_to_index, $buffer_index_outlook and $count_outlook are expected to be initialized.
+# $folder_to_index, $buffer_index_email and $count_email are expected to be initialized.
 	return if ( -d ); # We only want to act on FILES.
 	return if ( $File::Find::dir =~ /.*\.attach.*/ ); # messages attached to other messages are not indexed. Their parent messages will be.
 	# however i dunno if EMLs are totally being well parsed
 	our $folder_to_index;
-	our $count_outlook;
-	our $buffer_index_outlook;
+	our $count_email;
+	our $buffer_index_email;
 	if( ($File::Find::name =~ /.*\/[A-Z][a-z]+[0-9]{5}.html/) or ($File::Find::name =~ /.*\/eml-[0-9]+.html/) ) {
 		open( ITEM, "<:encoding(UTF-8)", $File::Find::name );
 		my $line = <ITEM>;
@@ -1482,17 +1482,17 @@ sub RVT_index_outlook_item {
 		( my $path = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.
 		(my $attachpath = $File::Find::name) =~ s/\.html$/.attach/;
 		our $attachments = '';
-		find( \&RVT_index_outlook_attachment, $attachpath );
-		$buffer_index_outlook = $buffer_index_outlook."<tr><td><a href=\"file:$path\" target=\"_blank\">$item_type</a><td>$line</td><td>$attachments</td></tr>\n";
-		$count_outlook++;
+		find( \&RVT_index_email_attachment, $attachpath );
+		$buffer_index_email = $buffer_index_email."<tr><td><a href=\"file:$path\" target=\"_blank\">$item_type</a><td>$line</td><td>$attachments</td></tr>\n";
+		$count_email++;
 	}
 	return 1;
 }
 
 
 
-sub RVT_index_outlook_attachment {
-# WARNING!!! This function is to be called ONLY from within RVT_index_outlook_item
+sub RVT_index_email_attachment {
+# WARNING!!! This function is to be called ONLY from within RVT_index_email_item
 # $attachments and $folder_to_index are expected to be initialized.
 	
 	our $attachments;
@@ -1500,7 +1500,7 @@ sub RVT_index_outlook_attachment {
 	if( -f $File::Find::name ) {
 		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
 		$link =~ s/#/%23/g;
-		$attachments = $attachments ."<a href=\"file:$link\">". basename($File::Find::name) ."</a><br>";
+		$attachments = $attachments ."<a href=\"file:$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
 	}
 	return 1;
 }
@@ -1765,7 +1765,7 @@ sub RVT_sanitize_libpff_item {
 		$field_values{'Flags'} =~ s/.*\((.*)\)/\1/;
 	}
 	# Write RVT_ITEM:
-	my $index_line = "<!--_XX_RVT_DELIM_".$field_values{'Sender name'}."_XX_RVT_DELIM_".$field_values{'Client submit time'}."_XX_RVT_DELIM_".$field_values{'Subject'}."_XX_RVT_DELIM_".$to."_XX_RVT_DELIM_".$cc."_XX_RVT_DELIM_".$bcc."_XX_RVT_DELIM_".$field_values{'Flags'}."_XX_RVT_DELIM_-->";
+	my $index_line = "<!--_XX_RVT_DELIM_".$field_values{'Client submit time'}."_XX_RVT_DELIM_".$field_values{'Sender name'}."_XX_RVT_DELIM_".$field_values{'Subject'}."_XX_RVT_DELIM_".$to."_XX_RVT_DELIM_".$cc."_XX_RVT_DELIM_".$bcc."_XX_RVT_DELIM_".$field_values{'Flags'}."_XX_RVT_DELIM_-->";
 	$index_line =~ s/#//g;
 	$index_line =~ s/_XX_RVT_DELIM_/#/g;
 	print RVT_ITEM "<HTML>$index_line
@@ -1781,7 +1781,7 @@ sub RVT_sanitize_libpff_item {
 </HEAD>
 <BODY>
 	<TABLE border=1 rules=all frame=box>
-		<tr><td><b>Item</b></td><td>Outlook item ($item_type)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>
+		<tr><td><b>Item</b></td><td>e-mail item ($item_type)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>
 		<tr><td><b>Source</b></td><td>$source</td></tr>
 ";
 	foreach my $k ( @sortorder ) { # Write headers to RVT_ITEM:
