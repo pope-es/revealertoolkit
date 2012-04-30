@@ -713,7 +713,7 @@ sub RVT_parse_compressed {
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
 			close (META);
-			if( $output =~ /Wrong password/ ) {
+			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) ) {
 				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
 				if( ! -d $reportpath ) { mkdir $reportpath };
 				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
