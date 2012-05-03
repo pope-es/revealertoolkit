@@ -713,14 +713,14 @@ sub RVT_parse_compressed {
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
 			close (META);
-			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) ) {
+			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) or ($output =~ /Unsupported Method/) ) {
 				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
 				if( ! -d $reportpath ) { mkdir $reportpath };
 				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
 				print REPORT "$f\n";
 				close( REPORT );
-				print "   * Item is encrypted or password-protected. Reported.\n";
-				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
+				print "   * Item seems encrypted or password-protected. Reported.\n";
+				print RVT_META "# Item seems encrypted or password-protected. Reported.\n";
 			}
 			if( $output =~ /Error: Can not open file as archive/ ) {
 				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
@@ -750,8 +750,7 @@ sub RVT_parse_dbx {
 	if( our @filelist_dbx ) {
 		print "\n";
 		foreach my $f ( our @filelist_dbx) {
-## NOS ATREVEMOS CON FOLDERS.DBX?
-			next if $f =~ /Folders.dbx$/; # XX_FIXME: 
+			next if $f =~ /Folders.dbx$/; # XX_RVT_FIXME: Folders.dbx somehow seems to crash our code :-?
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $dbxpath = RVT_create_folder($opath, 'dbx');
 			my $meta = "$dbxpath/RVT_metadata";
@@ -1172,8 +1171,8 @@ sub RVT_parse_pdf {
 				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
 				print REPORT "$f\n";
 				close( REPORT );
-				print "   * Item is encrypted or password-protected. Reported.\n";
-				print RVT_META "# Item is encrypted or password-protected. Reported.\n";
+				print "   * Item seems encrypted or password-protected. Reported.\n";
+				print RVT_META "# Item seems encrypted or password-protected. Reported.\n";
 			}
 			$count++;
 		}
