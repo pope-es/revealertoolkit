@@ -136,7 +136,7 @@ sub constructor {
 
 
 
-sub RVT_build_filelists {
+sub RVT_build_filelists () {
 
 	# Declare (our) file lists:
 	our @filelist_bkf;
@@ -417,7 +417,8 @@ sub RVT_parse_everything {
 
 
 sub RVT_script_parse_autoparse {
-	# works at disk level. Supports @disks.
+	# Works at DISK LEVEL. Supports @disks.
+
 	my $disk = shift( @_ );
 	$disk = $main::RVT_level->{tag} unless $disk;
 	while( $disk ) {
@@ -430,7 +431,7 @@ sub RVT_script_parse_autoparse {
 		}
 		my $diskpath = RVT_get_morguepath($disk);
 		RVT_script_parse_index("$diskpath/output/parser/control");
-		RVT_script_parse_export( ":allspecial", $disk );
+		RVT_script_parse_export( ":reports", $disk );
 		$disk = shift( @_ );
 	}
 	return 1;
@@ -440,9 +441,9 @@ sub RVT_script_parse_autoparse {
 
 sub RVT_script_parse_search  {
     # launches a search over indexed (PARSEd) files writing results (hits) to a file.
-    # takes as arguments:
-    #   file with searches: one per line
-    #   one or more disks from the morgue (supports @disks)
+    # Arguments:
+    # - File with searches: one per line (this file can be created with "script search file...")
+    # - One or more disks from the morgue (supports @disks)
 
     my $searchesfilename = shift( @_ );
     my $disk = shift( @_ );
@@ -489,9 +490,9 @@ sub RVT_script_parse_search  {
 
 sub RVT_script_parse_export  {
     # Exports results (from script parse search) to disk.
-    # takes as arguments:
-    #   file with searches: one per line
-    #   one or more disks from the morgue (supports @disks)
+    # Arguments:
+    # - File with searches: one per line
+    # - One or more disks from the morgue (supports @disks)
 
     my $searchesfilename = shift( @_ );
 	my $disk = shift( @_ );
@@ -511,7 +512,7 @@ sub RVT_script_parse_export  {
 			push( @searches, "rvt_encrypted" );
 		} elsif( $searchesfilename =~ /^:malformed$/ ) {
 			push( @searches, "rvt_malformed" );
-		} elsif( $searchesfilename =~ /^:allspecial$/ ) {
+		} elsif( $searchesfilename =~ /^:reports$/ ) {
 			push( @searches, "rvt_encrypted", "rvt_malformed" );
 		} else {
 			open (F, "<:encoding(UTF-8)", RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
@@ -567,8 +568,13 @@ sub RVT_script_parse_export  {
 
 
 
-sub RVT_script_parse_index {
-	our $folder_to_index = shift( @_ ); # this parameter is accessed by RVT_index_email_item
+sub RVT_script_parse_index ($) {
+	# For a given folder, creates RVT_index.html.
+	# For folders with EXPORTed search results, the index differentiates between regular files, and email items.
+	# For other folders, it creates an index of e-mail / Outlook items (both from PFF and from [mbox|msg|dbx]->eml).
+	
+#	our $folder_to_index = shift( @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
+	our $folder_to_index = join(" ", @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
 	print "  Creating $folder_to_index/RVT_index.html ... ";
 	if( ! -d $folder_to_index ) {
 		warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: create index $folder_to_index\n";
@@ -641,7 +647,7 @@ $buffer_index_regular
 	}
 	
 	if( $count_email ) {
-		print RVT_INDEX "<h3>e-mail and related elements: $count_email items</h3>
+		print RVT_INDEX "<h3>e-mail, calendar, contacts...: $count_email items</h3>
 <TABLE id=\"table_email\">
 <THEAD>
 <tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th><th>&nbsp;Attachments&nbsp;</th></tr>
@@ -709,28 +715,12 @@ sub RVT_parse_compressed {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_folder($opath, 'compressed');
 			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) or ($output =~ /Unsupported Method/) ) {
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Item seems encrypted or password-protected. Reported.\n";
-				print RVT_META "# Item seems encrypted or password-protected. Reported.\n";
-			}
-			if( $output =~ /Error: Can not open file as archive/ ) {
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Malformed item. Reported.\n";
-				print RVT_META "# Malformed item. Reported.\n";
-			}
+			open (RVT_META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print RVT_META $output;
+			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) or ($output =~ /Unsupported Method/) ) { RVT_report( "encrypted", $f, $disk ) }
+			if( $output =~ /Error: Can not open file as archive/ ) { RVT_report( "malformed", $f, $disk ) }
+			close (RVT_META);
 		}
 	}
     return 1;
@@ -907,15 +897,7 @@ sub RVT_parse_eml {
 					if( $html ) { push( @parts, $html ) }
 					elsif( $plain ) { push( @parts, $plain ) }
 					elsif( $rtf ) { push( @parts, $rtf ) }
-					else { 
-						( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-						if( ! -d $reportpath ) { mkdir $reportpath };
-						open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
-						print REPORT "$f\n";
-						close( REPORT );
-						print "   * Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
-						print RVT_META "# Malformed item: Message seems to contain malformed MIME headers. Reported.\n";
-					}
+					else { RVT_report( "malformed", $f, $disk ) }
 				} elsif( $ctype =~ /^multipart/ ) { push( @parts, $part->parts ) }
 				elsif( $filename ) { $is_attach = 1 }
 				elsif( ($ctype =~ /^text\//) && (! $msgbody) ) {
@@ -953,6 +935,7 @@ sub RVT_parse_eml {
 					my $string = "$attachfolder/$filename";
 					print RVT_META "Attachment: $string\n";
 					$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
+					$string =~ s/%/%25/g;
 					$string =~ s/#/%23/g;
 					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a></td></tr>\n";
 				}
@@ -1110,9 +1093,8 @@ sub RVT_parse_msg {
 			$fpath = "$msgpath/msg-$count.eml"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			( my $meta = $fpath ) =~ s/\.eml$/.RVT_metadata/;
 
-			open (META, ">:encoding(UTF-8)", "$meta") or warn ("WARNING: failed to create output file $meta: $!.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			close (META);
+			open (RVT_META, ">:encoding(UTF-8)", "$meta") or warn ("WARNING: failed to create output file $meta: $!.");
+			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			
 			# Temp redirection of STDERR to RVT_META, to capture output from Email::Outlook::Message.
 			open( STDERR, ">>:encoding(UTF-8)", "$meta" ); 
@@ -1124,16 +1106,8 @@ sub RVT_parse_msg {
 				open( RVT_ITEM, ">:encoding(UTF-8)", "$fpath" ) or warn ("WARNING: failed to create output file $fpath: $!.");
 				print RVT_ITEM $mail;
 				close( RVT_ITEM );
-			} else { 
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_malformed" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Malformed item. Reported.\n";
-				print RVT_META "# Malformed item. Reported.\n";
-			}
-
+			} else { RVT_report( "malformed", $f, $disk ) }
+			close (RVT_META);
 			$count++;
 		}
 	}
@@ -1161,19 +1135,11 @@ sub RVT_parse_pdf {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$pdfpath/pdf-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			my $output = `$PDFTOTEXT "$f" - 2>&1`;
-			open (META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
-			print META $output;
-			close (META);
-			if( $output =~ /^Error: Incorrect password$/ ) {
-				( my $reportpath = $opath ) =~ s/\/control$/\/searches/;
-				if( ! -d $reportpath ) { mkdir $reportpath };
-				open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_encrypted" );
-				print REPORT "$f\n";
-				close( REPORT );
-				print "   * Item seems encrypted or password-protected. Reported.\n";
-				print RVT_META "# Item seems encrypted or password-protected. Reported.\n";
-			}
+			open (RVT_META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
+			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print RVT_META $output;
+			if( $output =~ /^Error: Incorrect password$/ ) { RVT_report( "encrypted", $f, $disk ) }
+			close (RVT_META);
 			$count++;
 		}
 	}
@@ -1465,7 +1431,7 @@ sub RVT_get_unique_filename ($$) {
 
 
 
-sub RVT_index_email_item {
+sub RVT_index_email_item () {
 # WARNING!!! This function is to be called ONLY from within RVT_create_index.
 # $folder_to_index, $buffer_index_email and $count_email are expected to be initialized.
 	return if ( -d ); # We only want to act on FILES.
@@ -1502,7 +1468,7 @@ sub RVT_index_email_item {
 
 
 
-sub RVT_index_email_attachment {
+sub RVT_index_email_attachment () {
 # WARNING!!! This function is to be called ONLY from within RVT_index_email_item
 # $attachments and $folder_to_index are expected to be initialized.
 	
@@ -1510,6 +1476,7 @@ sub RVT_index_email_attachment {
 	our $folder_to_index;
 	if( -f $File::Find::name ) {
 		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
+		$link =~ s/%/%25/g;
 		$link =~ s/#/%23/g;
 		$attachments = $attachments ."<a href=\"file:$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
 	}
@@ -1518,7 +1485,7 @@ sub RVT_index_email_attachment {
 
 
 
-sub RVT_index_regular_file {
+sub RVT_index_regular_file () {
 # WARNING!!! This function is to be called ONLY from within RVT_create_index.
 # $folder_to_index, $buffer_index_regular and $count_regular are expected to be initialized.
 	return if ( -d ); # We only want to act on FILES.
@@ -1528,6 +1495,8 @@ sub RVT_index_regular_file {
 	our $buffer_index_regular;
 
 	( my $link = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.
+	$link =~ s/%/%25/g;
+	$link =~ s/#/%23/g;
 	( my $basename = basename($File::Find::name) ) =~ s/(.*)\.[^.]{1,16}$/\1/;
 	( my $ext = uc(basename($File::Find::name)) ) =~ s/.*\.([^.]{1,16})$/.\1/;
 	
@@ -1553,7 +1522,7 @@ sub RVT_index_regular_file {
 
 
 
-sub RVT_sanitize_libpff_attachment {
+sub RVT_sanitize_libpff_attachment () {
 # WARNING!!! This function is to be called ONLY from within RVT_sanitize_libpff_item.
 # File descriptors RVT_META and RVT_ITEM are expected to be open when entering this sub,
 # and $wanted_depth is expected to be correctly set.
@@ -1565,6 +1534,7 @@ sub RVT_sanitize_libpff_attachment {
 		print RVT_META "Attachment: $File::Find::name\n";
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
+		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
 	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*[A-Z[a-z]*00001.html/ )  {
@@ -1572,6 +1542,7 @@ sub RVT_sanitize_libpff_attachment {
 		print RVT_META "Attachment: $File::Find::name\n";
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
+		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
 	}
@@ -1580,7 +1551,7 @@ sub RVT_sanitize_libpff_attachment {
 
 
 
-sub RVT_sanitize_libpff_item {
+sub RVT_sanitize_libpff_item () {
 	
 	return unless ( -d ); # We are only interested in DIRECTORIES
 	return unless ( $File::Find::name =~ /\/[A-Z][a-z]*[0-9]{5}$/ );
@@ -1851,12 +1822,39 @@ sub RVT_sanitize_libpff_item {
 
 
 
-sub RVT_shorten_fs_path {
+sub RVT_shorten_fs_path ($) {
 	# Shorten a file name to fit it on screen.
 	my $parm = shift( @_ );
 	$parm =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9]\/.*)/\1/;
 	$parm =~ s/\/output\/parser\/control\// /;	
 	return $parm;
+}
+
+
+
+sub RVT_report ($$$) {
+# WARNING: RVT_META is expected to be an open fd.
+	# Logs a given item to a given report.
+	# Standard reports: encrypted, malformed.
+	my ( $report, $file, $disk ) = @_;
+
+	my $reportpath = RVT_get_morguepath($disk) . '/output/parser/searches';
+	if( ! -d $reportpath ) { mkdir $reportpath };
+	open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_$report" );
+	print REPORT "$file\n";
+	close( REPORT );
+	if( $report == "encrypted" ) {
+		print "   * Item seems encrypted or password-protected. Reported.\n";
+		print RVT_META "# Item seems encrypted or password-protected. Reported.\n";
+	} elsif( $report == "malformed" ) {
+		print "   * Item seems malformed. Reported.\n";
+		print RVT_META "# Item seems malformed. Reported.\n";
+	} else {
+		print "   * Item added to report rvt_$report.\n";
+		print RVT_META "# Item added to report rvt_$report.\n";
+	}
+	
+	return 1;
 }
 
 
