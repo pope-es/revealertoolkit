@@ -32,7 +32,7 @@
 
 BEGIN {
 
-	use encoding "utf-8"; # lgomez> Still not sure about this.
+	use encoding "utf-8";
 
 	# loading RVT libraries path
 	use FindBin;
