@@ -466,9 +466,18 @@ sub RVT_script_parse_search  {
 		for $string ( @searches ) {
 			chomp $string;
 			$string = lc($string);
-			print "-- $string\n";
-			open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
-			open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
+			if( grep( /:::/, $string ) ) { # Regexp search
+				(my $regexp = $string) =~ s/^.*::://;
+				$string =~ s/:::.*$//;
+				print "-- REGEXP: $string ==> $regexp ..... ";
+				open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
+				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
+			} else { # Regular search
+				print "-- LITERAL: $string ..... ";
+				open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
+				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
+			}
+			my $hits = 0;
 			while (my $file = <FMATCH>) {
 				chomp( $file );
 				my @sources = RVT_get_all_sources( $file, $disk );
@@ -477,10 +486,12 @@ sub RVT_script_parse_search  {
 					$line = "$line$source#";
 				}
 				print FOUT "$line\n";
+				$hits++;
 			}
 			close FMATCH;
 			close FOUT;
-		}
+			print "($hits hits)\n";
+		} # end for $string ( @searches )
 		$disk = shift( @_ );
 	} # end while( $disk )
     return 1;
@@ -523,7 +534,15 @@ sub RVT_script_parse_export  {
 		for $string ( @searches ) { # For each search string...
 			chomp $string;
 			$string = lc($string);
-			print "-- $string\n";
+			
+			if( grep( /:::/, $string ) ) {	# Regexp search
+				(my $regexp = $string) =~ s/^.*::://;
+				$string =~ s/:::.*$//;
+				print "-- REGEXP: $string ==> $regexp ..... ";
+			} else {						# Regular search
+				print "-- LITERAL: $string .....";
+			}
+
 			open (FMATCH, "$searchespath/$string");
 			my $opath = "$exportpath/$string";
 			mkdir $opath;
@@ -531,6 +550,7 @@ sub RVT_script_parse_export  {
 			mkdir "$opath/email";
 			my %copied;
 			open( FILEINDEX, ">>:encoding(UTF-8)", "$opath/files/__file_index.RVT_metadata" );
+			my $hits = 0;
 			while (my $file = <FMATCH>) { # For each line of results...
 				chomp ( $file );
 				$file =~ s/#.*//; # we discard the rest of the sources and re-calculate them:
@@ -557,8 +577,10 @@ sub RVT_script_parse_export  {
 						$copied{$result} = 1;
 					}
 				} # end while( my $result = shift( @results ) ) {
+				$hits++;
 			} # end while (my $file = <FMATCH>) { # For each line of results...
 			close( FILEINDEX );
+			print "($hits hits)\n";
 			RVT_script_parse_index( $opath );
 		} # end for each string...
 		$disk = shift( @_ );
