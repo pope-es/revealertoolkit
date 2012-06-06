@@ -466,31 +466,87 @@ sub RVT_script_parse_search  {
 		for $string ( @searches ) {
 			chomp $string;
 			$string = lc($string);
-			if( grep( /:::/, $string ) ) { # Regexp search
+			if( grep( /:::intersect:::/, $string ) ) { # intersection search ("AND" operator)
+				my @parms = split( ":::", $string );
+				if( (scalar(@parms) < 4 ) or ($parms[1] != "intersect") ) {
+					print "WARNING: Skipping malformed search. Keyword \"INTERSECT\" appears at wrong position: $string\n";
+					open( FMATCH, "<", "/dev/null" );
+					open( FOUT, ">", "/dev/null" );				
+				} else {
+					my $searchName = shift( @parms );
+					shift( @parms ); # "intersect" - we checked that before.
+					print "-- INTERSECT: $searchName ==> ".join( ":::", @parms )." ..... ";
+					open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
+					my $regexp = shift( @parms );
+					open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
+					my @fmatch = ();
+					while( my $item = <FMATCH> ) {
+						chomp( $item );
+						push(@fmatch, $item );
+					}
+					close FMATCH; # at this point, @fmatch contains items that match the first search term.
+					while( $regexp = shift(@parms) ) { # Perform necessary ANDs
+						open (FMATCH, "-|", "grep", "-EHl", $regexp, @fmatch, "-R");
+						@fmatch = ();
+						while( my $item = <FMATCH> ) {
+							chomp( $item );
+							push(@fmatch, $item );
+						}
+						close FMATCH;
+					}
+					my $hits = 0;
+					while (my $file = shift(@fmatch) ) {
+						chomp( $file );
+						my @sources = RVT_get_all_sources( $file, $disk );
+						my $line = '';
+						while( my $source = shift( @sources) ) {
+							$line = "$line$source#";
+						}
+						print FOUT "$line\n";
+						$hits++;
+					}
+					close FOUT;
+					print "($hits hits)\n";
+				}
+			} elsif( grep( /:::/, $string ) ) { # Regexp search
 				(my $regexp = $string) =~ s/^.*::://;
-				$string =~ s/:::.*$//;
-				print "-- REGEXP: $string ==> $regexp ..... ";
+				(my $searchName = $string) =~ s/:::.*$//;
+				print "-- REGEXP: $searchName ==> $regexp ..... ";
 				open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
-				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
+				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
+				my $hits = 0;
+				while (my $file = <FMATCH>) {
+					chomp( $file );
+					my @sources = RVT_get_all_sources( $file, $disk );
+					my $line = '';
+					while( my $source = shift( @sources) ) {
+						$line = "$line$source#";
+					}
+					print FOUT "$line\n";
+					$hits++;
+				}
+				close FMATCH;
+				close FOUT;
+				print "($hits hits)\n";
 			} else { # Regular search
 				print "-- LITERAL: $string ..... ";
 				open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
 				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
-			}
-			my $hits = 0;
-			while (my $file = <FMATCH>) {
-				chomp( $file );
-				my @sources = RVT_get_all_sources( $file, $disk );
-				my $line = '';
-				while( my $source = shift( @sources) ) {
-					$line = "$line$source#";
+				my $hits = 0;
+				while (my $file = <FMATCH>) {
+					chomp( $file );
+					my @sources = RVT_get_all_sources( $file, $disk );
+					my $line = '';
+					while( my $source = shift( @sources) ) {
+						$line = "$line$source#";
+					}
+					print FOUT "$line\n";
+					$hits++;
 				}
-				print FOUT "$line\n";
-				$hits++;
+				close FMATCH;
+				close FOUT;
+				print "($hits hits)\n";
 			}
-			close FMATCH;
-			close FOUT;
-			print "($hits hits)\n";
 		} # end for $string ( @searches )
 		$disk = shift( @_ );
 	} # end while( $disk )
@@ -535,7 +591,18 @@ sub RVT_script_parse_export  {
 			chomp $string;
 			$string = lc($string);
 			
-			if( grep( /:::/, $string ) ) {	# Regexp search
+			if( grep( /:::intersect:::/, $string ) ) {	# intersection search ("AND" operator)
+				my @parms = split( ":::", $string );
+				if( (scalar(@parms) < 4 ) or ($parms[1] != "intersect") ) {
+					print "WARNING: Skipping malformed search. Keyword \"INTERSECT\" appears at wrong position: $string\n";
+					open( FMATCH, "<", "/dev/null" );
+					open( FOUT, ">", "/dev/null" );				
+				} else {
+					$string = shift( @parms );
+					shift( @parms ); # "intersect" - we checked that before.
+					print "-- INTERSECT: $string ==> ".join( ":::", @parms )." ..... ";
+				}
+			} elsif( grep( /:::/, $string ) ) {	# Regexp search (or INTERSECT search, same for us at this point)
 				(my $regexp = $string) =~ s/^.*::://;
 				$string =~ s/:::.*$//;
 				print "-- REGEXP: $string ==> $regexp ..... ";
@@ -608,7 +675,7 @@ sub RVT_script_parse_index ($) {
  	else { $index_type = 'misc' }
 	
 	my $index = "$folder_to_index/RVT_index.html";
-	if( -f $index ) { print "WARNING: Overwriting existing index. " }
+	if( -f $index ) { print "(WARNING: overwriting existing index)" }
 	
 	open( RVT_INDEX, ">:encoding(UTF-8)", "$index" ) or warn "WARNING: cannot open $index for writing.\n$!\n";
 	print RVT_INDEX "<HTML>
@@ -647,9 +714,9 @@ tsRegister();
 	if( $count_email ) {
 		print RVT_INDEX "<script type=\"text/javascript\">
 <!--
-var TSort_Data = new Array ('table_email', 'h', 's', 'd', 's', 's', 's', 's', 's', 's');
+var TSort_Data = new Array ('table_email', 'h', 'd', 's', 's', 's', 's', 's', 's', 's');
 var TSort_Classes = new Array ('row1', 'row2');
-var TSort_Initial = 2;
+var TSort_Initial = 1;
 tsRegister();
 // -->
 </script>";
