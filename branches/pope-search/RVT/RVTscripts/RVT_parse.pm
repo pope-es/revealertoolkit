@@ -71,7 +71,7 @@ use RVTbase::RVT_morgue;
 use RVTscripts::RVT_files;
 use File::Copy;
 use File::Copy::Recursive qw (fcopy dircopy);
-use File::Path qw(mkpath);
+use File::Path qw(mkpath rmtree);
 use File::Basename;
 use File::Find;
 use Data::Dumper;
@@ -476,6 +476,7 @@ sub RVT_script_parse_search  {
 					my $searchName = shift( @parms );
 					shift( @parms ); # "intersect" - we checked that before.
 					print "-- INTERSECT: $searchName ==> ".join( ":::", @parms )." ..... ";
+					if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting previous results at $searchespath/$searchName ..... "; }
 					open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
 					my $regexp = shift( @parms );
 					open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
@@ -513,6 +514,7 @@ sub RVT_script_parse_search  {
 				(my $searchName = $string) =~ s/:::.*$//;
 				print "-- REGEXP: $searchName ==> $regexp ..... ";
 				open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
+				if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting previous results at $searchespath/$searchName ..... "; }
 				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
 				my $hits = 0;
 				while (my $file = <FMATCH>) {
@@ -531,6 +533,7 @@ sub RVT_script_parse_search  {
 			} else { # Regular search
 				print "-- LITERAL: $string ..... ";
 				open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
+				if( -e "$searchespath/$string" ) { print "WARNING: overwriting previous results at $searchespath/$string ..... "; }
 				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
 				my $hits = 0;
 				while (my $file = <FMATCH>) {
@@ -607,11 +610,15 @@ sub RVT_script_parse_export  {
 				$string =~ s/:::.*$//;
 				print "-- REGEXP: $string ==> $regexp ..... ";
 			} else {						# Regular search
-				print "-- LITERAL: $string .....";
+				print "-- LITERAL: $string ..... ";
 			}
 
-			open (FMATCH, "$searchespath/$string");
+			open (FMATCH, "$searchespath/$string") || print "ERROR: cannot open $searchespath/$string\n";
 			my $opath = "$exportpath/$string";
+			if ( -e $opath ) {
+				print "WARNING: overwriting previous export at $opath ..... ";
+				rmtree( $opath );
+			}
 			mkdir $opath;
 			mkdir "$opath/files";
 			mkdir "$opath/email";
@@ -664,7 +671,7 @@ sub RVT_script_parse_index ($) {
 	
 #	our $folder_to_index = shift( @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
 	our $folder_to_index = join(" ", @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
-	print "  Creating $folder_to_index/RVT_index.html ... ";
+	print "  Creating RVT_index... ";
 	if( ! -d $folder_to_index ) {
 		warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: create index $folder_to_index\n";
 		return;
@@ -747,7 +754,7 @@ $buffer_index_email
 	}
 
 	print RVT_INDEX "</BODY>\n</HTML>\n";
-	print "Done.\n";
+	print "Done!\n";
 	return 1;
 }
 
@@ -1549,7 +1556,7 @@ sub RVT_index_email_item () {
 		(my $attachpath = $File::Find::name) =~ s/\.html$/.attach/;
 		our $attachments = '';
 		find( \&RVT_index_email_attachment, $attachpath );
-		$buffer_index_email = $buffer_index_email."<tr><td><a href=\"file:$path\" target=\"_blank\">$item_type</a><td>$line</td><td>$attachments</td></tr>\n";
+		$buffer_index_email = $buffer_index_email."<tr><td><a href=\"$path\" target=\"_blank\">$item_type</a><td>$line</td><td>$attachments</td></tr>\n";
 		$count_email++;
 	}
 	return 1;
@@ -1567,7 +1574,7 @@ sub RVT_index_email_attachment () {
 		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
 		$link =~ s/%/%25/g;
 		$link =~ s/#/%23/g;
-		$attachments = $attachments ."<a href=\"file:$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
+		$attachments = $attachments ."<a href=\"$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
 	}
 	return 1;
 }
@@ -1604,7 +1611,7 @@ sub RVT_index_regular_file () {
 		$mtime = "unknown (XX_RVT_FIXME)";
 	}
 
-	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"file:$link\" target=\"_blank\">$basename</a></td><td>$ext</td><td>$folder</td><td>$size</td><td>$mtime</td><td>$atime</td><td>$remarks</td></tr>\n";
+	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">$basename</a></td><td>$ext</td><td>$folder</td><td>$size</td><td>$mtime</td><td>$atime</td><td>$remarks</td></tr>\n";
 	$count_regular++;
 	return 1;
 }
