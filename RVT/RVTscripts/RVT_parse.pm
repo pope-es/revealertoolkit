@@ -669,7 +669,6 @@ sub RVT_script_parse_index ($) {
 	# For folders with EXPORTed search results, the index differentiates between regular files, and email items.
 	# For other folders, it creates an index of e-mail / Outlook items (both from PFF and from [mbox|msg|dbx]->eml).
 	
-#	our $folder_to_index = shift( @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
 	our $folder_to_index = join(" ", @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
 	print "  Creating RVT_index... ";
 	if( ! -d $folder_to_index ) {
@@ -899,8 +898,7 @@ sub RVT_parse_eml {
 			( my $meta = $fpath ) =~ s/\.html$/.RVT_metadata/;
 			
 			open( RVT_ITEM, ">:encoding(UTF-8)", "$fpath") or warn "WARNING: cannot open file $fpath: $!\n";
-			open( RVT_META, ">:encoding(UTF-8)", "$meta") or warn "WARNING: cannot open file $meta: $!\n";
-			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			my $headers = '';
 
 			open( EML_ITEM, "<:encoding(UTF-8)", "$f" ) or warn "WARNING: cannot open file $f: $!\n";
 			my $message = '';
@@ -909,15 +907,12 @@ sub RVT_parse_eml {
 				$line =~ s/\r\n/\n/; # to handle DOS line endings.
 				$message = $message.$line;
 				if( $i_am_in_headers ) { 
-					print RVT_META $line;
+					$headers = $headers . $line;
 					if( $line =~ /^$/ ) { $i_am_in_headers = 0 }
 				}
 			}
 			close( EML_ITEM );
 			my $obj = Email::MIME->new(encode_utf8($message)); # encode_utf8 to avoid croaking with some EMLX containing multibyte characters.
-
-			# Print object headers to RVT_META:
-#			foreach my $k ( $obj->header_names ) { print RVT_META "$k: ".$obj->header($k)."\n" }
 
 			my $from = $obj->header('From');
 			my $to = $obj->header('To');
@@ -942,15 +937,37 @@ sub RVT_parse_eml {
 			$index_line =~ s/#//g;
 			$index_line =~ s/_XX_RVT_DELIM_/#/g;
 			print RVT_ITEM "<HTML>$index_line
+<!-- BEGIN RVT METADATA
+# Source file: $f
+# Parsed by: $RVT_moduleName v$RVT_moduleVersion
+# END RVT METADATA -->
 <HEAD>
-	<TITLE>
-		$subject
-	</TITLE>
 	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+	<style type=\"text/css\">
+		table,tr,td{border:1px solid; font-family:sans-serif; font-size:small;border-collapse:collapse;padding:5px;}
+		pre{font-size:12px;}
+	</style>
+	<title>
+		$subject
+	</title>
+	<script language=\"JavaScript\" type=\"text/javascript\">
+		<!--
+		function sizeTbl(h) {
+		  var tbl = document.getElementById('tbl');
+		  tbl.style.display = h;
+		}
+		function doKey(\$k) {
+			if ( ((\$k>64) && (\$k<91))   ||   ((\$k>96) && (\$k<123)) ) {
+				var tbl = document.getElementById('tbl');
+				tbl.style.display = 'block';
+			}
+		}
+		// -->
+	</script> 
 </HEAD>
-<BODY>
-	<TABLE border=1 rules=all frame=box>
-		<tr><td><b>Item</b></td><td>e-mail item (Message)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $meta) ,"\" target=\"_blank\">[Headers]</a></td></tr>
+<BODY onKeyPress=\"doKey(window.event.keyCode)\">
+	<TABLE border=1>
+		<tr><td><b>Item</b></td><td>e-mail item (Message) - <a href=\"javascript:sizeTbl('block')\">Metadata</a></td></tr>
 		<tr><td><b>Source</b></td><td>$source</td></tr>
 ";
 			if( $date ne '' ) {print RVT_ITEM "		<tr><td><b>Sent</b></td><td>$date</td></tr>\n" }
@@ -1029,20 +1046,29 @@ sub RVT_parse_eml {
 					print ATTACH $part->body;
 					close ATTACH;
 					my $string = "$attachfolder/$filename";
-					print RVT_META "Attachment: $string\n";
+					my $size = -s $string;
 					$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
 					$string =~ s/%/%25/g;
 					$string =~ s/#/%23/g;
-					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a></td></tr>\n";
+					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a> ($size bytes)</td></tr>\n";
 				}
 				
 			} # end while( $part=shift(@parts) )
 			print RVT_ITEM "</TABLE><br>\n";
-			
+			print RVT_ITEM "<DIV id=tbl name=tbl style=\"overflow:hidden;display:none\">
+<TABLE border=1 >
+<TR><TD><a href=\"javascript:sizeTbl('none')\">[X]</a> <b>METADATA:</b><br><br>
+<pre>
+$headers
+</pre>
+</TD></TR>
+</TABLE>
+</DIV><br><br>
+";
+
 			print RVT_ITEM $msgbody;
 			print RVT_ITEM "	</BODY>\n</HTML>\n";
 			close( RVT_ITEM );
-			close( RVT_META );
 			$count++;
 		}
 	}
@@ -1473,8 +1499,7 @@ sub RVT_get_source  ($$) { # parameters: ( $file, $disk )
 			$source = $file;
 			$source =~ s/(eml-[0-9]+)\.attach\/[^\/]*$/\1.html/;
 			$got_source = 1;
-		} else { # Point to the RVT_META for this particular EML, which indicates the source.
-			$file =~ s/(.*\/output\/parser\/control\/eml-[0-9]+\/eml-[0-9]+)\..*/\1.RVT_metadata/;
+		} else { # Look inside the HTML of this particular EML, which indicates the source.
 			$source_type = 'infile';
 		}
 	} elsif( $source_type eq 'special_msg' ) {
@@ -1574,7 +1599,7 @@ sub RVT_index_email_attachment () {
 		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
 		$link =~ s/%/%25/g;
 		$link =~ s/#/%23/g;
-		$attachments = $attachments ."<a href=\"$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
+		$attachments = $attachments ."- <a href=\"$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
 	}
 	return 1;
 }
@@ -1620,27 +1645,32 @@ sub RVT_index_regular_file () {
 
 sub RVT_sanitize_libpff_attachment () {
 # WARNING!!! This function is to be called ONLY from within RVT_sanitize_libpff_item.
-# File descriptors RVT_META and RVT_ITEM are expected to be open when entering this sub,
-# and $wanted_depth is expected to be correctly set.
+# File descriptor RVT_ITEM is expected to be open when entering this sub,
+# and $wanted_depth and $headers are expected to be correctly set.
 	return if ( -d ); # We only want to act on FILES.
 	my $item_depth = $File::Find::dir =~ tr[/][];
 	our $wanted_depth;
+	our $headers;
 	if( $item_depth == $wanted_depth ) {
+		( my $short = $File::Find::name ) =~ s/.*\/output\/parser\/control\///;
+		my $size = -s $File::Find::name;
+		$headers = $headers . "Attachment: $short ($size bytes)\n";
 		my $string = $File::Find::name;
-		print RVT_META "Attachment: $File::Find::name\n";
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
 		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
-		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
+		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a> ($size bytes)</td></tr>\n";
 	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*[A-Z[a-z]*00001.html/ )  {
+		( my $short = $File::Find::name ) =~ s/.*\/output\/parser\/control\///;
+		my $size = -s $File::Find::name;
+		$headers = $headers . "Attachment: $short ($size bytes)\n"; # computing the SIZE is more complicated in this case.
 		my $string = $File::Find::name;
-		print RVT_META "Attachment: $File::Find::name\n";
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
 		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
-		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n";
+		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n"; # computing the SIZE is more complicated in this case.
 	}
 	return 1;
 }
@@ -1762,24 +1792,23 @@ sub RVT_sanitize_libpff_item () {
 	if( $item_type eq 'Message' ) { $file =~ s/Message/OutlookHeaders/ }
 	return if( $item_type eq 'Attachment' ); # Folders like Attachment00001 must not be treated directly by us; instead they will be treated during the sub parse_attachment of their parent directory.
 	return if( $item_type eq 'Folder' ); # Folders like Folder00001 are likely to be found in recovered structures, but they are not "by themselves" items to be analyzed. Note that the normal items (Message, Contact...) inside WILL be analyzed normally.
-# habría que quitar este print:
-	if( exists $field_names{$item_type} ) { }#print "Item: $item_type ($source)\n" }
+	if( exists $field_names{$item_type} ) { } # print "Item: $item_type ($source)\n" }
 	else {
-# Y aquí, además, habría que reportar a MALFORMED.
+# XX aquí, además, habría que reportar a MALFORMED:
 		warn "WARNING: Skipping unknown item type $item_type ($source)\n";
 		return
 	}
 	
 	open( LIBPFF_ITEM, "<:encoding(UTF-8)", "$folder/$file" ) or warn( "WARNING: Cannot open $folder/$file for reading - skipping item.\n" ) && return;
 	open( RVT_ITEM, ">:encoding(UTF-8)", "$folder.html" ) or warn( "WARNING: Cannot open $folder.txt for writing - skipping item.\n" ) && return;
-	open( RVT_META, ">:encoding(UTF-8)", "$folder.RVT_metadata" ) or warn( "WARNING: Cannot open $folder.RVT_metadata for writing - skipping item.\n" ) && return;	
-	print RVT_META "## $file follows:\n\n";
+	our $headers = "";
+	$headers = $headers . "<b>$file</b>\n<pre>\n";
 	
 	# Parse LIBPFF_ITEM until an empty line is found, writing to RVT_META and store wanted keys:
 	PARSE_KEYS:
 	while( my $line = <LIBPFF_ITEM> ) { # This loop exits as soon as one empty line is found
 		if( $line =~ /^$/ ) { last PARSE_KEYS } # this exits the WHILE loop
-		print RVT_META $line;
+		$headers = $headers . $line;
 		STORE_KEY:
 		foreach my $k ( keys %field_values ) { # Store the key if we want it:
 			if( $line =~ /^$k:/ ) {
@@ -1790,16 +1819,18 @@ sub RVT_sanitize_libpff_item () {
 			} # end if
 		} # end foreach 
 	} # end while
+	$headers = $headers . "</pre>\n";
 
 	# InternetHeaders.txt: append to RVT_META
 	if( -f "$folder/InternetHeaders.txt" ) {
-		print RVT_META "\n\n## InternetHeaders.txt follows:\n\n";
+		$headers = $headers . "\n<b>InternetHeaders.txt</b>\n<pre>\n";
 		open (INTERNETHEADERS, "<:encoding(UTF-8)", "$folder/InternetHeaders.txt") or warn ("WARNING: failed to open $folder/InternetHeaders.txt\n");
 		while( my $line = <INTERNETHEADERS> ) {
 			chomp( $line); # Two chomps attempting to normalize the DOS line ending.
 			chomp( $line);
-			print RVT_META "$line\n";
+			$headers = $headers . "$line\n";
 		}			
+		$headers = $headers . "</pre>\n";
 		close (INTERNETHEADERS);
 		unlink ("$folder/InternetHeaders.txt") or warn ("WARNING: failed to delete $folder/InternetHeaders.txt\n");
 	}
@@ -1811,10 +1842,10 @@ sub RVT_sanitize_libpff_item () {
 	if( -f "$folder/Recipients.txt" ) {
 		my $string;
 		my $previous_line = "";
-		print RVT_META "\n\n## Recipients.txt follows:\n\n";
+		$headers = $headers . "\n<b>Recipients.txt</b>\n<pre>\n";
 		open (RECIPIENTS, "<:encoding(UTF-8)", "$folder/Recipients.txt") or warn ("WARNING: failed to open $File::Find::dir/Recipients.txt\n");
 		while( my $line = <RECIPIENTS> ) {
-			print RVT_META $line;
+			$headers = $headers . $line;
 			if( $line =~ /^Recipient type/ ) {
 				my $string = $previous_line;
 				$string =~ s/.*\t//;
@@ -1826,15 +1857,17 @@ sub RVT_sanitize_libpff_item () {
 			}			
 		$previous_line = $line;			
 		}
+		$headers = $headers . "</pre>\n";
 		close (RECIPIENTS); # done parsing Recipients.txt
 		unlink ("$folder/Recipients.txt") or warn ("WARNING: failed to delete $folder/Recipients.txt\n");	
 	}
 
 	# ConversationIndex.txt: append to RVT_META
 	if( -f "$folder/ConversationIndex.txt" ) {
-		print RVT_META "\n\n## ConversationIndex.txt follows:\n\n";
-		open (CONVERSATIONINDEX, "<:encoding(UTF-8)", "$folder/ConversationIndex.txt") or warn ("WARNING: failed to open $folder/ConversationIndex.txt\n");
-		while( my $line = <CONVERSATIONINDEX> ) { print RVT_META $line }			
+		$headers = $headers . "\n<b>ConversationIndex.txt</b>\n<pre>\n";
+		open ( CONVERSATIONINDEX, "<:encoding(UTF-8)", "$folder/ConversationIndex.txt") or warn ("WARNING: failed to open $folder/ConversationIndex.txt\n");
+		while ( my $line = <CONVERSATIONINDEX> ) { $headers = $headers . $line }
+		$headers = $headers . "</pre>\n";
 		close (CONVERSATIONINDEX);
 		unlink ("$folder/ConversationIndex.txt") or warn ("WARNING: failed to delete $folder/ConversationIndex.txt\n");
 	}
@@ -1854,22 +1887,36 @@ sub RVT_sanitize_libpff_item () {
 	$index_line =~ s/#//g;
 	$index_line =~ s/_XX_RVT_DELIM_/#/g;
 	print RVT_ITEM "<HTML>$index_line
-<HEAD><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+<HEAD>
+	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
 	<style type=\"text/css\">
-		table, tr, td { border: 1px solid grey; font-family:sans-serif; font-size:small; }
-		table { border-collapse:collapse; }
-		td { padding: 5 px; }
+		table,tr,td{border:1px solid; font-family:sans-serif; font-size:small;border-collapse:collapse;padding:5px;}
+		pre{font-size:12px;}
 	</style>
-	<TITLE>
+	<title>
 		$field_values{'Subject'}
-	</TITLE>
+	</title>
+	<script language=\"JavaScript\" type=\"text/javascript\">
+		<!--
+		function sizeTbl(h) {
+		  var tbl = document.getElementById('tbl');
+		  tbl.style.display = h;
+		}
+		function doKey(\$k) {
+			if ( ((\$k>64) && (\$k<91))   ||   ((\$k>96) && (\$k<123)) ) {
+				var tbl = document.getElementById('tbl');
+				tbl.style.display = 'block';
+			}
+		}
+		// -->
+	</script> 
 </HEAD>
-<BODY>
-	<TABLE border=1 rules=all frame=box>
-		<tr><td><b>Item</b></td><td>e-mail item ($item_type)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href=\"",basename( $folder) ,".RVT_metadata\" target=\"_blank\">[Headers]</a></td></tr>
+<BODY onKeyPress=\"doKey(window.event.keyCode)\">
+	<TABLE border=1>
+		<tr><td><b>Item</b></td><td>e-mail item ($item_type) - <a href=\"javascript:sizeTbl('block')\">Metadata</a></td></tr>
 		<tr><td><b>Source</b></td><td>$source</td></tr>
 ";
-	foreach my $k ( @sortorder ) { # Write headers to RVT_ITEM:
+	foreach my $k ( @sortorder ) { # Write desired headers to RVT_ITEM:
 		if( defined( $field_values{$k} ) && defined( $field_names{$item_type}{$k} ) ) {
 			print RVT_ITEM "		<tr><td><b>$field_names{$item_type}{$k}</b></td><td>$field_values{$k}</td></tr>\n";
 		}
@@ -1882,26 +1929,36 @@ sub RVT_sanitize_libpff_item () {
 	# Attachments:
 	if( -d "$folder/Attachments" ) {
 		move( "$folder/Attachments", "$folder.attach" );
-		print RVT_META "\n\n## Attachment information follows:\n\n";
+		$headers = $headers . "\n<b>Attachment information:</b>\n<pre>\n";
 		our $wanted_depth = "$folder" =~ tr[/][];
 		find( \&RVT_sanitize_libpff_attachment, "$folder.attach" );
+		$headers = $headers . "</pre>\n";
 	}
 
 	# Parse rest of LIBPFF_ITEM writing to RVT_META and RVT_ITEM
 	print RVT_ITEM "</TABLE><br>\n";	
-	print RVT_META "\n## Rest of $file (if any) follows:\n\n";
+	$headers = $headers . "\n<b>Rest of $file (if any) follows:</b>\n<pre>";
 	while( my $line = <LIBPFF_ITEM> ) { 
 		print RVT_ITEM "$line<br>";
-		print RVT_META $line;
+		$headers = $headers . $line;
 	}
+	$headers = $headers . "</pre>\n<b>END OF METADATA</b>";
+
+	# Write RVT_META section inside RVT_ITEM:
+	print RVT_ITEM "<DIV id=tbl name=tbl style=\"overflow:hidden;display:none\">
+<TABLE border=1 >
+<TR><TD><a href=\"javascript:sizeTbl('none')\">[X]</a> <b>METADATA:</b><br><br>
+$headers
+</TD></TR>
+</TABLE>
+</DIV><br><br>
+";
 
 	# Message.txt: append to RVT_ITEM
 	if( -f "$folder/Message.txt" ) {
-		print RVT_META "\n\n## Message.txt follows:\n\n";
 		open (MESSAGE,  "<:encoding(UTF-8)", "$folder/Message.txt") or warn ("WARNING: failed to open $folder/Message.txt\n");
 		while( my $line = <MESSAGE> ) {
 			chomp( $line);
-			print RVT_META "$line\n";
 			print RVT_ITEM "$line<br>\n";
 		} 
 		close (MESSAGE); # done parsing Message.txt
@@ -1911,10 +1968,10 @@ sub RVT_sanitize_libpff_item () {
 	print RVT_ITEM "	</BODY>\n</HTML>\n";
 	close( LIBPFF_ITEM );
 	close( RVT_ITEM );
-	close( RVT_META );
 	unlink( "$folder/$file" ) || warn( "WARNING: Cannot delete $folder/file\n" );
 	rmdir( $folder ) || warn( "WARNING: Cannot delete $folder\n" );
 }
+
 
 
 
