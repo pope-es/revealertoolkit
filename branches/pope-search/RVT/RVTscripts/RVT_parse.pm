@@ -1636,7 +1636,7 @@ sub RVT_index_regular_file () {
 		$mtime = "unknown (XX_RVT_FIXME)";
 	}
 
-	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">$basename</a></td><td>$ext</td><td>$folder</td><td>$size</td><td>$mtime</td><td>$atime</td><td>$remarks</td></tr>\n";
+	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">$basename$ext</a></td><td>$ext</td><td>$folder</td><td>$size</td><td>$mtime</td><td>$atime</td><td>$remarks</td></tr>\n";
 	$count_regular++;
 	return 1;
 }
