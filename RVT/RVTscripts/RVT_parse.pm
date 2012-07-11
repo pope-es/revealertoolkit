@@ -813,6 +813,7 @@ sub RVT_parse_compressed {
 			my $normalized = `echo "$f" | $FSTRINGS`;
 			chomp ($normalized);
 			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
+			my $chmod = `/bin/chmod -R ug+rwX "$fpath"`;
 			open (RVT_META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
 			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Normalized name and path: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print RVT_META $output;
