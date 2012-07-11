@@ -783,7 +783,7 @@ sub RVT_parse_bkf {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_folder($opath, 'bkf');
 			my $output = `$MTFTAR < "$f" | tar x -C "$fpath" 2>&1 `;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or warn ("WARNING: cannot create metadata files: $!.");
+			open (META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or warn ("WARNING: cannot create metadata files: $!.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
 			close (META);
@@ -796,6 +796,7 @@ sub RVT_parse_bkf {
 
 sub RVT_parse_compressed {
 	my $Z7 = "7z";
+	my $FSTRINGS = "f-strings";
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -809,9 +810,11 @@ sub RVT_parse_compressed {
 		foreach my $f ( our @filelist_compressed ) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_folder($opath, 'compressed');
+			my $normalized = `echo "$f" | $FSTRINGS`;
+			chomp ($normalized);
 			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
-			open (RVT_META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
-			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			open (RVT_META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
+			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Normalized name and path: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print RVT_META $output;
 			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) or ($output =~ /Unsupported Method/) ) { RVT_report( "encrypted", $f, $disk ) }
 			if( $output =~ /Error: Can not open file as archive/ ) { RVT_report( "malformed", $f, $disk ) }
@@ -1484,6 +1487,7 @@ sub RVT_get_source  ($$) { # parameters: ( $file, $disk )
 	
 	if( $source_type eq 'infolder' ) {
 		$file =~ s/(.*\/output\/parser\/control\/[a-z]*-[0-9]*)\/.*/\1\/RVT_metadata/;
+		if( ! -f $file ) { $file =~ s/(.*\/output\/parser\/control\/[a-z]*-[0-9]*)\/.*/\1\/__RVT_metadata.txt/; }
 		$source_type = 'infile';
 	} elsif( $source_type eq 'special_pff' ) {
 		if( $file =~ /[0-9]{5}\.attach\/[^\/]*$/ ) { # If an attachment, point its parent.
@@ -1624,7 +1628,7 @@ sub RVT_index_regular_file () {
 	open( SOURCE, "<:encoding(UTF-8)", $File::Find::name.".RVT_metadata" );
 	my $original = <SOURCE>;
 	close SOURCE;
-	my $folder = RVT_shorten_fs_path( $original );
+	my $folder = RVT_shorten_fs_path( dirname($original) );
 	my $size = stat($original)->size;
 	my $atime = ctime( stat($original)->atime );
 	my $mtime = ctime( stat($original)->mtime );
@@ -1636,7 +1640,7 @@ sub RVT_index_regular_file () {
 		$mtime = "unknown (XX_RVT_FIXME)";
 	}
 
-	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">$basename$ext</a></td><td>$ext</td><td>$folder</td><td>$size</td><td>$mtime</td><td>$atime</td><td>$remarks</td></tr>\n";
+	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">$basename$ext</a></td><td>$ext</td><td>$folder</td><td align=right>$size</td><td align=right>$mtime</td><td align=right>$atime</td><td>$remarks</td></tr>\n";
 	$count_regular++;
 	return 1;
 }
