@@ -783,7 +783,8 @@ sub RVT_parse_bkf {
 		foreach my $f ( our @filelist_bkf ) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_folder($opath, 'bkf');
-			my $output = `$MTFTAR < "$f" | tar x -C "$fpath" 2>&1 `;
+			(my $escaped = $f) =~ s/`/\\`/g;
+			my $output = `$MTFTAR < "$escaped" | tar x -C "$fpath" 2>&1 `;
 			open (META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or warn ("WARNING: cannot create metadata files: $!.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
@@ -797,7 +798,6 @@ sub RVT_parse_bkf {
 
 sub RVT_parse_compressed {
 	my $Z7 = "7z";
-	my $FSTRINGS = "f-strings";
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -811,12 +811,11 @@ sub RVT_parse_compressed {
 		foreach my $f ( our @filelist_compressed ) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_folder($opath, 'compressed');
-			my $normalized = `echo "$f" | $FSTRINGS`;
-			chomp ($normalized);
-			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$f" 2>&1`;
+			(my $escaped = $f) =~ s/`/\\`/g;
+			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$escaped" 2>&1`;
 			my $chmod = `/bin/chmod -R ug+rwX "$fpath"`;
 			open (RVT_META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
-			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Normalized name and path: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print RVT_META $output;
 			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) or ($output =~ /Unsupported Method/) ) { RVT_report( "encrypted", $f, $disk ) }
 			if( $output =~ /Error: Can not open file as archive/ ) { RVT_report( "malformed", $f, $disk ) }
@@ -845,7 +844,7 @@ sub RVT_parse_dbx {
 			my $dbxpath = RVT_create_folder($opath, 'dbx');
 			my $meta = "$dbxpath/RVT_metadata";
 			open (META,">:encoding(UTF-8)", "$meta") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META "# BEGIN RVT METADATA\n# Source file: $f\nvo# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			close (META);
 	
 			my $fpath = RVT_create_file($dbxpath, 'dbx', 'eml');
@@ -1055,6 +1054,7 @@ sub RVT_parse_eml {
 					$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
 					$string =~ s/%/%25/g;
 					$string =~ s/#/%23/g;
+					$string =~ s/\?/%3f/g;
 					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a> ($size bytes)</td></tr>\n";
 				}
 				
@@ -1084,6 +1084,7 @@ $headers
 
 sub RVT_parse_evt {
 	my $EVTPARSE = "evtparse.pl";
+	my $FSTRINGS = "f-strings";
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1167,7 +1168,7 @@ sub RVT_parse_mbox {
 		foreach my $f ( our @filelist_mbox) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $mboxpath = RVT_create_folder($opath, 'mbox');
-			my $meta = "$mboxpath/RVT_metadata";
+			my $meta = "$mboxpath/__RVT_metadata.txt";
 			open (META,">:encoding(UTF-8)", "$meta") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			
@@ -1261,7 +1262,8 @@ sub RVT_parse_pdf {
 		foreach my $f ( our @filelist_pdf ) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$pdfpath/pdf-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			my $output = `$PDFTOTEXT "$f" - 2>&1`;
+			(my $escaped = $f) =~ s/`/\\`/g;
+			my $output = `$PDFTOTEXT "$escaped" - 2>&1`;
 			open (RVT_META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
 			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print RVT_META $output;
@@ -1322,7 +1324,8 @@ sub RVT_parse_sqlite {
 		foreach my $f ( our @filelist_sqlite ) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$sqlitepath/sqlite-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			my $output = `echo ".dump" | sqlite3 -batch "$f"`;
+			(my $escaped = $f) =~ s/`/\\`/g;
+			my $output = `echo ".dump" | sqlite3 -batch "$escaped"`;
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
 			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print FOUT $output;
@@ -1352,12 +1355,12 @@ sub RVT_parse_text {
 		foreach my $f (our @filelist_text) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$opath/text-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
-			my $normalized = `echo "$f" | $FSTRINGS`;
-			chomp ($normalized);
-	
+			(my $escaped = $f) =~ s/`/\\`/g;
+			my $normalized = `echo "$escaped" | $FSTRINGS`;
+			chomp ($normalized);	
 			open (FTEXT, "-|", "$FSTRINGS", "$f") or die ("ERROR: Failed to open input file $f\n");
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output files.");
-			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Normalized name and path: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Normal: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			while (<FTEXT>){
 				print FOUT $_;
 			}
@@ -1387,8 +1390,9 @@ sub RVT_parse_undelete {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_folder($opath, 'undelete');
 			mkpath $fpath;
-			my $output = `$TSK_RECOVER "$f" "$fpath" 2>&1`;
-			open (META, ">:encoding(UTF-8)", "$fpath/RVT_metadata") or die ("ERR: failed to create metadata files.");
+			(my $escaped = $f) =~ s/`/\\`/g;
+			my $output = `$TSK_RECOVER "$escaped" "$fpath" 2>&1`;
+			open (META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
 			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
 			print META $output;
 			close (META);
@@ -1605,6 +1609,7 @@ sub RVT_index_email_attachment () {
 		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
 		$link =~ s/%/%25/g;
 		$link =~ s/#/%23/g;
+		$link =~ s/\?/%3f/g;
 		$attachments = $attachments ."- <a href=\"$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
 	}
 	return 1;
@@ -1624,6 +1629,7 @@ sub RVT_index_regular_file () {
 	( my $link = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.
 	$link =~ s/%/%25/g;
 	$link =~ s/#/%23/g;
+	$link =~ s/\?/%3f/g;
 	( my $basename = basename($File::Find::name) ) =~ s/(.*)\.[^.]{1,16}$/\1/;
 	( my $ext = uc(basename($File::Find::name)) ) =~ s/.*\.([^.]{1,16})$/.\1/;
 	
@@ -1666,6 +1672,7 @@ sub RVT_sanitize_libpff_attachment () {
 		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
 		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
+		$string =~ s/\?/%3f/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a> ($size bytes)</td></tr>\n";
 	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*[A-Z[a-z]*00001.html/ )  {
 		( my $short = $File::Find::name ) =~ s/.*\/output\/parser\/control\///;
@@ -1676,6 +1683,7 @@ sub RVT_sanitize_libpff_attachment () {
 		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
 		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
+		$string =~ s/\?/%3f/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n"; # computing the SIZE is more complicated in this case.
 	}
 	return 1;
