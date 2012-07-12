@@ -325,8 +325,9 @@ sub RVT_build_filelists () {
 		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel spreadsheet
 		elsif( $File::Find::name =~ /\.xlsb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel 2007 binary workbook
 		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }	# XML
-		elsif( $File::Find::name =~ /\/hiberfil\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
-		elsif( $File::Find::name =~ /\/pagefile\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
+# We'll find a better way to treat these:
+#		elsif( $File::Find::name =~ /\/hiberfil\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
+#		elsif( $File::Find::name =~ /\/pagefile\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
 	}
 }
 
