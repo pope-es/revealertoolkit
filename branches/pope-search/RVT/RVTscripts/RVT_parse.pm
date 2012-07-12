@@ -54,6 +54,7 @@ BEGIN {
    						&RVT_script_parse_autoparse
 						&RVT_script_parse_search
 						&RVT_script_parse_export
+						&RVT_script_parse_sexport
    						&RVT_script_parse_index
 					);
 }
@@ -125,6 +126,8 @@ sub constructor {
                                                     script parse search <search file> <disk>";
    $main::RVT_functions{RVT_script_parse_export } = "Export search results to disk\n
                                                     script parse export <search file> <disk>";
+   $main::RVT_functions{RVT_script_parse_sexport } = "Launches parse_SEarch and parse_EXPORT at once\n
+                                                    script parse sexport <search file> <disk>";
    $main::RVT_functions{RVT_script_parse_index } = "Creates an index of exported items\n
                                                     script parse index <folder in the filesystem>";
 }
@@ -552,6 +555,7 @@ sub RVT_script_parse_search  {
 				print "($hits hits)\n";
 			}
 		} # end for $string ( @searches )
+		print "\n";
 		$disk = shift( @_ );
 	} # end while( $disk )
     return 1;
@@ -658,9 +662,20 @@ sub RVT_script_parse_export  {
 			print "($hits hits)\n";
 			RVT_script_parse_index( $opath );
 		} # end for each string...
+		print "\n";
 		$disk = shift( @_ );
 	} # end while( $disk )
 	return 1;
+}
+
+
+
+sub RVT_script_parse_sexport  {
+	# SEarch + EXPORT
+	# Takes any arguments that are valid for RVT_script_parse_search and RVT_script_parse_export
+	my @args = @_;
+	RVT_script_parse_search( @args );
+	RVT_script_parse_export( @args );
 }
 
 
@@ -671,7 +686,7 @@ sub RVT_script_parse_index ($) {
 	# For other folders, it creates an index of e-mail / Outlook items (both from PFF and from [mbox|msg|dbx]->eml).
 	
 	our $folder_to_index = join(" ", @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
-	print "  Creating RVT_index... ";
+	print "  Creating RVT_index ..... ";
 	if( ! -d $folder_to_index ) {
 		warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: create index $folder_to_index\n";
 		return;
@@ -682,7 +697,7 @@ sub RVT_script_parse_index ($) {
  	else { $index_type = 'misc' }
 	
 	my $index = "$folder_to_index/RVT_index.html";
-	if( -f $index ) { print "(WARNING: overwriting existing index)" }
+	if( -f $index ) { print "(WARNING: overwriting existing index) " }
 	
 	open( RVT_INDEX, ">:encoding(UTF-8)", "$index" ) or warn "WARNING: cannot open $index for writing.\n$!\n";
 	print RVT_INDEX "<HTML>
