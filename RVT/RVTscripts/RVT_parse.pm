@@ -1893,7 +1893,7 @@ sub RVT_sanitize_libpff_item () {
 	my $to = "";
 	my $cc = "";
 	my $bcc = "";
-	if( -f "$folder/Recipients:" ) {
+	if( -f "$folder/Recipients.txt" ) {
 		my $string;
 		my $previous_line = "";
 		$headers = $headers . "\n<b>Recipients:</b>\n<pre>\n";
@@ -1917,8 +1917,8 @@ sub RVT_sanitize_libpff_item () {
 	}
 
 	# ConversationIndex.txt: append to RVT_META
-	if( -f "$folder/Conversation Index:" ) {
-		$headers = $headers . "\n<b>ConversationIndex.txt</b>\n<pre>\n";
+	if( -f "$folder/ConversationIndex.txt" ) {
+		$headers = $headers . "\n<b>Conversation index:</b>\n<pre>\n";
 		open ( CONVERSATIONINDEX, "<:encoding(UTF-8)", "$folder/ConversationIndex.txt") or warn ("WARNING: failed to open $folder/ConversationIndex.txt\n");
 		while ( my $line = <CONVERSATIONINDEX> ) { $headers = $headers . $line }
 		$headers = $headers . "</pre>\n";
