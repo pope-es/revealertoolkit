@@ -128,7 +128,7 @@ sub constructor {
                                                     script parse export <search file> <disk>";
    $main::RVT_functions{RVT_script_parse_sexport } = "Launches parse_SEarch and parse_EXPORT at once\n
                                                     script parse sexport <search file> <disk>";
-   $main::RVT_functions{RVT_script_parse_index } = "Creates an index of exported items\n
+   $main::RVT_functions{RVT_script_parse_index } = "Creates RVT_index.html for a given folder (or folders: use folder/*)\n
                                                     script parse index <folder in the filesystem>";
 }
 
@@ -260,8 +260,8 @@ sub RVT_build_filelists () {
 # filelist_lnk:
 		elsif( $File::Find::name =~ /\.lnk$/i ) { push( @filelist_lnk, $File::Find::name ) }
 # filelist_mbox:
-		elsif( $File::Find::name =~ /\.mbox$/i ) { push( @filelist_mbox, $File::Find::name ) }
-		elsif( $File::Find::name =~ /\/mbox$/i ) { push( @filelist_mbox, $File::Find::name ) }
+		elsif( $File::Find::name =~ /\.mbox$/i ) { push( @filelist_mbox, $File::Find::name ) } # warning, not the same!
+		elsif( $File::Find::name =~ /\/mbox$/i ) { push( @filelist_mbox, $File::Find::name ) } # warning, not the same!
 # filelist_msg:
 		elsif( $File::Find::name =~ /\.msg$/i ) { push( @filelist_msg, $File::Find::name ) }
 # filelist_pdf:
@@ -328,7 +328,7 @@ sub RVT_build_filelists () {
 		elsif( $File::Find::name =~ /\.xls$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel spreadsheet
 		elsif( $File::Find::name =~ /\.xlsb$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Excel 2007 binary workbook
 		elsif( $File::Find::name =~ /\.xml$/i ) { push( @filelist_text, $File::Find::name ) }	# XML
-# We'll find a better way to treat these:
+# These go through the text plugin as well, but we need a better way to treat them (browsing by chunks would be nice):
 #		elsif( $File::Find::name =~ /\/hiberfil\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
 #		elsif( $File::Find::name =~ /\/pagefile\.sys$/i ) { push( @filelist_text, $File::Find::name ) }	# MS Windows virtual memory
 	}
@@ -457,8 +457,8 @@ sub RVT_script_parse_search  {
 		print "\t Launching searches for $disk\n";
 		my $case = RVT_get_casenumber($disk);
 		my $diskpath = RVT_get_morguepath($disk);
-		my $parsedfiles = "$diskpath/output/parser/control/text/";
-		my $searchespath = "$diskpath/output/parser/searches/";
+		my $parsedfiles = "$diskpath/output/parser/control/text";
+		my $searchespath = "$diskpath/output/parser/searches";
 		return 0 if (! $diskpath);
 		return 0 if (! -d $parsedfiles);
 		if (! -e $searchespath) { mkdir $searchespath or return 0; }
@@ -480,7 +480,7 @@ sub RVT_script_parse_search  {
 					my $searchName = shift( @parms );
 					shift( @parms ); # "intersect" - we checked that before.
 					print "-- INTERSECT: $searchName ==> ".join( ":::", @parms )." ..... ";
-					if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting previous results at $searchespath/$searchName ..... "; }
+					if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting $searchespath/$searchName ..... "; }
 					open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
 					my $regexp = shift( @parms );
 					open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
@@ -518,7 +518,7 @@ sub RVT_script_parse_search  {
 				(my $searchName = $string) =~ s/:::.*$//;
 				print "-- REGEXP: $searchName ==> $regexp ..... ";
 				open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
-				if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting previous results at $searchespath/$searchName ..... "; }
+				if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting $searchespath/$searchName ..... "; }
 				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
 				my $hits = 0;
 				while (my $file = <FMATCH>) {
@@ -537,7 +537,7 @@ sub RVT_script_parse_search  {
 			} else { # Regular search
 				print "-- LITERAL: $string ..... ";
 				open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
-				if( -e "$searchespath/$string" ) { print "WARNING: overwriting previous results at $searchespath/$string ..... "; }
+				if( -e "$searchespath/$string" ) { print "WARNING: overwriting $searchespath/$string ..... "; }
 				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
 				my $hits = 0;
 				while (my $file = <FMATCH>) {
@@ -577,18 +577,18 @@ sub RVT_script_parse_export  {
 		print "\t Exporting search results for $disk\n";
 		my $case = RVT_get_casenumber($disk);
 		my $diskpath = RVT_get_morguepath($disk);
-		my $searchespath = "$diskpath/output/parser/searches/";
+		my $searchespath = "$diskpath/output/parser/searches";
 		my $exportpath = "$diskpath/output/parser/export";
 		return 0 if (! $diskpath);
 		if (! -e $exportpath) { mkdir $exportpath or return 0; }
 		
 		my @searches = ();
 		if( $searchesfilename =~ /^:encrypted$/ ) {
-			push( @searches, "rvt_encrypted" );
+			push( @searches, "_RVT_encrypted" );
 		} elsif( $searchesfilename =~ /^:malformed$/ ) {
-			push( @searches, "rvt_malformed" );
+			push( @searches, "_RVT_malformed" );
 		} elsif( $searchesfilename =~ /^:reports$/ ) {
-			push( @searches, "rvt_encrypted", "rvt_malformed" );
+			push( @searches, "_RVT_encrypted", "_RVT_malformed" );
 		} else {
 			open (F, "<:encoding(UTF-8)", RVT_get_morguepath($case)."/searches_files/$searchesfilename") or return 0;
 			@searches = grep {!/^\s*#/} <F>;
@@ -597,7 +597,7 @@ sub RVT_script_parse_export  {
 		
 		for $string ( @searches ) { # For each search string...
 			chomp $string;
-			$string = lc($string);
+			$string = lc($string) unless ($string =~ /^_RVT_/);
 			
 			if( grep( /:::intersect:::/, $string ) ) {	# intersection search ("AND" operator)
 				my @parms = split( ":::", $string );
@@ -621,7 +621,7 @@ sub RVT_script_parse_export  {
 			open (FMATCH, "$searchespath/$string") || print "ERROR: cannot open $searchespath/$string\n";
 			my $opath = "$exportpath/$string";
 			if ( -e $opath ) {
-				print "WARNING: overwriting previous export at $opath ..... ";
+				print "WARNING: overwriting $opath ..... ";
 				rmtree( $opath );
 			}
 			mkdir $opath;
@@ -686,93 +686,112 @@ sub RVT_script_parse_index ($) {
 	# For other folders, it creates an index of e-mail / Outlook items (both from PFF and from [mbox|msg|dbx]->eml).
 	
 	our $folder_to_index = join(" ", @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
-	print "  Creating RVT_index ..... ";
-	if( ! -d $folder_to_index ) {
-		warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: create index $folder_to_index\n";
-		return;
-	}
 	
-	my $index_type;
- 	if( ( -d "$folder_to_index/files" ) or ( -d "$folder_to_index/email" ) ) { $index_type = 'search_results' }
- 	else { $index_type = 'misc' }
+	if( $folder_to_index =~ /^.*\/\*$/ ) { # if folder is 'whatever/*', index its subfolders:
+		(my $mother = $folder_to_index) =~ s/\/\*$//;
+		if( ! -d $mother ) {
+			warn "ERROR: Not a directory: $mother ($!)\nOMMITING COMMAND: script parse index $folder_to_index\n";
+			return;
+		}
+		opendir my($dh), $mother or warn "WARNING: cannot open $mother: $!";
+		my @dir_entries = readdir $dh;
+		closedir $dh;
+		
+		foreach my $dir_entry ( @dir_entries ) {
+			if ( (-d $dir_entry) and not ($dir_entry =~ /^\.\.?$/) ) {
+				print "$mother/$dir_entry\n";
+				RVT_script_parse_index ( "$mother/$dir_entry" )
+			}
+		}		
+	} else { ####################### Create index for normal folders
+		if( ! -d $folder_to_index ) {
+			warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: script parse index $folder_to_index\n";
+			return;
+		}
+		print "  Creating RVT_index ..... ";	
+		my $index_type;
+		if( ( -d "$folder_to_index/files" ) or ( -d "$folder_to_index/email" ) ) { $index_type = 'search_results' }
+		else { $index_type = 'misc' }
+		
+		my $index = "$folder_to_index/RVT_index.html";
+		if( -f $index ) { print "(WARNING: overwriting) " }
+		
+		open( RVT_INDEX, ">:encoding(UTF-8)", "$index" ) or warn "WARNING: cannot open $index for writing.\n$!\n";
+		print RVT_INDEX "<HTML>
+	<HEAD> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+	<style type=\"text/css\">
+		tr.row1 td { background:white; }
+		tr.row2 td { background:lightgrey; }
+		table, tr, td { border: 1px solid grey; font-family:sans-serif; font-size:small; }
+		table { border-collapse:collapse; }
+		td { padding: 5 px; }
+	</style>
+	<script type=\"text/javascript\">
+	<!--\n// Copyright 2007 - 2010 Gennadiy Shvets\n// The program is distributed under the terms of the GNU General\n// Public License 3.0\n//\n// See http://www.allmyscripts.com/Table_Sort/index.html for usage details.\n\n// Script version 1.8\n\nvar TSort_Store;\nvar TSort_All;\n\nfunction TSort_StoreDef () {\n	this.sorting = [];\n	this.nodes = [];\n	this.rows = [];\n	this.row_clones = [];\n	this.sort_state = [];\n	this.initialized = 0;\n//	this.last_sorted = -1;\n	this.history = [];\n	this.sort_keys = [];\n	this.sort_colors = [ '#FF0000', '#800080', '#0000FF' ];\n};\n\nfunction tsInitOnload ()\n{\n	//	If TSort_All is not initialized - do it now (simulate old behavior)\n	if	(TSort_All == null)\n		tsRegister();\n\n	for (var id in TSort_All)\n	{\n		tsSetTable (id);\n		tsInit();\n	}\n	if	(window.onload_sort_table)\n		window.onload_sort_table();\n}\n\nfunction tsInit()\n{\n\n	if	(TSort_Data.push == null)\n		return;\n	var table_id = TSort_Data[0];\n	var table = document.getElementById(table_id);\n	// Find thead\n	var thead = table.getElementsByTagName('thead')[0];\n	if	(thead == null)\n	{\n		alert ('Cannot find THEAD tag!');\n		return;\n	}\n	var tr = thead.getElementsByTagName('tr');\n	var cols, i, node, len;\n	if	(tr.length > 1)\n	{\n		var	cols0 = tr[0].getElementsByTagName('th');\n		if	(cols0.length == 0)\n			cols0 = tr[0].getElementsByTagName('td');\n		var cols1;\n		var	cols1 = tr[1].getElementsByTagName('th');\n		if	(cols1.length == 0)\n			cols1 = tr[1].getElementsByTagName('td');\n		cols = new Array ();\n		var j0, j1, n;\n		len = cols0.length;\n		for (j0 = 0, j1 = 0; j0 < len; j0++)\n		{\n			node = cols0[j0];\n			n = node.colSpan;\n			if	(n > 1)\n			{\n				while (n > 0)\n				{\n					cols.push (cols1[j1++]);\n					n--;\n				}\n			}\n			else\n			{\n				if	(node.rowSpan == 1)\n					j1++;\n				cols.push (node);\n			}\n		}\n	}\n	else\n	{\n		cols = tr[0].getElementsByTagName('th');\n		if	(cols.length == 0)\n			cols = tr[0].getElementsByTagName('td');\n	}\n	len = cols.length;\n	for (var i = 0; i < len; i++)\n	{\n		if	(i >= TSort_Data.length - 1)\n			break;\n		node = cols[i];\n		var sorting = TSort_Data[i + 1].toLowerCase();\n		if	(sorting == null)  sorting = '';\n		TSort_Store.sorting.push(sorting);\n\n		if	((sorting != null)&&(sorting != ''))\n		{\n//			node.tsort_col_id = i;\n//			node.tsort_table_id = table_id;\n//			node.onclick = tsDraw;\n			node.innerHTML = \"<a href='' onClick=\\\"tsDraw(\" + i + \",'\" +\n				table_id + \"'); return false\\\">\" + node.innerHTML +\n				'</a><b><span id=\"TS_' + i + '_' + table_id + '\"></span></b>';\n			node.style.cursor = \"pointer\";\n		}\n	}\n\n	// Get body data\n	var tbody = table.getElementsByTagName('tbody')[0];\n	if	(tbody == null)	return;\n	// Get TR rows\n	var rows = tbody.getElementsByTagName('tr');\n	var date = new Date ();\n	var len, text, a;\n	for (i = 0; i < rows.length; i++)\n	{\n		var row = rows[i];\n		var cols = row.getElementsByTagName('td');\n		var row_data = [];\n		for (j = 0; j < cols.length; j++)\n		{\n			// Get cell text\n			text = cols[j].innerHTML.replace(/^\\\s+/, '');\n			text = text.replace(/\\\s+\$/, '');\n			var sorting = TSort_Store.sorting[j];\n			if	(sorting == 'h')\n			{\n				text = text.replace(/<[^>]+>/g, '');\n				text = text.toLowerCase();\n			}\n			else if	(sorting == 's')\n				text = text.toLowerCase();\n			else if (sorting == 'i')\n			{\n				text = parseInt(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'n')\n			{\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseInt(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'c')\n			{\n				text = text.replace(/^\\\$/, '');\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'f')\n			{\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'g')\n			{\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'd')\n			{\n				if	(text.match(/^\\\d\\\d\\\d\\\d\\\-\\\d\\\d?\\\-\\\d\\\d?(?: \\\d\\\d?:\\\d\\\d?:\\\d\\\d?)?\$/))\n				{\n					a = text.split (/[\\\s\\\-:]/);\n					text = (a[3] == null)?\n						Date.UTC(a[0], a[1] - 1, a[2],    0,    0,    0, 0):\n						Date.UTC(a[0], a[1] - 1, a[2], a[3], a[4], a[5], 0);\n				}\n				else\n					text = Date.parse(text);\n			}\n			row_data.push(text);\n		}\n		TSort_Store.rows.push(row_data);\n		// Save a reference to the TR element\n		var new_row = row.cloneNode(true);\n		new_row.tsort_row_id = i;\n		TSort_Store.row_clones[i] = new_row;\n	}\n	TSort_Store.initialized = 1;\n\n	if	(TSort_Store.cookie)\n	{\n		var allc = document.cookie;\n		i = allc.indexOf (TSort_Store.cookie + '=');\n		if	(i != -1)\n		{\n			i += TSort_Store.cookie.length + 1;\n			len = allc.indexOf (\";\", i);\n			text = decodeURIComponent (allc.substring (i, (len == -1)?\n				allc.length: len));\n			TSort_Store.initial = (text == '')? null: text.split(/\\\s*,\\\s*/);\n		}\n	}\n\n	var	initial = TSort_Store.initial;\n	if	(initial != null)\n	{\n		var itype = typeof initial;\n		if	((itype == 'number')||(itype == 'string'))\n			tsDraw(initial);\n		else\n		{\n			for (i = initial.length - 1; i >= 0; i--)\n				tsDraw(initial[i]);\n		}\n	}\n}\n\nfunction tsDraw(p_id, p_table)\n{\n	if	(p_table != null)\n		tsSetTable (p_table);\n\n	if	((TSort_Store == null)||(TSort_Store.initialized == 0))\n		return;\n\n	var i = 0;\n	var sort_keys = TSort_Store.sort_keys;\n	var id;\n	var new_order = '';\n	if	(p_id != null)\n	{\n		if	(typeof p_id == 'number')\n			id = p_id;\n		else	if	((typeof p_id == 'string')&&(p_id.match(/^\\\d+[ADU]\$/i)))\n		{\n			id = p_id.replace(/^(\\\d+)[ADU]\$/i, \"\$1\");\n			new_order = p_id.replace(/^\\\d+([ADU])\$/i, \"\$1\").toUpperCase();\n		}\n	}\n	if	(id == null)\n	{\n		id = this.tsort_col_id;\n		if	((p_table == null)&&(this.tsort_table_id != null))\n			tsSetTable (this.tsort_table_id);\n	}\n	var table_id = TSort_Data[0];\n\n	var order = TSort_Store.sort_state[id];\n	if	(new_order == 'U')\n	{\n		if	(order != null)\n		{\n			TSort_Store.sort_state[id] = null;\n			obj = document.getElementById ('TS_' + id + '_' + table_id);\n			if	(obj != null)	obj.innerHTML = '';\n		}\n	}\n	else if	(new_order != '')\n	{\n		TSort_Store.sort_state[id] = (new_order == 'A')? true: false;\n		//	Add column number to the sort keys array\n		sort_keys.unshift(id);\n		i = 1;\n	}\n	else\n	{\n		if	((order == null)||(order == true))\n		{\n			TSort_Store.sort_state[id] = (order == null)? true: false;\n			//	Add column number to the sort keys array\n			sort_keys.unshift(id);\n			i = 1;\n		}\n		else\n		{\n			TSort_Store.sort_state[id] = null;\n			obj = document.getElementById ('TS_' + id + '_' + table_id);\n			if	(obj != null)	obj.innerHTML = '';\n		}\n	}\n\n	var len = sort_keys.length;\n	//	This will either remove the column completely from the sort_keys\n	//	array (i = 0) or remove duplicate column number if present (i = 1).\n	while (i < len)\n	{\n		if	(sort_keys[i] == id)\n		{\n			sort_keys.splice(i, 1);\n			len--;\n			break;\n		}\n		i++;\n	}\n	if	(len > 3)\n	{\n		i = sort_keys.pop();\n		obj = document.getElementById ('TS_' + i + '_' + table_id);\n		if	(obj != null)	obj.innerHTML = '';\n		TSort_Store.sort_state[i] = null;\n	}\n\n	// Sort the rows\n	TSort_Store.row_clones.sort(tsSort);\n\n	// Save the currently selected order\n	var new_tbody = document.createElement('tbody');\n	var row_clones = TSort_Store.row_clones;\n	len = row_clones.length;\n	var classes = TSort_Store.classes;\n	if	(classes == null)\n	{\n		for (i = 0; i < len; i++)\n			new_tbody.appendChild (row_clones[i].cloneNode(true));\n	}\n	else\n	{\n		var clone;\n		var j = 0;\n		var cl_len = classes.length;\n		for (i = 0; i < len; i++)\n		{\n			clone = row_clones[i].cloneNode(true);\n			clone.className = classes[j++];\n			if	(j >= cl_len)  j = 0;\n			new_tbody.appendChild (clone);\n		}\n	}\n\n	// Replace table body\n	var table = document.getElementById(table_id);\n	var tbody = table.getElementsByTagName('tbody')[0];\n	table.removeChild(tbody);\n	table.appendChild(new_tbody);\n\n	var obj, color, icon, state;\n	len = sort_keys.length;\n	var sorting = new Array ();\n	for (i = 0; i < len; i++)\n	{\n		id = sort_keys[i];\n		obj = document.getElementById ('TS_' + id + '_' + table_id);\n		if	(obj == null)  continue;\n		state = (TSort_Store.sort_state[id])? 0: 1;\n		icon = TSort_Store.icons[state];\n		obj.innerHTML = (icon.match(/</))? icon:\n			'<font color=\"' + TSort_Store.sort_colors[i] + '\">' + icon + '</font>';\n		sorting.push(id + ((state)? 'D': 'A'));\n	}\n\n	if	(TSort_Store.cookie)\n	{\n		//	Store the contents of \"sorting\" array into a cookie for 30 days\n		var date = new Date();\n		date.setTime (date.getTime () + 2592000);\n		document.cookie = TSort_Store.cookie + \"=\" +\n			encodeURIComponent (sorting.join(',')) + \"; expires=\" +\n			date.toGMTString () + \"; path=/\";\n	}\n}\n\nfunction tsSort(a, b)\n{\n	var data_a = TSort_Store.rows[a.tsort_row_id];\n	var data_b = TSort_Store.rows[b.tsort_row_id];\n	var sort_keys = TSort_Store.sort_keys;\n	var len = sort_keys.length;\n	var id;\n	var type;\n	var order;\n	var result;\n	for (var i = 0; i < len; i++)\n	{\n		id = sort_keys[i];\n		type = TSort_Store.sorting[id];\n\n		var v_a = data_a[id];\n		var v_b = data_b[id];\n		if	(v_a == v_b)  continue;\n		if	((type == 'i')||(type == 'f')||(type == 'd'))\n			result = v_a - v_b;\n		else\n			result = (v_a < v_b)? -1: 1;\n		order = TSort_Store.sort_state[id];\n		return (order)? result: 0 - result;\n	}\n\n	return (a.tsort_row_id < b.tsort_row_id)? -1: 1;\n}\n\nfunction tsRegister()\n{\n	if	(TSort_All == null)\n		TSort_All = new Object();\n\n	var ts_obj = new TSort_StoreDef();\n	ts_obj.sort_data = TSort_Data;\n	TSort_Data = null;\n	if	(typeof TSort_Classes != 'undefined')\n	{\n		ts_obj.classes = TSort_Classes;\n		TSort_Classes = null;\n	}\n	if	(typeof TSort_Initial != 'undefined')\n	{\n		ts_obj.initial = TSort_Initial;\n		TSort_Initial = null;\n	}\n	if	(typeof TSort_Cookie != 'undefined')\n	{\n		ts_obj.cookie = TSort_Cookie;\n		TSort_Cookie = null;\n	}\n	if	(typeof TSort_Icons != 'undefined')\n	{\n		ts_obj.icons = TSort_Icons;\n		TSort_Icons = null;\n	}\n	if	(ts_obj.icons == null)\n		ts_obj.icons = new Array (\"\\u2193\", \"\\u2191\");\n\n	if	(ts_obj.sort_data != null)\n		TSort_All[ts_obj.sort_data[0]] = ts_obj;\n}\n\nfunction	tsSetTable (p_id)\n{\n	TSort_Store = TSort_All[p_id];\n	if	(TSort_Store == null)\n	{\n		alert (\"Cannot set table '\" + p_id + \"' - table is not registered\");\n		return;\n	}\n	TSort_Data = TSort_Store.sort_data;\n}\n\nif	(window.addEventListener)\n	window.addEventListener(\"load\", tsInitOnload, false);\nelse if (window.attachEvent)\n	window.attachEvent (\"onload\", tsInitOnload);\nelse\n{\n	if  ((window.onload_sort_table == null)&&(window.onload != null))\n		window.onload_sort_table = window.onload;\n	// Assign new onload function\n	window.onload = tsInitOnload;\n}\n// End of code by Gennadiy Shvets\n// -->\n</script>";
 	
-	my $index = "$folder_to_index/RVT_index.html";
-	if( -f $index ) { print "(WARNING: overwriting existing index) " }
+		our $buffer_index_regular = '';
+		our $count_regular = 0;
+		if( -d "$folder_to_index/files" ) { find( \&RVT_index_regular_file, "$folder_to_index/files" ) }
+		if( $count_regular ) {
+			print RVT_INDEX "<script type=\"text/javascript\">
+	<!--
+	var TSort_Data = new Array ('table_regular', 'h', 's', 's', 'i', 'd', 'd', 's');
+	var TSort_Classes = new Array ('row1', 'row2');
+	var TSort_Initial = 0;
+	tsRegister();
+	// -->
+	</script>";
+		}
 	
-	open( RVT_INDEX, ">:encoding(UTF-8)", "$index" ) or warn "WARNING: cannot open $index for writing.\n$!\n";
-	print RVT_INDEX "<HTML>
-<HEAD> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
-<style type=\"text/css\">
-	tr.row1 td { background:white; }
-	tr.row2 td { background:lightgrey; }
-	table, tr, td { border: 1px solid grey; font-family:sans-serif; font-size:small; }
-	table { border-collapse:collapse; }
-	td { padding: 5 px; }
-</style>
-<script type=\"text/javascript\">
-<!--\n// Copyright 2007 - 2010 Gennadiy Shvets\n// The program is distributed under the terms of the GNU General\n// Public License 3.0\n//\n// See http://www.allmyscripts.com/Table_Sort/index.html for usage details.\n\n// Script version 1.8\n\nvar TSort_Store;\nvar TSort_All;\n\nfunction TSort_StoreDef () {\n	this.sorting = [];\n	this.nodes = [];\n	this.rows = [];\n	this.row_clones = [];\n	this.sort_state = [];\n	this.initialized = 0;\n//	this.last_sorted = -1;\n	this.history = [];\n	this.sort_keys = [];\n	this.sort_colors = [ '#FF0000', '#800080', '#0000FF' ];\n};\n\nfunction tsInitOnload ()\n{\n	//	If TSort_All is not initialized - do it now (simulate old behavior)\n	if	(TSort_All == null)\n		tsRegister();\n\n	for (var id in TSort_All)\n	{\n		tsSetTable (id);\n		tsInit();\n	}\n	if	(window.onload_sort_table)\n		window.onload_sort_table();\n}\n\nfunction tsInit()\n{\n\n	if	(TSort_Data.push == null)\n		return;\n	var table_id = TSort_Data[0];\n	var table = document.getElementById(table_id);\n	// Find thead\n	var thead = table.getElementsByTagName('thead')[0];\n	if	(thead == null)\n	{\n		alert ('Cannot find THEAD tag!');\n		return;\n	}\n	var tr = thead.getElementsByTagName('tr');\n	var cols, i, node, len;\n	if	(tr.length > 1)\n	{\n		var	cols0 = tr[0].getElementsByTagName('th');\n		if	(cols0.length == 0)\n			cols0 = tr[0].getElementsByTagName('td');\n		var cols1;\n		var	cols1 = tr[1].getElementsByTagName('th');\n		if	(cols1.length == 0)\n			cols1 = tr[1].getElementsByTagName('td');\n		cols = new Array ();\n		var j0, j1, n;\n		len = cols0.length;\n		for (j0 = 0, j1 = 0; j0 < len; j0++)\n		{\n			node = cols0[j0];\n			n = node.colSpan;\n			if	(n > 1)\n			{\n				while (n > 0)\n				{\n					cols.push (cols1[j1++]);\n					n--;\n				}\n			}\n			else\n			{\n				if	(node.rowSpan == 1)\n					j1++;\n				cols.push (node);\n			}\n		}\n	}\n	else\n	{\n		cols = tr[0].getElementsByTagName('th');\n		if	(cols.length == 0)\n			cols = tr[0].getElementsByTagName('td');\n	}\n	len = cols.length;\n	for (var i = 0; i < len; i++)\n	{\n		if	(i >= TSort_Data.length - 1)\n			break;\n		node = cols[i];\n		var sorting = TSort_Data[i + 1].toLowerCase();\n		if	(sorting == null)  sorting = '';\n		TSort_Store.sorting.push(sorting);\n\n		if	((sorting != null)&&(sorting != ''))\n		{\n//			node.tsort_col_id = i;\n//			node.tsort_table_id = table_id;\n//			node.onclick = tsDraw;\n			node.innerHTML = \"<a href='' onClick=\\\"tsDraw(\" + i + \",'\" +\n				table_id + \"'); return false\\\">\" + node.innerHTML +\n				'</a><b><span id=\"TS_' + i + '_' + table_id + '\"></span></b>';\n			node.style.cursor = \"pointer\";\n		}\n	}\n\n	// Get body data\n	var tbody = table.getElementsByTagName('tbody')[0];\n	if	(tbody == null)	return;\n	// Get TR rows\n	var rows = tbody.getElementsByTagName('tr');\n	var date = new Date ();\n	var len, text, a;\n	for (i = 0; i < rows.length; i++)\n	{\n		var row = rows[i];\n		var cols = row.getElementsByTagName('td');\n		var row_data = [];\n		for (j = 0; j < cols.length; j++)\n		{\n			// Get cell text\n			text = cols[j].innerHTML.replace(/^\\\s+/, '');\n			text = text.replace(/\\\s+\$/, '');\n			var sorting = TSort_Store.sorting[j];\n			if	(sorting == 'h')\n			{\n				text = text.replace(/<[^>]+>/g, '');\n				text = text.toLowerCase();\n			}\n			else if	(sorting == 's')\n				text = text.toLowerCase();\n			else if (sorting == 'i')\n			{\n				text = parseInt(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'n')\n			{\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseInt(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'c')\n			{\n				text = text.replace(/^\\\$/, '');\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'f')\n			{\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'g')\n			{\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'd')\n			{\n				if	(text.match(/^\\\d\\\d\\\d\\\d\\\-\\\d\\\d?\\\-\\\d\\\d?(?: \\\d\\\d?:\\\d\\\d?:\\\d\\\d?)?\$/))\n				{\n					a = text.split (/[\\\s\\\-:]/);\n					text = (a[3] == null)?\n						Date.UTC(a[0], a[1] - 1, a[2],    0,    0,    0, 0):\n						Date.UTC(a[0], a[1] - 1, a[2], a[3], a[4], a[5], 0);\n				}\n				else\n					text = Date.parse(text);\n			}\n			row_data.push(text);\n		}\n		TSort_Store.rows.push(row_data);\n		// Save a reference to the TR element\n		var new_row = row.cloneNode(true);\n		new_row.tsort_row_id = i;\n		TSort_Store.row_clones[i] = new_row;\n	}\n	TSort_Store.initialized = 1;\n\n	if	(TSort_Store.cookie)\n	{\n		var allc = document.cookie;\n		i = allc.indexOf (TSort_Store.cookie + '=');\n		if	(i != -1)\n		{\n			i += TSort_Store.cookie.length + 1;\n			len = allc.indexOf (\";\", i);\n			text = decodeURIComponent (allc.substring (i, (len == -1)?\n				allc.length: len));\n			TSort_Store.initial = (text == '')? null: text.split(/\\\s*,\\\s*/);\n		}\n	}\n\n	var	initial = TSort_Store.initial;\n	if	(initial != null)\n	{\n		var itype = typeof initial;\n		if	((itype == 'number')||(itype == 'string'))\n			tsDraw(initial);\n		else\n		{\n			for (i = initial.length - 1; i >= 0; i--)\n				tsDraw(initial[i]);\n		}\n	}\n}\n\nfunction tsDraw(p_id, p_table)\n{\n	if	(p_table != null)\n		tsSetTable (p_table);\n\n	if	((TSort_Store == null)||(TSort_Store.initialized == 0))\n		return;\n\n	var i = 0;\n	var sort_keys = TSort_Store.sort_keys;\n	var id;\n	var new_order = '';\n	if	(p_id != null)\n	{\n		if	(typeof p_id == 'number')\n			id = p_id;\n		else	if	((typeof p_id == 'string')&&(p_id.match(/^\\\d+[ADU]\$/i)))\n		{\n			id = p_id.replace(/^(\\\d+)[ADU]\$/i, \"\$1\");\n			new_order = p_id.replace(/^\\\d+([ADU])\$/i, \"\$1\").toUpperCase();\n		}\n	}\n	if	(id == null)\n	{\n		id = this.tsort_col_id;\n		if	((p_table == null)&&(this.tsort_table_id != null))\n			tsSetTable (this.tsort_table_id);\n	}\n	var table_id = TSort_Data[0];\n\n	var order = TSort_Store.sort_state[id];\n	if	(new_order == 'U')\n	{\n		if	(order != null)\n		{\n			TSort_Store.sort_state[id] = null;\n			obj = document.getElementById ('TS_' + id + '_' + table_id);\n			if	(obj != null)	obj.innerHTML = '';\n		}\n	}\n	else if	(new_order != '')\n	{\n		TSort_Store.sort_state[id] = (new_order == 'A')? true: false;\n		//	Add column number to the sort keys array\n		sort_keys.unshift(id);\n		i = 1;\n	}\n	else\n	{\n		if	((order == null)||(order == true))\n		{\n			TSort_Store.sort_state[id] = (order == null)? true: false;\n			//	Add column number to the sort keys array\n			sort_keys.unshift(id);\n			i = 1;\n		}\n		else\n		{\n			TSort_Store.sort_state[id] = null;\n			obj = document.getElementById ('TS_' + id + '_' + table_id);\n			if	(obj != null)	obj.innerHTML = '';\n		}\n	}\n\n	var len = sort_keys.length;\n	//	This will either remove the column completely from the sort_keys\n	//	array (i = 0) or remove duplicate column number if present (i = 1).\n	while (i < len)\n	{\n		if	(sort_keys[i] == id)\n		{\n			sort_keys.splice(i, 1);\n			len--;\n			break;\n		}\n		i++;\n	}\n	if	(len > 3)\n	{\n		i = sort_keys.pop();\n		obj = document.getElementById ('TS_' + i + '_' + table_id);\n		if	(obj != null)	obj.innerHTML = '';\n		TSort_Store.sort_state[i] = null;\n	}\n\n	// Sort the rows\n	TSort_Store.row_clones.sort(tsSort);\n\n	// Save the currently selected order\n	var new_tbody = document.createElement('tbody');\n	var row_clones = TSort_Store.row_clones;\n	len = row_clones.length;\n	var classes = TSort_Store.classes;\n	if	(classes == null)\n	{\n		for (i = 0; i < len; i++)\n			new_tbody.appendChild (row_clones[i].cloneNode(true));\n	}\n	else\n	{\n		var clone;\n		var j = 0;\n		var cl_len = classes.length;\n		for (i = 0; i < len; i++)\n		{\n			clone = row_clones[i].cloneNode(true);\n			clone.className = classes[j++];\n			if	(j >= cl_len)  j = 0;\n			new_tbody.appendChild (clone);\n		}\n	}\n\n	// Replace table body\n	var table = document.getElementById(table_id);\n	var tbody = table.getElementsByTagName('tbody')[0];\n	table.removeChild(tbody);\n	table.appendChild(new_tbody);\n\n	var obj, color, icon, state;\n	len = sort_keys.length;\n	var sorting = new Array ();\n	for (i = 0; i < len; i++)\n	{\n		id = sort_keys[i];\n		obj = document.getElementById ('TS_' + id + '_' + table_id);\n		if	(obj == null)  continue;\n		state = (TSort_Store.sort_state[id])? 0: 1;\n		icon = TSort_Store.icons[state];\n		obj.innerHTML = (icon.match(/</))? icon:\n			'<font color=\"' + TSort_Store.sort_colors[i] + '\">' + icon + '</font>';\n		sorting.push(id + ((state)? 'D': 'A'));\n	}\n\n	if	(TSort_Store.cookie)\n	{\n		//	Store the contents of \"sorting\" array into a cookie for 30 days\n		var date = new Date();\n		date.setTime (date.getTime () + 2592000);\n		document.cookie = TSort_Store.cookie + \"=\" +\n			encodeURIComponent (sorting.join(',')) + \"; expires=\" +\n			date.toGMTString () + \"; path=/\";\n	}\n}\n\nfunction tsSort(a, b)\n{\n	var data_a = TSort_Store.rows[a.tsort_row_id];\n	var data_b = TSort_Store.rows[b.tsort_row_id];\n	var sort_keys = TSort_Store.sort_keys;\n	var len = sort_keys.length;\n	var id;\n	var type;\n	var order;\n	var result;\n	for (var i = 0; i < len; i++)\n	{\n		id = sort_keys[i];\n		type = TSort_Store.sorting[id];\n\n		var v_a = data_a[id];\n		var v_b = data_b[id];\n		if	(v_a == v_b)  continue;\n		if	((type == 'i')||(type == 'f')||(type == 'd'))\n			result = v_a - v_b;\n		else\n			result = (v_a < v_b)? -1: 1;\n		order = TSort_Store.sort_state[id];\n		return (order)? result: 0 - result;\n	}\n\n	return (a.tsort_row_id < b.tsort_row_id)? -1: 1;\n}\n\nfunction tsRegister()\n{\n	if	(TSort_All == null)\n		TSort_All = new Object();\n\n	var ts_obj = new TSort_StoreDef();\n	ts_obj.sort_data = TSort_Data;\n	TSort_Data = null;\n	if	(typeof TSort_Classes != 'undefined')\n	{\n		ts_obj.classes = TSort_Classes;\n		TSort_Classes = null;\n	}\n	if	(typeof TSort_Initial != 'undefined')\n	{\n		ts_obj.initial = TSort_Initial;\n		TSort_Initial = null;\n	}\n	if	(typeof TSort_Cookie != 'undefined')\n	{\n		ts_obj.cookie = TSort_Cookie;\n		TSort_Cookie = null;\n	}\n	if	(typeof TSort_Icons != 'undefined')\n	{\n		ts_obj.icons = TSort_Icons;\n		TSort_Icons = null;\n	}\n	if	(ts_obj.icons == null)\n		ts_obj.icons = new Array (\"\\u2193\", \"\\u2191\");\n\n	if	(ts_obj.sort_data != null)\n		TSort_All[ts_obj.sort_data[0]] = ts_obj;\n}\n\nfunction	tsSetTable (p_id)\n{\n	TSort_Store = TSort_All[p_id];\n	if	(TSort_Store == null)\n	{\n		alert (\"Cannot set table '\" + p_id + \"' - table is not registered\");\n		return;\n	}\n	TSort_Data = TSort_Store.sort_data;\n}\n\nif	(window.addEventListener)\n	window.addEventListener(\"load\", tsInitOnload, false);\nelse if (window.attachEvent)\n	window.attachEvent (\"onload\", tsInitOnload);\nelse\n{\n	if  ((window.onload_sort_table == null)&&(window.onload != null))\n		window.onload_sort_table = window.onload;\n	// Assign new onload function\n	window.onload = tsInitOnload;\n}\n// End of code by Gennadiy Shvets\n// -->\n</script>";
-
-	our $buffer_index_regular = '';
-	our $count_regular = 0;
-	if( -d "$folder_to_index/files" ) { find( \&RVT_index_regular_file, "$folder_to_index/files" ) }
-	if( $count_regular ) {
-		print RVT_INDEX "<script type=\"text/javascript\">
-<!--
-var TSort_Data = new Array ('table_regular', 'h', 's', 's', 'i', 'd', 'd', 's');
-var TSort_Classes = new Array ('row1', 'row2');
-var TSort_Initial = 0;
-tsRegister();
-// -->
-</script>";
-	}
-
-	our $buffer_index_email = '';
-	our $count_email = 0;
-	if( -d "$folder_to_index/email" ) { find( \&RVT_index_email_item, "$folder_to_index/email" ) }
-	elsif( ! -d "$folder_to_index/files" ) {
-		# This is not a normal export folder (no files/, no email/ ?). Index all email items in here.
-		find( \&RVT_index_email_item, "$folder_to_index" )
-	}
-	if( $count_email ) {
-		print RVT_INDEX "<script type=\"text/javascript\">
-<!--
-var TSort_Data = new Array ('table_email', 'h', 'd', 's', 's', 's', 's', 's', 's', 's');
-var TSort_Classes = new Array ('row1', 'row2');
-var TSort_Initial = 1;
-tsRegister();
-// -->
-</script>";
-	}
-	(my $ref = $folder_to_index) =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9])\/.*\/([^\/]*)$/\1 \2/;
-	print RVT_INDEX "<TITLE>Index: $ref</TITLE>\n</HEAD>\n<BODY><h3>Index: $ref</h3>\n";  # Index of $folder_to_index";
+		our $buffer_index_email = '';
+		our $count_email = 0;
+		our $count_attach = 0;
+		if( -d "$folder_to_index/email" ) { find( \&RVT_index_email_item, "$folder_to_index/email" ) }
+		elsif( ! -d "$folder_to_index/files" ) {
+			# This is not a normal export folder (no files/, no email/ ?). Index all email items in here.
+			find( \&RVT_index_email_item, "$folder_to_index" )
+		}
+		if( $count_email ) {
+			print RVT_INDEX "<script type=\"text/javascript\">
+	<!--
+	var TSort_Data = new Array ('table_email', 'h', 'd', 's', 's', 's', 's', 's', 's', 's');
+	var TSort_Classes = new Array ('row1', 'row2');
+	var TSort_Initial = 1;
+	tsRegister();
+	// -->
+	</script>";
+		}
+		(my $ref = $folder_to_index) =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9])\/.*\/([^\/]*)$/\1 \2/;
+		print RVT_INDEX "<TITLE>Index: $ref</TITLE>\n</HEAD>\n<BODY><h3>Index: $ref</h3>\n";  # Index of $folder_to_index";
+		
+		if( $count_regular ) {
+			print RVT_INDEX "<h3>Regular files: $count_regular items</h3>
+	<TABLE id=\"table_regular\" border=1 rules=all frame=box>
+	<THEAD>
+	<tr><th>File name</th><th>ext</th><th>Path</th><th>Size</th><th>Last modified</th><th>Last accessed</th><th>Remarks</th></tr>
+	</THEAD>
+	$buffer_index_regular
+	</TABLE>
+	";
+		}
+		
+		if( $count_email ) {
+			print RVT_INDEX "<h3>e-mail, calendar, contacts...: $count_email items</h3>
+	<TABLE id=\"table_email\">
+	<THEAD>
+	<tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th><th>&nbsp;Attachments&nbsp;</th></tr>
+	</THEAD>
+	$buffer_index_email
+	</TABLE>
+	";
+		}
 	
-	if( $count_regular ) {
-		print RVT_INDEX "<h3>Regular files: $count_regular items</h3>
-<TABLE id=\"table_regular\" border=1 rules=all frame=box>
-<THEAD>
-<tr><th>File name</th><th>ext</th><th>Path</th><th>Size</th><th>Last modified</th><th>Last accessed</th><th>Remarks</th></tr>
-</THEAD>
-$buffer_index_regular
-</TABLE>
-";
+		print RVT_INDEX "</BODY>\n</HTML>\n";
+		my $total = $count_regular + $count_email;
+		print "done. $total entries: $count_regular regular files + $count_email e-mail items (with $count_attach attachments)\n";
+		return 1;
 	}
-	
-	if( $count_email ) {
-		print RVT_INDEX "<h3>e-mail, calendar, contacts...: $count_email items</h3>
-<TABLE id=\"table_email\">
-<THEAD>
-<tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th><th>&nbsp;Attachments&nbsp;</th></tr>
-</THEAD>
-$buffer_index_email
-</TABLE>
-";
-	}
-
-	print RVT_INDEX "</BODY>\n</HTML>\n";
-	print "Done!\n";
-	return 1;
 }
-
 
 
 
@@ -801,7 +820,7 @@ sub RVT_parse_bkf {
 			(my $escaped = $f) =~ s/`/\\`/g;
 			my $output = `$MTFTAR < "$escaped" | tar x -C "$fpath" 2>&1 `;
 			open (META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or warn ("WARNING: cannot create metadata files: $!.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META "# RVT SRC: $f\n";
 			print META $output;
 			close (META);
 		}
@@ -830,7 +849,7 @@ sub RVT_parse_compressed {
 			my $output = `$Z7 x -o"$fpath" -pPASSWORD -y "$escaped" 2>&1`;
 			my $chmod = `/bin/chmod -R ug+rwX "$fpath"`;
 			open (RVT_META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
-			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print RVT_META "# RVT SRC: $f\n";
 			print RVT_META $output;
 			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) or ($output =~ /Unsupported Method/) ) { RVT_report( "encrypted", $f, $disk ) }
 			if( $output =~ /Error: Can not open file as archive/ ) { RVT_report( "malformed", $f, $disk ) }
@@ -859,7 +878,7 @@ sub RVT_parse_dbx {
 			my $dbxpath = RVT_create_folder($opath, 'dbx');
 			my $meta = "$dbxpath/RVT_metadata";
 			open (META,">:encoding(UTF-8)", "$meta") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
-			print META "# BEGIN RVT METADATA\n# Source file: $f\nvo# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META "# RVT SRC: $f\n";
 			close (META);
 	
 			my $fpath = RVT_create_file($dbxpath, 'dbx', 'eml');
@@ -956,10 +975,9 @@ sub RVT_parse_eml {
 			$index_line =~ s/#//g;
 			$index_line =~ s/_XX_RVT_DELIM_/#/g;
 			print RVT_ITEM "<HTML>$index_line
-<!-- BEGIN RVT METADATA
-# Source file: $f
-# Parsed by: $RVT_moduleName v$RVT_moduleVersion
-# END RVT METADATA -->
+<!-- 
+# RVT SRC: $f
+-->
 <HEAD>
 	<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
 	<style type=\"text/css\">
@@ -1070,6 +1088,7 @@ sub RVT_parse_eml {
 					$string =~ s/%/%25/g;
 					$string =~ s/#/%23/g;
 					$string =~ s/\?/%3f/g;
+					$string =~ s/\\/%5c/g;
 					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a> ($size bytes)</td></tr>\n";
 				}
 				
@@ -1119,7 +1138,7 @@ sub RVT_parse_evt {
 			open (FEVT, "-|", "$EVTPARSE", $f) or die "Error: $!";
 			binmode (FEVT, ":encoding(cp1252)") || die "Can't binmode to cp1252 encoding\n";
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output file.");
-			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print FOUT "# RVT SRC: $f\n";
 			print FOUT "Date#Type#User#Event ID#Description\n";
 			while (<FEVT>) {
 				chomp ($_);
@@ -1157,7 +1176,7 @@ sub RVT_parse_lnk {
 			$fpath = "$lnkpath/lnk-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			open (FLNK, "-|", "$LNKPARSE", $f);
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
-			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print FOUT "# RVT SRC: $f\n";
 			while (<FLNK>) { print FOUT $_ }
 			close (FLNK);
 			close (FOUT);
@@ -1185,7 +1204,7 @@ sub RVT_parse_mbox {
 			my $mboxpath = RVT_create_folder($opath, 'mbox');
 			my $meta = "$mboxpath/__RVT_metadata.txt";
 			open (META,">:encoding(UTF-8)", "$meta") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META "# RVT SRC: $f\n";
 			
 			Mail::Mbox::MessageParser::SETUP_CACHE( { 'file_name' => '/tmp/RVT_mbox_cache' } );
 			my $fh = new FileHandle($f);
@@ -1237,7 +1256,7 @@ sub RVT_parse_msg {
 			( my $meta = $fpath ) =~ s/\.eml$/.RVT_metadata/;
 
 			open (RVT_META, ">:encoding(UTF-8)", "$meta") or warn ("WARNING: failed to create output file $meta: $!.");
-			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print RVT_META "# RVT SRC: $f\n";
 			
 			# Temp redirection of STDERR to RVT_META, to capture output from Email::Outlook::Message.
 			open( STDERR, ">>:encoding(UTF-8)", "$meta" ); 
@@ -1280,7 +1299,7 @@ sub RVT_parse_pdf {
 			(my $escaped = $f) =~ s/`/\\`/g;
 			my $output = `$PDFTOTEXT "$escaped" - 2>&1`;
 			open (RVT_META, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output files: $!.");
-			print RVT_META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print RVT_META "# RVT SRC: $f\n";
 			print RVT_META $output;
 			if( $output =~ /^Error: Incorrect password$/ ) { RVT_report( "encrypted", $f, $disk ) }
 			close (RVT_META);
@@ -1308,7 +1327,7 @@ sub RVT_parse_pff {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			my $fpath = RVT_create_file($opath, 'pff', 'RVT_metadata');    	
 			open (META,">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create metadata files."); # XX Lo del encoding habría que hacerlo en muchos otros sitios.
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META "# RVT SRC: $f\n";
 			close (META);
 			$fpath =~ s/.RVT_metadata//; 
 			my @args = ("$PFFEXPORT", '-f', 'text', '-m', 'all', '-q', '-t', "$fpath", $f); # -f text and -m all are in fact default options.
@@ -1342,7 +1361,7 @@ sub RVT_parse_sqlite {
 			(my $escaped = $f) =~ s/`/\\`/g;
 			my $output = `echo ".dump" | sqlite3 -batch "$escaped"`;
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
-			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print FOUT "# RVT SRC: $f\n";
 			print FOUT $output;
 			close FOUT;
 			$count++;
@@ -1375,7 +1394,7 @@ sub RVT_parse_text {
 			chomp ($normalized);	
 			open (FTEXT, "-|", "$FSTRINGS", "$f") or die ("ERROR: Failed to open input file $f\n");
 			open (FOUT, ">:encoding(UTF-8)", "$fpath") or die ("ERR: failed to create output files.");
-			print FOUT "# BEGIN RVT METADATA\n# Source file: $f\n# Normal: $normalized\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print FOUT "# RVT SRC: $f\n# $normalized\n";
 			while (<FTEXT>){
 				print FOUT $_;
 			}
@@ -1408,7 +1427,7 @@ sub RVT_parse_undelete {
 			(my $escaped = $f) =~ s/`/\\`/g;
 			my $output = `$TSK_RECOVER "$escaped" "$fpath" 2>&1`;
 			open (META, ">:encoding(UTF-8)", "$fpath/__RVT_metadata.txt") or die ("ERR: failed to create metadata files.");
-			print META "# BEGIN RVT METADATA\n# Source file: $f\n# Parsed by: $RVT_moduleName v$RVT_moduleVersion\n# END RVT METADATA\n";
+			print META "# RVT SRC: $f\n";
 			print META $output;
 			close (META);
 		}
@@ -1537,8 +1556,8 @@ sub RVT_get_source  ($$) { # parameters: ( $file, $disk )
 		open (FILE, "<:encoding(UTF-8)", $file);	
 		my $count = 0;
 		while ( $source = <FILE>) {
-			if ($source =~ s/# Source file: //) { $got_source = 1; last; }
-			if ($count > 5) { last; } ## THIS is the number of lines that will be read when looking for the RVT_Source metadata.
+			if ($source =~ s/# RVT SRC: //) { $got_source = 1; last; }
+			if ($count > 2) { last; } # This limits the number of lines that will be read when looking for the source.
 			$count++ ;
 		}
 		close (FILE);
@@ -1616,16 +1635,19 @@ sub RVT_index_email_item () {
 
 sub RVT_index_email_attachment () {
 # WARNING!!! This function is to be called ONLY from within RVT_index_email_item
-# $attachments and $folder_to_index are expected to be initialized.
+# $attachments, $folder_to_index and $count_attach are expected to be initialized.
 	
 	our $attachments;
 	our $folder_to_index;
+	our $count_attach;
 	if( -f $File::Find::name ) {
 		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
 		$link =~ s/%/%25/g;
 		$link =~ s/#/%23/g;
 		$link =~ s/\?/%3f/g;
+		$link =~ s/\\/%5c/g;
 		$attachments = $attachments ."- <a href=\"$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
+		$count_attach++;
 	}
 	return 1;
 }
@@ -1645,6 +1667,7 @@ sub RVT_index_regular_file () {
 	$link =~ s/%/%25/g;
 	$link =~ s/#/%23/g;
 	$link =~ s/\?/%3f/g;
+	$link =~ s/\\/%5c/g;
 	( my $basename = basename($File::Find::name) ) =~ s/(.*)\.[^.]{1,16}$/\1/;
 	( my $ext = uc(basename($File::Find::name)) ) =~ s/.*\.([^.]{1,16})$/.\1/;
 	
@@ -1688,6 +1711,7 @@ sub RVT_sanitize_libpff_attachment () {
 		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
 		$string =~ s/\?/%3f/g;
+		$string =~ s/\\/%5c/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a> ($size bytes)</td></tr>\n";
 	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*[A-Z[a-z]*00001.html/ )  {
 		( my $short = $File::Find::name ) =~ s/.*\/output\/parser\/control\///;
@@ -1699,6 +1723,7 @@ sub RVT_sanitize_libpff_attachment () {
 		$string =~ s/%/%25/g;
 		$string =~ s/#/%23/g;
 		$string =~ s/\?/%3f/g;
+		$string =~ s/\\/%5c/g;
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n"; # computing the SIZE is more complicated in this case.
 	}
 	return 1;
@@ -1852,7 +1877,7 @@ sub RVT_sanitize_libpff_item () {
 
 	# InternetHeaders.txt: append to RVT_META
 	if( -f "$folder/InternetHeaders.txt" ) {
-		$headers = $headers . "\n<b>InternetHeaders.txt</b>\n<pre>\n";
+		$headers = $headers . "\n<b>Internet headers:</b>\n<pre>\n";
 		open (INTERNETHEADERS, "<:encoding(UTF-8)", "$folder/InternetHeaders.txt") or warn ("WARNING: failed to open $folder/InternetHeaders.txt\n");
 		while( my $line = <INTERNETHEADERS> ) {
 			chomp( $line); # Two chomps attempting to normalize the DOS line ending.
@@ -1868,10 +1893,10 @@ sub RVT_sanitize_libpff_item () {
 	my $to = "";
 	my $cc = "";
 	my $bcc = "";
-	if( -f "$folder/Recipients.txt" ) {
+	if( -f "$folder/Recipients:" ) {
 		my $string;
 		my $previous_line = "";
-		$headers = $headers . "\n<b>Recipients.txt</b>\n<pre>\n";
+		$headers = $headers . "\n<b>Recipients:</b>\n<pre>\n";
 		open (RECIPIENTS, "<:encoding(UTF-8)", "$folder/Recipients.txt") or warn ("WARNING: failed to open $File::Find::dir/Recipients.txt\n");
 		while( my $line = <RECIPIENTS> ) {
 			$headers = $headers . $line;
@@ -1892,7 +1917,7 @@ sub RVT_sanitize_libpff_item () {
 	}
 
 	# ConversationIndex.txt: append to RVT_META
-	if( -f "$folder/ConversationIndex.txt" ) {
+	if( -f "$folder/Conversation Index:" ) {
 		$headers = $headers . "\n<b>ConversationIndex.txt</b>\n<pre>\n";
 		open ( CONVERSATIONINDEX, "<:encoding(UTF-8)", "$folder/ConversationIndex.txt") or warn ("WARNING: failed to open $folder/ConversationIndex.txt\n");
 		while ( my $line = <CONVERSATIONINDEX> ) { $headers = $headers . $line }
@@ -1966,12 +1991,12 @@ sub RVT_sanitize_libpff_item () {
 
 	# Parse rest of LIBPFF_ITEM writing to RVT_META and RVT_ITEM
 	print RVT_ITEM "</TABLE><br>\n";	
-	$headers = $headers . "\n<b>Rest of $file (if any) follows:</b>\n<pre>";
+	$headers = $headers . "\n<b>Rest of $file (if any):</b>\n<pre>";
 	while( my $line = <LIBPFF_ITEM> ) { 
 		print RVT_ITEM "$line<br>";
 		$headers = $headers . $line;
 	}
-	$headers = $headers . "</pre>\n<b>END OF METADATA</b>";
+	$headers = $headers . "</pre>\n";
 
 	# Write RVT_META section inside RVT_ITEM:
 	print RVT_ITEM "<DIV id=tbl name=tbl style=\"overflow:hidden;display:none\">
@@ -2022,18 +2047,18 @@ sub RVT_report ($$$) {
 
 	my $reportpath = RVT_get_morguepath($disk) . '/output/parser/searches';
 	if( ! -d $reportpath ) { mkdir $reportpath };
-	open( REPORT, ">>:encoding(UTF-8)", "$reportpath/rvt_$report" );
+	open( REPORT, ">>:encoding(UTF-8)", "$reportpath/_RVT_$report" );
 	print REPORT "$file\n";
 	close( REPORT );
 	if( $report == "encrypted" ) {
 		print "   * Item seems encrypted or password-protected. Reported.\n";
-		print RVT_META "# Item seems encrypted or password-protected. Reported.\n";
+		print RVT_META "# Item seems encrypted or password-protected. Reported.\n" or warn "WARNING: cannot log to RVT_META (is it open?): $!";
 	} elsif( $report == "malformed" ) {
 		print "   * Item seems malformed. Reported.\n";
-		print RVT_META "# Item seems malformed. Reported.\n";
+		print RVT_META "# Item seems malformed. Reported.\n" or warn "WARNING: cannot log to RVT_META (is it open?): $!";
 	} else {
-		print "   * Item added to report rvt_$report.\n";
-		print RVT_META "# Item added to report rvt_$report.\n";
+		print "   * Item added to report _RVT_$report.\n";
+		print RVT_META "# Item added to report _RVT_$report.\n" or warn "WARNING: cannot log to RVT_META (is it open?): $!";
 	}
 	
 	return 1;
