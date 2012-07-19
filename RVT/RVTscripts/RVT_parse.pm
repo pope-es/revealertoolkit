@@ -160,7 +160,7 @@ sub RVT_build_filelists () {
 	if( -f $File::Find::name ) {
 # filelist_bkf:
 		if( $File::Find::name =~ /\.bkf$/i ) { push( @filelist_bkf, $File::Find::name ) }		# MS Windows backup
-# filelist_compressed - fs images are also pushed to @filelist_undelete, to be parsed with tsk_recover
+# filelist_compressed - fs images are also pushed to @filelist_undelete
 		elsif( $File::Find::name =~ /\.arj$/i ) { push( @filelist_compressed, $File::Find::name ) }		# ARJ compressed file
 		elsif( $File::Find::name =~ /\.bz$/i ) { push( @filelist_compressed, $File::Find::name ) }		# bzip file
 		elsif( $File::Find::name =~ /\.bzip$/i ) { push( @filelist_compressed, $File::Find::name ) }	# bzip file
@@ -853,6 +853,9 @@ sub RVT_parse_compressed {
 			print RVT_META $output;
 			if( ($output =~ /Wrong password/) or ($output =~ /EncryptionInfo/) or ($output =~ /Unsupported Method/) ) { RVT_report( "encrypted", $f, $disk ) }
 			if( $output =~ /Error: Can not open file as archive/ ) { RVT_report( "malformed", $f, $disk ) }
+			if( $f =~ /.*\.(docm|docx|dotm|dotx|keynote|numbers|odb|odc|odf|odg|odi|odm|odp|ods|odt|otc|otf|otg|oth|oti|otp|ots|ott|pages|potx|potm|ppam|pptm|pptx|ppsx|ppsm|stc|std|sti|stw|sxc|sxd|sxg|sxi|sxm|sxw|xlam|xlsx|xlsm|xltm|xltx)$/i ) { # ODF documents
+				finddepth( \&RVT_sanitize_compressed_office, $fpath );
+			}			
 			close (RVT_META);
 		}
 	}
@@ -1417,7 +1420,7 @@ sub RVT_parse_undelete {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("filesystem undeletion (if possible)... ");
+	printf ("filesystem undeletion... ");
 	if( our @filelist_undelete ) {
 		print "\n";
 		foreach my $f ( our @filelist_undelete ) {
@@ -1688,6 +1691,24 @@ sub RVT_index_regular_file () {
 
 	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">$basename$ext</a></td><td>$ext</td><td>$folder</td><td align=right>$size</td><td align=right>$mtime</td><td align=right>$atime</td><td>$remarks</td></tr>\n";
 	$count_regular++;
+	return 1;
+}
+
+
+
+sub RVT_sanitize_compressed_office () {
+# WARNING!!! This function is to be called ONLY from within RVT_parse_compressed.
+# File descriptor RVT_META is expected to be open.
+	if ( -f $File::Find::name ) {
+		if ( $File::Find::name =~ /.*\.(xml|rels|rdf)$/i ) {
+			open ( FILE, "<:encoding(UTF-8)", $File::Find::name );
+			while ( my $line = <FILE> ) { print RVT_META $line }
+			close FILE;
+			unlink $File::Find::name;
+		}
+	} elsif ( -d $File::Find::name ) {
+		rmdir $File::Find::name; # will fail if not empty, it's OK.
+	}
 	return 1;
 }
 
