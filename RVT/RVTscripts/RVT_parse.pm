@@ -1094,6 +1094,7 @@ sub RVT_parse_eml {
 #print "  Attachment: $filename\n";
 					( my $attachfolder = $fpath ) =~ s/\.html$/.attach/;
 					mkpath( $attachfolder ); # no "or warn..." to avoid that warning if folder already exists.
+					$filename =~ s/[\/\\]//g; # Forbidden characters in the filesystem
 					open( ATTACH, ">", "$attachfolder/$filename" ) or warn "WARNING: Cannot open file $attachfolder/$filename: $!";
 					print ATTACH $part->body;
 					close ATTACH;
