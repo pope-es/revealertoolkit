@@ -850,7 +850,7 @@ sub RVT_parse_compressed {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("compressed files... ");
+	printf ("Compressed... ");
 	if( our @filelist_compressed ) {
 		print "\n";
 		foreach my $f ( our @filelist_compressed ) {
@@ -948,10 +948,8 @@ sub RVT_parse_eml {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
 			$fpath = "$emlpath/eml-$count.html"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
 			( my $meta = $fpath ) =~ s/\.html$/.RVT_metadata/;
-			
 			open( RVT_ITEM, ">:encoding(UTF-8)", "$fpath") or warn "WARNING: cannot open file $fpath: $!\n";
 			my $headers = '';
-
 			open( EML_ITEM, "<:encoding(UTF-8)", "$f" ) or warn "WARNING: cannot open file $f: $!\n";
 			my $message = '';
 			my $i_am_in_headers = 1;
@@ -965,7 +963,6 @@ sub RVT_parse_eml {
 			}
 			close( EML_ITEM );
 			my $obj = Email::MIME->new(encode_utf8($message)); # encode_utf8 to avoid croaking with some EMLX containing multibyte characters.
-
 			my $from = $obj->header('From');
 			my $to = $obj->header('To');
 			my $cc = $obj->header('Cc');
@@ -1038,7 +1035,7 @@ sub RVT_parse_eml {
 #print "I set this new content type: ". $obj->content_type ."\n";
 				@parts = $obj;
 			} else { @parts = $obj->parts } # Fallback resource
-
+			my $attach_info = "";
 			while( my $part = shift(@parts) ) {
 #print "-- Part:\n";
 				my $ctype = $part->content_type;
@@ -1108,6 +1105,8 @@ sub RVT_parse_eml {
 					$string =~ s/\?/%3f/g;
 					$string =~ s/\\/%5c/g;
 					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a> ($size bytes)</td></tr>\n";
+					( my $short = $string ) =~ s/.*\/output\/parser\/control\///;
+					$attach_info = $attach_info . "Attachment: $short ($size bytes)\n";
 				}
 				
 			} # end while( $part=shift(@parts) )
@@ -1115,10 +1114,15 @@ sub RVT_parse_eml {
 			print RVT_ITEM "<DIV id=tbl name=tbl style=\"overflow:hidden;display:none\">
 <TABLE border=1 >
 <TR><TD><a href=\"javascript:sizeTbl('none')\">[X]</a> <b>METADATA:</b><br><br>
-<pre>
+<PRE>
 $headers
-</pre>
-</TD></TR>
+</PRE>";
+			if ( $attach_info ) { print RVT_ITEM "<B>Attachment information:</B>
+<PRE>
+$attach_info
+</PRE>";				
+			}
+			print RVT_ITEM "</TD></TR>
 </TABLE>
 </DIV><br><br>
 ";
@@ -1182,7 +1186,7 @@ sub RVT_parse_graphics {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("graphics... ");
+	printf ("Graphics... ");
 	if( our @filelist_graphics ) {
 		print "\n";
 		foreach my $f ( our @filelist_graphics ) {
@@ -1235,7 +1239,7 @@ sub RVT_parse_mbox {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("mbox... ");
+	printf ("MBOX... ");
 	if( our @filelist_mbox ) {
 		print "\n";
 		foreach my $f ( our @filelist_mbox) {
@@ -1388,7 +1392,7 @@ sub RVT_parse_sqlite {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("sqlite... ");
+	printf ("SQLite... ");
 	if( our @filelist_sqlite ) {
 		print "\n";
 		my $sqlitepath = RVT_create_folder($opath, 'sqlite');
@@ -1420,7 +1424,7 @@ sub RVT_parse_text {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control/text';
     mkpath $opath unless (-d $opath);
 
-	printf ("text... ");
+	printf ("Text... ");
 	my $fpath = RVT_create_file($opath, 'text', 'txt');
 	( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
 	if( our @filelist_text ) {
@@ -1456,7 +1460,7 @@ sub RVT_parse_undelete {
     my $opath = RVT_get_morguepath($disk) . '/output/parser/control';
     mkpath $opath unless (-d $opath);
     
-	printf ("filesystem undeletion... ");
+	printf ("Undeletion... ");
 	if( our @filelist_undelete ) {
 		print "\n";
 		foreach my $f ( our @filelist_undelete ) {
