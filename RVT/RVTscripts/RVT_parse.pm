@@ -55,7 +55,8 @@ BEGIN {
 						&RVT_script_parse_search
 						&RVT_script_parse_export
 						&RVT_script_parse_sexport
-   						&RVT_script_parse_index
+   						&RVT_script_parse_index_keyword
+   						&RVT_script_parse_index_disk
 					);
 }
 
@@ -128,8 +129,15 @@ sub constructor {
                                                     script parse export <search file> <disk>";
    $main::RVT_functions{RVT_script_parse_sexport } = "Launches parse_SEarch and parse_EXPORT at once\n
                                                     script parse sexport <search file> <disk>";
-   $main::RVT_functions{RVT_script_parse_index } = "Creates RVT_index.html for a given folder (or folders: use folder/*)\n
-                                                    script parse index <folder in the filesystem>";
+   $main::RVT_functions{RVT_script_parse_index_keyword } = "Creates RVT_keyword_index.html for a folder containing the exportation of a
+given keyword, such as (...)/111111-11-1/output/parser/export/my_keyword
+Use with \"folder/*\" to act on its subfolders: script parse index keyword (...)/export/*\n
+                                                    script parse index keyword <folder>";
+   $main::RVT_functions{RVT_script_parse_index_disk } = "Creates RVT_disk_index.html for a folder containing exportation results of a
+given disk, such as (...)/111111-11-1/output/parser/export
+Can be used with \"folder/*\" to act on its subfolders, although RVT's default directory
+hierarchy does not have a folder where this would be useful.\n
+                                                    script parse index disk <folder>";
 }
 
 
@@ -443,7 +451,7 @@ sub RVT_script_parse_autoparse {
 			RVT_parse_everything( $disk );
 		}
 		my $diskpath = RVT_get_morguepath($disk);
-		RVT_script_parse_index("$diskpath/output/parser/control");
+		RVT_script_parse_index_keyword("$diskpath/output/parser/control");
 		RVT_script_parse_export( ":reports", $disk );
 		$disk = shift( @_ );
 	}
@@ -453,7 +461,7 @@ sub RVT_script_parse_autoparse {
 
 
 sub RVT_script_parse_search  {
-    # launches a search over indexed (PARSEd) files writing results (hits) to a file.
+    # launches a search over PARSEd files writing results (atomic hits) to a file.
     # Arguments:
     # - File with searches: one per line (this file can be created with "script search file...")
     # - One or more disks from the morgue (supports @disks)
@@ -488,8 +496,9 @@ sub RVT_script_parse_search  {
 				} else {
 					my $searchName = shift( @parms );
 					shift( @parms ); # "intersect" - we checked that before.
-					print "-- INTERSECT: $searchName ==> ".join( ":::", @parms )." ..... ";
-					if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting $searchespath/$searchName ..... "; }
+					print "-- INTERSECT: $searchName ==> ".join( ":::", @parms )." ";
+					if( -e "$searchespath/$searchName" ) { print "(WARNING: overwriting) "; }
+					print "..... ";
 					open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
 					my $regexp = shift( @parms );
 					open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
@@ -520,14 +529,15 @@ sub RVT_script_parse_search  {
 						$hits++;
 					}
 					close FOUT;
-					print "($hits hits)\n";
+					print "$hits atomic hits.\n";
 				}
 			} elsif( grep( /:::/, $string ) ) { # Regexp search
 				(my $regexp = $string) =~ s/^.*::://;
 				(my $searchName = $string) =~ s/:::.*$//;
-				print "-- REGEXP: $searchName ==> $regexp ..... ";
+				print "-- REGEXP: $searchName ==> $regexp ";
+				if( -e "$searchespath/$searchName" ) { print "(WARNING: overwriting) "; }
+				print "..... ";
 				open (FMATCH, "-|", "grep", "-EHl", $regexp, $parsedfiles, "-R");
-				if( -e "$searchespath/$searchName" ) { print "WARNING: overwriting $searchespath/$searchName ..... "; }
 				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$searchName");
 				my $hits = 0;
 				while (my $file = <FMATCH>) {
@@ -542,11 +552,12 @@ sub RVT_script_parse_search  {
 				}
 				close FMATCH;
 				close FOUT;
-				print "($hits hits)\n";
+				print "$hits atomic hits.\n";
 			} else { # Regular search
-				print "-- LITERAL: $string ..... ";
+				print "-- LITERAL: $string ";
+				if( -e "$searchespath/$string" ) { print "(WARNING: overwriting) "; }
+				print "..... ";
 				open (FMATCH, "-|", "grep", "-Hl", $string, $parsedfiles, "-R");
-				if( -e "$searchespath/$string" ) { print "WARNING: overwriting $searchespath/$string ..... "; }
 				open (FOUT, ">:encoding(UTF-8)", "$searchespath/$string");
 				my $hits = 0;
 				while (my $file = <FMATCH>) {
@@ -561,7 +572,7 @@ sub RVT_script_parse_search  {
 				}
 				close FMATCH;
 				close FOUT;
-				print "($hits hits)\n";
+				print "$hits atomic hits.\n";
 			}
 		} # end for $string ( @searches )
 		print "\n";
@@ -610,6 +621,7 @@ sub RVT_script_parse_export  {
 			chomp $string;
 			$string = lc($string) unless ($string =~ /^_RVT_/);
 			
+			my $searchTerm;
 			if( grep( /:::intersect:::/, $string ) ) {	# intersection search ("AND" operator)
 				my @parms = split( ":::", $string );
 				if( (scalar(@parms) < 4 ) or ($parms[1] != "intersect") ) {
@@ -619,27 +631,36 @@ sub RVT_script_parse_export  {
 				} else {
 					$string = shift( @parms );
 					shift( @parms ); # "intersect" - we checked that before.
-					print "-- INTERSECT: $string ==> ".join( ":::", @parms )." ..... ";
+					print "-- INTERSECT: $string ==> ".join( ":::", @parms )." ";
+					$searchTerm = "INTERSECT: " . join( ":::", @parms ). "\n";
 				}
 			} elsif( grep( /:::/, $string ) ) {	# Regexp search (or INTERSECT search, same for us at this point)
 				(my $regexp = $string) =~ s/^.*::://;
 				$string =~ s/:::.*$//;
-				print "-- REGEXP: $string ==> $regexp ..... ";
+				print "-- REGEXP: $string ==> $regexp ";
+				$searchTerm = "REGEXP: $regexp\n";
 			} else {						# Regular search
-				print "-- LITERAL: $string ..... ";
+				print "-- LITERAL: $string ";
+				$searchTerm = "LITERAL: $string\n";
 			}
 
-			open (FMATCH, "$searchespath/$string") || print "ERROR: cannot open $searchespath/$string\n";
+			open (FMATCH, "$searchespath/$string") || print "(ERROR: cannot open) ";
 			my $opath = "$exportpath/$string";
 			if ( -e $opath ) {
-				print "WARNING: overwriting $opath ..... ";
+				print "(WARNING: overwriting) ";
 				rmtree( $opath );
 			}
+			print "..... ";
 			mkdir $opath;
 			mkdir "$opath/files";
 			mkdir "$opath/email";
-			my %copied;
+			
+			open( SEARCHTERM, ">>:encoding(UTF-8)", "$opath/__search_term.RVT_metadata" );
+			print SEARCHTERM $searchTerm;
+			close SEARCHTERM;
+			
 			open( FILEINDEX, ">>:encoding(UTF-8)", "$opath/files/__file_index.RVT_metadata" );
+			my %copied;
 			my $hits = 0;
 			while (my $file = <FMATCH>) { # For each line of results...
 				chomp ( $file );
@@ -670,10 +691,12 @@ sub RVT_script_parse_export  {
 				$hits++;
 			} # end while (my $file = <FMATCH>) { # For each line of results...
 			close( FILEINDEX );
-			print "($hits hits)\n";
-			RVT_script_parse_index( $opath );
+			print "$hits atomic hits.\n";
+			RVT_script_parse_index_keyword( $opath );
 		} # end for each string...
 		print "\n";
+		sleep 1;
+		RVT_script_parse_index_disk( RVT_get_morguepath($disk)."/output/parser/export" );
 		$disk = shift( @_ );
 	} # end while( $disk )
 	return 1;
@@ -684,6 +707,14 @@ sub RVT_script_parse_export  {
 sub RVT_script_parse_sexport  {
 	# SEarch + EXPORT
 	# Takes any arguments that are valid for RVT_script_parse_search and RVT_script_parse_export
+	
+	# XX_RVT_FIXME: habría que cambiar las primeras líneas, las formas de coger argumentos etc, para q sean como en search y en export. Es importante 
+	# esto: 
+#    my $searchesfilename = shift( @_ );
+#	my $disk = shift( @_ );
+#	$disk = $main::RVT_level->{tag} unless $disk;
+	# y luego hacer como en las otras: while disk tatata.... esto permitiría estando en "set level 100101", hacer "parse export bla @disks". (ahora hay q decir: parse export bla 100101@disks, aunque tengas el level seteado)
+	
 	my @args = @_;
 	RVT_script_parse_search( @args );
 	RVT_script_parse_export( @args );
@@ -691,17 +722,17 @@ sub RVT_script_parse_sexport  {
 
 
 
-sub RVT_script_parse_index ($) {
-	# For a given folder, creates RVT_index.html.
+sub RVT_script_parse_index_keyword ($) {
+	# For a given folder, creates RVT_keyword_index.html.
 	# For folders with EXPORTed search results, the index differentiates between regular files, and email items.
-	# For other folders, it creates an index of e-mail / Outlook items (both from PFF and from [mbox|msg|dbx]->eml).
+	# For other folders, it creates an index of e-mail items (both from PFF and from [mbox|msg|dbx]->eml).
 	
 	our $folder_to_index = join(" ", @_ ); # this parameter is accessed by RVT_index_email_item and probably some other stuff :)
 	
 	if( $folder_to_index =~ /^.*\/\*$/ ) { # if folder is 'whatever/*', index its subfolders:
 		(my $mother = $folder_to_index) =~ s/\/\*$//;
 		if( ! -d $mother ) {
-			warn "ERROR: Not a directory: $mother ($!)\nOMMITING COMMAND: script parse index $folder_to_index\n";
+			warn "ERROR: Not a directory: $mother ($!)\nOMMITING COMMAND: script parse index keyword $folder_to_index\n";
 			return;
 		}
 		opendir my($dh), $mother or warn "WARNING: cannot open $mother: $!";
@@ -709,49 +740,49 @@ sub RVT_script_parse_index ($) {
 		closedir $dh;
 		
 		foreach my $dir_entry ( @dir_entries ) {
-			if ( (-d $dir_entry) and not ($dir_entry =~ /^\.\.?$/) ) {
+			if ( (-d "$mother/$dir_entry") and not ($dir_entry =~ /^\.\.?$/) ) {
 				print "$mother/$dir_entry\n";
-				RVT_script_parse_index ( "$mother/$dir_entry" )
+				RVT_script_parse_index_keyword ( "$mother/$dir_entry" )
 			}
 		}		
 	} else { ####################### Create index for normal folders
 		if( ! -d $folder_to_index ) {
-			warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: script parse index $folder_to_index\n";
+			warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: script parse index keyword $folder_to_index\n";
 			return;
 		}
-		print "  Creating RVT_index ..... ";	
 		my $index_type;
 		if( ( -d "$folder_to_index/files" ) or ( -d "$folder_to_index/email" ) ) { $index_type = 'search_results' }
-		else { $index_type = 'misc' }
-		
-		my $index = "$folder_to_index/RVT_index.html";
+		else { $index_type = 'misc' }		
+		my $index = "$folder_to_index/RVT_keyword_index.html";
+		print "  Creating RVT_index ";	
 		if( -f $index ) { print "(WARNING: overwriting) " }
+		print "..... ";
 		
-		open( RVT_INDEX, ">:encoding(UTF-8)", "$index" ) or warn "WARNING: cannot open $index for writing.\n$!\n";
-		print RVT_INDEX "<HTML>
-	<HEAD> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
-	<style type=\"text/css\">
-		tr.row1 td { background:white; }
-		tr.row2 td { background:lightgrey; }
-		table, tr, td { border: 1px solid grey; font-family:sans-serif; font-size:small; }
-		table { border-collapse:collapse; }
-		td { padding: 5 px; }
-	</style>
-	<script type=\"text/javascript\">
+		open( RVT_KEYWORD_INDEX, ">:encoding(UTF-8)", "$index" ) or warn "WARNING: cannot open $index for writing.\n$!\n";
+		print RVT_KEYWORD_INDEX "<HTML>
+<HEAD> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+<style type=\"text/css\">
+	tr.row1 td { background:white; }
+	tr.row2 td { background:lightgrey; }
+	table, tr, td { border: 1px solid grey; font-family:sans-serif; font-size:small; }
+	table { border-collapse:collapse; }
+	th, td { padding: 5 px; }
+</style>
+<script type=\"text/javascript\">
 	<!--\n// Copyright 2007 - 2010 Gennadiy Shvets\n// The program is distributed under the terms of the GNU General\n// Public License 3.0\n//\n// See http://www.allmyscripts.com/Table_Sort/index.html for usage details.\n\n// Script version 1.8\n\nvar TSort_Store;\nvar TSort_All;\n\nfunction TSort_StoreDef () {\n	this.sorting = [];\n	this.nodes = [];\n	this.rows = [];\n	this.row_clones = [];\n	this.sort_state = [];\n	this.initialized = 0;\n//	this.last_sorted = -1;\n	this.history = [];\n	this.sort_keys = [];\n	this.sort_colors = [ '#FF0000', '#800080', '#0000FF' ];\n};\n\nfunction tsInitOnload ()\n{\n	//	If TSort_All is not initialized - do it now (simulate old behavior)\n	if	(TSort_All == null)\n		tsRegister();\n\n	for (var id in TSort_All)\n	{\n		tsSetTable (id);\n		tsInit();\n	}\n	if	(window.onload_sort_table)\n		window.onload_sort_table();\n}\n\nfunction tsInit()\n{\n\n	if	(TSort_Data.push == null)\n		return;\n	var table_id = TSort_Data[0];\n	var table = document.getElementById(table_id);\n	// Find thead\n	var thead = table.getElementsByTagName('thead')[0];\n	if	(thead == null)\n	{\n		alert ('Cannot find THEAD tag!');\n		return;\n	}\n	var tr = thead.getElementsByTagName('tr');\n	var cols, i, node, len;\n	if	(tr.length > 1)\n	{\n		var	cols0 = tr[0].getElementsByTagName('th');\n		if	(cols0.length == 0)\n			cols0 = tr[0].getElementsByTagName('td');\n		var cols1;\n		var	cols1 = tr[1].getElementsByTagName('th');\n		if	(cols1.length == 0)\n			cols1 = tr[1].getElementsByTagName('td');\n		cols = new Array ();\n		var j0, j1, n;\n		len = cols0.length;\n		for (j0 = 0, j1 = 0; j0 < len; j0++)\n		{\n			node = cols0[j0];\n			n = node.colSpan;\n			if	(n > 1)\n			{\n				while (n > 0)\n				{\n					cols.push (cols1[j1++]);\n					n--;\n				}\n			}\n			else\n			{\n				if	(node.rowSpan == 1)\n					j1++;\n				cols.push (node);\n			}\n		}\n	}\n	else\n	{\n		cols = tr[0].getElementsByTagName('th');\n		if	(cols.length == 0)\n			cols = tr[0].getElementsByTagName('td');\n	}\n	len = cols.length;\n	for (var i = 0; i < len; i++)\n	{\n		if	(i >= TSort_Data.length - 1)\n			break;\n		node = cols[i];\n		var sorting = TSort_Data[i + 1].toLowerCase();\n		if	(sorting == null)  sorting = '';\n		TSort_Store.sorting.push(sorting);\n\n		if	((sorting != null)&&(sorting != ''))\n		{\n//			node.tsort_col_id = i;\n//			node.tsort_table_id = table_id;\n//			node.onclick = tsDraw;\n			node.innerHTML = \"<a href='' onClick=\\\"tsDraw(\" + i + \",'\" +\n				table_id + \"'); return false\\\">\" + node.innerHTML +\n				'</a><b><span id=\"TS_' + i + '_' + table_id + '\"></span></b>';\n			node.style.cursor = \"pointer\";\n		}\n	}\n\n	// Get body data\n	var tbody = table.getElementsByTagName('tbody')[0];\n	if	(tbody == null)	return;\n	// Get TR rows\n	var rows = tbody.getElementsByTagName('tr');\n	var date = new Date ();\n	var len, text, a;\n	for (i = 0; i < rows.length; i++)\n	{\n		var row = rows[i];\n		var cols = row.getElementsByTagName('td');\n		var row_data = [];\n		for (j = 0; j < cols.length; j++)\n		{\n			// Get cell text\n			text = cols[j].innerHTML.replace(/^\\\s+/, '');\n			text = text.replace(/\\\s+\$/, '');\n			var sorting = TSort_Store.sorting[j];\n			if	(sorting == 'h')\n			{\n				text = text.replace(/<[^>]+>/g, '');\n				text = text.toLowerCase();\n			}\n			else if	(sorting == 's')\n				text = text.toLowerCase();\n			else if (sorting == 'i')\n			{\n				text = parseInt(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'n')\n			{\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseInt(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'c')\n			{\n				text = text.replace(/^\\\$/, '');\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'f')\n			{\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'g')\n			{\n				text = text.replace(/(\\\d)\\\,(?=\\\d\\\d\\\d)/g, \"\$1\");\n				text = parseFloat(text);\n				if	(isNaN(text))	text = 0;\n			}\n			else if (sorting == 'd')\n			{\n				if	(text.match(/^\\\d\\\d\\\d\\\d\\\-\\\d\\\d?\\\-\\\d\\\d?(?: \\\d\\\d?:\\\d\\\d?:\\\d\\\d?)?\$/))\n				{\n					a = text.split (/[\\\s\\\-:]/);\n					text = (a[3] == null)?\n						Date.UTC(a[0], a[1] - 1, a[2],    0,    0,    0, 0):\n						Date.UTC(a[0], a[1] - 1, a[2], a[3], a[4], a[5], 0);\n				}\n				else\n					text = Date.parse(text);\n			}\n			row_data.push(text);\n		}\n		TSort_Store.rows.push(row_data);\n		// Save a reference to the TR element\n		var new_row = row.cloneNode(true);\n		new_row.tsort_row_id = i;\n		TSort_Store.row_clones[i] = new_row;\n	}\n	TSort_Store.initialized = 1;\n\n	if	(TSort_Store.cookie)\n	{\n		var allc = document.cookie;\n		i = allc.indexOf (TSort_Store.cookie + '=');\n		if	(i != -1)\n		{\n			i += TSort_Store.cookie.length + 1;\n			len = allc.indexOf (\";\", i);\n			text = decodeURIComponent (allc.substring (i, (len == -1)?\n				allc.length: len));\n			TSort_Store.initial = (text == '')? null: text.split(/\\\s*,\\\s*/);\n		}\n	}\n\n	var	initial = TSort_Store.initial;\n	if	(initial != null)\n	{\n		var itype = typeof initial;\n		if	((itype == 'number')||(itype == 'string'))\n			tsDraw(initial);\n		else\n		{\n			for (i = initial.length - 1; i >= 0; i--)\n				tsDraw(initial[i]);\n		}\n	}\n}\n\nfunction tsDraw(p_id, p_table)\n{\n	if	(p_table != null)\n		tsSetTable (p_table);\n\n	if	((TSort_Store == null)||(TSort_Store.initialized == 0))\n		return;\n\n	var i = 0;\n	var sort_keys = TSort_Store.sort_keys;\n	var id;\n	var new_order = '';\n	if	(p_id != null)\n	{\n		if	(typeof p_id == 'number')\n			id = p_id;\n		else	if	((typeof p_id == 'string')&&(p_id.match(/^\\\d+[ADU]\$/i)))\n		{\n			id = p_id.replace(/^(\\\d+)[ADU]\$/i, \"\$1\");\n			new_order = p_id.replace(/^\\\d+([ADU])\$/i, \"\$1\").toUpperCase();\n		}\n	}\n	if	(id == null)\n	{\n		id = this.tsort_col_id;\n		if	((p_table == null)&&(this.tsort_table_id != null))\n			tsSetTable (this.tsort_table_id);\n	}\n	var table_id = TSort_Data[0];\n\n	var order = TSort_Store.sort_state[id];\n	if	(new_order == 'U')\n	{\n		if	(order != null)\n		{\n			TSort_Store.sort_state[id] = null;\n			obj = document.getElementById ('TS_' + id + '_' + table_id);\n			if	(obj != null)	obj.innerHTML = '';\n		}\n	}\n	else if	(new_order != '')\n	{\n		TSort_Store.sort_state[id] = (new_order == 'A')? true: false;\n		//	Add column number to the sort keys array\n		sort_keys.unshift(id);\n		i = 1;\n	}\n	else\n	{\n		if	((order == null)||(order == true))\n		{\n			TSort_Store.sort_state[id] = (order == null)? true: false;\n			//	Add column number to the sort keys array\n			sort_keys.unshift(id);\n			i = 1;\n		}\n		else\n		{\n			TSort_Store.sort_state[id] = null;\n			obj = document.getElementById ('TS_' + id + '_' + table_id);\n			if	(obj != null)	obj.innerHTML = '';\n		}\n	}\n\n	var len = sort_keys.length;\n	//	This will either remove the column completely from the sort_keys\n	//	array (i = 0) or remove duplicate column number if present (i = 1).\n	while (i < len)\n	{\n		if	(sort_keys[i] == id)\n		{\n			sort_keys.splice(i, 1);\n			len--;\n			break;\n		}\n		i++;\n	}\n	if	(len > 3)\n	{\n		i = sort_keys.pop();\n		obj = document.getElementById ('TS_' + i + '_' + table_id);\n		if	(obj != null)	obj.innerHTML = '';\n		TSort_Store.sort_state[i] = null;\n	}\n\n	// Sort the rows\n	TSort_Store.row_clones.sort(tsSort);\n\n	// Save the currently selected order\n	var new_tbody = document.createElement('tbody');\n	var row_clones = TSort_Store.row_clones;\n	len = row_clones.length;\n	var classes = TSort_Store.classes;\n	if	(classes == null)\n	{\n		for (i = 0; i < len; i++)\n			new_tbody.appendChild (row_clones[i].cloneNode(true));\n	}\n	else\n	{\n		var clone;\n		var j = 0;\n		var cl_len = classes.length;\n		for (i = 0; i < len; i++)\n		{\n			clone = row_clones[i].cloneNode(true);\n			clone.className = classes[j++];\n			if	(j >= cl_len)  j = 0;\n			new_tbody.appendChild (clone);\n		}\n	}\n\n	// Replace table body\n	var table = document.getElementById(table_id);\n	var tbody = table.getElementsByTagName('tbody')[0];\n	table.removeChild(tbody);\n	table.appendChild(new_tbody);\n\n	var obj, color, icon, state;\n	len = sort_keys.length;\n	var sorting = new Array ();\n	for (i = 0; i < len; i++)\n	{\n		id = sort_keys[i];\n		obj = document.getElementById ('TS_' + id + '_' + table_id);\n		if	(obj == null)  continue;\n		state = (TSort_Store.sort_state[id])? 0: 1;\n		icon = TSort_Store.icons[state];\n		obj.innerHTML = (icon.match(/</))? icon:\n			'<font color=\"' + TSort_Store.sort_colors[i] + '\">' + icon + '</font>';\n		sorting.push(id + ((state)? 'D': 'A'));\n	}\n\n	if	(TSort_Store.cookie)\n	{\n		//	Store the contents of \"sorting\" array into a cookie for 30 days\n		var date = new Date();\n		date.setTime (date.getTime () + 2592000);\n		document.cookie = TSort_Store.cookie + \"=\" +\n			encodeURIComponent (sorting.join(',')) + \"; expires=\" +\n			date.toGMTString () + \"; path=/\";\n	}\n}\n\nfunction tsSort(a, b)\n{\n	var data_a = TSort_Store.rows[a.tsort_row_id];\n	var data_b = TSort_Store.rows[b.tsort_row_id];\n	var sort_keys = TSort_Store.sort_keys;\n	var len = sort_keys.length;\n	var id;\n	var type;\n	var order;\n	var result;\n	for (var i = 0; i < len; i++)\n	{\n		id = sort_keys[i];\n		type = TSort_Store.sorting[id];\n\n		var v_a = data_a[id];\n		var v_b = data_b[id];\n		if	(v_a == v_b)  continue;\n		if	((type == 'i')||(type == 'f')||(type == 'd'))\n			result = v_a - v_b;\n		else\n			result = (v_a < v_b)? -1: 1;\n		order = TSort_Store.sort_state[id];\n		return (order)? result: 0 - result;\n	}\n\n	return (a.tsort_row_id < b.tsort_row_id)? -1: 1;\n}\n\nfunction tsRegister()\n{\n	if	(TSort_All == null)\n		TSort_All = new Object();\n\n	var ts_obj = new TSort_StoreDef();\n	ts_obj.sort_data = TSort_Data;\n	TSort_Data = null;\n	if	(typeof TSort_Classes != 'undefined')\n	{\n		ts_obj.classes = TSort_Classes;\n		TSort_Classes = null;\n	}\n	if	(typeof TSort_Initial != 'undefined')\n	{\n		ts_obj.initial = TSort_Initial;\n		TSort_Initial = null;\n	}\n	if	(typeof TSort_Cookie != 'undefined')\n	{\n		ts_obj.cookie = TSort_Cookie;\n		TSort_Cookie = null;\n	}\n	if	(typeof TSort_Icons != 'undefined')\n	{\n		ts_obj.icons = TSort_Icons;\n		TSort_Icons = null;\n	}\n	if	(ts_obj.icons == null)\n		ts_obj.icons = new Array (\"\\u2193\", \"\\u2191\");\n\n	if	(ts_obj.sort_data != null)\n		TSort_All[ts_obj.sort_data[0]] = ts_obj;\n}\n\nfunction	tsSetTable (p_id)\n{\n	TSort_Store = TSort_All[p_id];\n	if	(TSort_Store == null)\n	{\n		alert (\"Cannot set table '\" + p_id + \"' - table is not registered\");\n		return;\n	}\n	TSort_Data = TSort_Store.sort_data;\n}\n\nif	(window.addEventListener)\n	window.addEventListener(\"load\", tsInitOnload, false);\nelse if (window.attachEvent)\n	window.attachEvent (\"onload\", tsInitOnload);\nelse\n{\n	if  ((window.onload_sort_table == null)&&(window.onload != null))\n		window.onload_sort_table = window.onload;\n	// Assign new onload function\n	window.onload = tsInitOnload;\n}\n// End of code by Gennadiy Shvets\n// -->\n</script>";
 	
 		our $buffer_index_regular = '';
 		our $count_regular = 0;
 		if( -d "$folder_to_index/files" ) { find( \&RVT_index_regular_file, "$folder_to_index/files" ) }
 		if( $count_regular ) {
-			print RVT_INDEX "<script type=\"text/javascript\">
+			print RVT_KEYWORD_INDEX "<script type=\"text/javascript\">
 	<!--
 	var TSort_Data = new Array ('table_regular', 'h', 's', 's', 'i', 'd', 'd', 's');
 	var TSort_Classes = new Array ('row1', 'row2');
 	var TSort_Initial = 0;
 	tsRegister();
 	// -->
-	</script>";
+</script>";
 		}
 	
 		our $buffer_index_email = '';
@@ -763,7 +794,7 @@ sub RVT_script_parse_index ($) {
 			find( \&RVT_index_email_item, "$folder_to_index" )
 		}
 		if( $count_email ) {
-			print RVT_INDEX "<script type=\"text/javascript\">
+			print RVT_KEYWORD_INDEX "<script type=\"text/javascript\">
 	<!--
 	var TSort_Data = new Array ('table_email', 'h', 'd', 's', 's', 's', 's', 's', 's', 'h');
 	var TSort_Classes = new Array ('row1', 'row2');
@@ -773,10 +804,10 @@ sub RVT_script_parse_index ($) {
 	</script>";
 		}
 		(my $ref = $folder_to_index) =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9])\/.*\/([^\/]*)$/\1 \2/;
-		print RVT_INDEX "<TITLE>Index: $ref</TITLE>\n</HEAD>\n<BODY><h3>Index: $ref</h3>\n";  # Index of $folder_to_index";
+		print RVT_KEYWORD_INDEX "<TITLE>Index: $ref</TITLE>\n</HEAD>\n<BODY><h3>Index: $ref</h3>\n";  # Index of $folder_to_index";
 		
 		if( $count_regular ) {
-			print RVT_INDEX "<h3>Regular files: $count_regular items</h3>
+			print RVT_KEYWORD_INDEX "<h3>Regular files: $count_regular items</h3>
 	<TABLE id=\"table_regular\" border=1 rules=all frame=box>
 	<THEAD>
 	<tr><th>File name</th><th>ext</th><th>Path</th><th>Size</th><th>Last modified</th><th>Last accessed</th><th>Remarks</th></tr>
@@ -787,7 +818,7 @@ sub RVT_script_parse_index ($) {
 		}
 		
 		if( $count_email ) {
-			print RVT_INDEX "<h3>e-mail, calendar, contacts...: $count_email items</h3>
+			print RVT_KEYWORD_INDEX "<h3>e-mail, calendar, contacts...: $count_email items</h3>
 	<TABLE id=\"table_email\">
 	<THEAD>
 	<tr><th>&nbsp;Item&nbsp;</th><th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th><th>&nbsp;From&nbsp;</th><th>&nbsp;Subject&nbsp;</th><th>&nbsp;To&nbsp;</th><th>&nbsp;Cc&nbsp;</th><th>&nbsp;BCc&nbsp;</th><th>&nbsp;Remarks&nbsp;</th><th>&nbsp;Attachments&nbsp;</th></tr>
@@ -796,12 +827,109 @@ sub RVT_script_parse_index ($) {
 	</TABLE>
 	";
 		}
-	
-		print RVT_INDEX "</BODY>\n</HTML>\n";
+		
+		open( SEARCHTERM, "<:encoding(UTF-8)", "$folder_to_index/__search_term.RVT_metadata" );
+		my $searchTerm = <SEARCHTERM>;
+		close SEARCHTERM;
+		chomp $searchTerm;
+		$searchTerm =~ s/#//;
+		
+		print RVT_KEYWORD_INDEX "</BODY>\n<!--#". basename( $folder_to_index) ."#$searchTerm#$count_regular#$count_email#$count_attach#-->\n</HTML>\n";
 		my $total = $count_regular + $count_email;
-		print "done. $total entries: $count_regular regular files + $count_email e-mail items (with $count_attach attachments)\n";
+		print "done. $total entries";
+		if ( $total ) {
+			print ": ";
+			if ( $count_regular ) { print "$count_regular regular files" }
+			if ( $count_regular && $count_email ) { print " + " }
+			if ( $count_email ) { print "$count_email e-mail items (with $count_attach attachments)" }
+		}
+		print ".\n";
 		return 1;
 	}
+}
+
+
+
+sub RVT_script_parse_index_disk ($) {
+	# Creates an index for all searches in a given folder, usually (...)/output/parser/export.
+	# We should expand this to accept as a parameter a disk (100xxx-xx-x) and act on its output/parser/export.
+	
+	our $folder_to_index = join(" ", @_ );
+
+	if( $folder_to_index =~ /^.*\/\*$/ ) { # if folder is 'whatever/*', index its subfolders:
+		(my $mother = $folder_to_index) =~ s/\/\*$//;
+		if( ! -d $mother ) {
+			warn "ERROR: Not a directory: $mother ($!)\nOMMITING COMMAND: script parse index $folder_to_index\n";
+			return;
+		}
+		opendir my($dh), $mother or warn "WARNING: cannot open $mother: $!";
+		my @dir_entries = readdir $dh;
+		closedir $dh;
+		
+		foreach my $dir_entry ( @dir_entries ) {
+			if ( (-d "$mother/$dir_entry") and not ($dir_entry =~ /^\.\.?$/) ) {
+				print "$mother/$dir_entry\n";
+				RVT_script_parse_index_disk ( "$mother/$dir_entry" )
+			}
+		}		
+	} else { ####################### Create index for normal folders	
+		if( ! -d $folder_to_index ) {
+			warn "ERROR: Not a directory: $folder_to_index ($!)\nOMMITING COMMAND: script parse indexdisk $folder_to_index\n";
+			return;
+		}
+		print "  Creating RVT_disk_index.html ";
+		if( -f "$folder_to_index/RVT_disk_index.html" ) { print "(WARNING: overwriting) " }
+		print "..... ";
+		opendir my($dh), $folder_to_index or warn "WARNING: cannot open $folder_to_index: $!";
+		my @dir_entries = sort( readdir $dh );
+		closedir $dh;
+	
+		(my $ref = $folder_to_index) =~ s/^.*\/([0-9]{6}-[0-9]{2}-[0-9])\/.*$/\1/;
+		open ( RVT_DISK_INDEX, ">:encoding(UTF-8)", "$folder_to_index/RVT_disk_index.html" );
+		print RVT_DISK_INDEX "<HTML>
+	<HEAD> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">
+	<style type=\"text/css\">
+		table, tr, td { border: 1px solid grey; font-family:sans-serif; font-size:small; }
+		table { border-collapse:collapse; }
+		th, td { padding: 5 px; }
+		tr:nth-child(2n+1) { background:lightgrey; }
+	</style>
+	<TITLE>Disk: $ref</TITLE>
+	</HEAD>
+	<BODY>
+	<H3>Disk: $ref</H3>
+	<TABLE border=1 rules=all frame=box>
+	<THEAD>
+	<tr><th>Search</th><th>Regular files</th><th colspan=\"2\">e-mail, calendar, contacts...</th></tr>
+	</THEAD>
+	";
+	
+		foreach my $dir_entry ( @dir_entries ) {
+#print "dir_entry: $dir_entry\n";
+			open( RVT_KEYWORD_INDEX, "<:encoding(UTF-8)", "$folder_to_index/$dir_entry/RVT_keyword_index.html" );
+			my $line = "";
+			my $possible;
+			while( $possible = <RVT_KEYWORD_INDEX> ) { # Get the last line starting with a comment.
+				if ( $possible =~ /^<!--/ ) { $line = $possible; }
+			}
+#print "last possible: $possible\nline: $line\n";
+			close RVT_KEYWORD_INDEX;
+			if ( $line ) { # Note that dir_entries without a /RVT_keyword_index.html will produce no output, thus we skip arbitrary items that may be in this directory, such as .DS_Store files (or the HTML file we are creating, itself).
+				my @fields = split( "#", $line );
+				print RVT_DISK_INDEX "	<tr><td><a title=\"".RVT_sanitize_html_string($fields[2])."\" href=\"".RVT_sanitize_http_link("$fields[1]/RVT_keyword_index.html")."\"target=\"blank\">".RVT_sanitize_html_string($fields[1])."</a></td><td align=\"right\">$fields[3]</td><td align=\"right\">$fields[4] items</td><td align=\"right\">";
+				if ( $fields[4] ) {
+					if ( $fields[5] ) { print RVT_DISK_INDEX "with $fields[5] attachments" }
+					else { print RVT_DISK_INDEX "with no attachments" }
+				}
+				print RVT_DISK_INDEX "</td></tr>\n";
+			}
+		}
+		
+		print RVT_DISK_INDEX "</TABLE>\n</BODY>\n</HTML>\n";
+		close RVT_DISK_INDEX;
+		print "done.\n";
+	}
+	return 1;
 }
 
 
@@ -1090,21 +1218,18 @@ sub RVT_parse_eml {
 				}
 				
 				# Attachments:
-				if( $is_attach ) {
+				if( $is_attach ) { # RVT_XX_FIXME: Many attachments with the same name and in the same message (can that happen?) could overwrite each other. We should check that out.
 #print "  Attachment: $filename\n";
 					( my $attachfolder = $fpath ) =~ s/\.html$/.attach/;
 					mkpath( $attachfolder ); # no "or warn..." to avoid that warning if folder already exists.
-					$filename =~ s/[\/\\]//g; # Forbidden characters in the filesystem
+					$filename =~ s/[\/\\]//g; # Forbidden characters in the filesystem will be ignored.
 					open( ATTACH, ">", "$attachfolder/$filename" ) or warn "WARNING: Cannot open file $attachfolder/$filename: $!";
 					print ATTACH $part->body;
 					close ATTACH;
 					my $string = "$attachfolder/$filename";
 					my $size = -s $string;
 					$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
-					$string =~ s/%/%25/g;
-					$string =~ s/#/%23/g;
-					$string =~ s/\?/%3f/g;
-					$string =~ s/\\/%5c/g;
+					$string = RVT_sanitize_http_link( $string );
 					print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">$filename</a> ($size bytes)</td></tr>\n";
 					( my $short = $string ) =~ s/.*\/output\/parser\/control\///;
 					$attach_info = $attach_info . "Attachment: $short ($size bytes)\n";
@@ -1665,11 +1790,13 @@ sub RVT_index_email_item () {
 			$item_type = basename( $File::Find::name );
 			$item_type =~ s/[0-9]{5}.*//;
 		}
-		( my $path = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.
+		my $quoted_folder = quotemeta ($folder_to_index);
+		( my $path = $File::Find::name ) =~ s/$quoted_folder\/?//; # make paths relative.
+		$path = RVT_sanitize_http_link( $path );
 		(my $attachpath = $File::Find::name) =~ s/\.html$/.attach/;
 		our $attachments = '';
 		find( \&RVT_index_email_attachment, $attachpath );
-		$buffer_index_email = $buffer_index_email."<tr><td><a href=\"$path\" target=\"_blank\">$item_type</a><td>$line</td><td>$attachments</td></tr>\n";
+		$buffer_index_email = $buffer_index_email."<tr><td><a href=\"$path\" target=\"_blank\">$item_type</a><td>$line</td><td nowrap>$attachments</td></tr>\n";
 		$count_email++;
 	}
 	return 1;
@@ -1685,12 +1812,10 @@ sub RVT_index_email_attachment () {
 	our $folder_to_index;
 	our $count_attach;
 	if( -f $File::Find::name ) {
-		(my $link = $File::Find::name) =~ s/$folder_to_index\/?//;
-		$link =~ s/%/%25/g;
-		$link =~ s/#/%23/g;
-		$link =~ s/\?/%3f/g;
-		$link =~ s/\\/%5c/g;
-		$attachments = $attachments ."- <a href=\"$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
+		my $quoted_folder = quotemeta ($folder_to_index);
+		(my $link = $File::Find::name) =~ s/$quoted_folder\/?//;
+		$link = RVT_sanitize_http_link( $link );
+		$attachments = $attachments ."&gt;<a href=\"$link\" target=\"_blank\">". basename($File::Find::name) ."</a><br>";
 		$count_attach++;
 	}
 	return 1;
@@ -1706,13 +1831,9 @@ sub RVT_index_regular_file () {
 	our $folder_to_index;
 	our $count_regular;
 	our $buffer_index_regular;
-
-	( my $link = $File::Find::name ) =~ s/$folder_to_index\/?//; # make paths relative.
-	$link =~ s/%/%25/g;
-	$link =~ s/#/%23/g;
-	$link =~ s/\?/%3f/g;
-	$link =~ s/\\/%5c/g;
-	( my $basename = basename($File::Find::name) ) =~ s/(.*)\.[^.]{1,16}$/\1/;
+	my $quoted_folder = quotemeta ($folder_to_index);
+	( my $link = $File::Find::name ) =~ s/$quoted_folder\/?//; # make paths relative.
+	$link = RVT_sanitize_http_link( $link );
 	( my $ext = uc(basename($File::Find::name)) ) =~ s/.*\.([^.]{1,16})$/.\1/;
 	
 	open( SOURCE, "<:encoding(UTF-8)", $File::Find::name.".RVT_metadata" );
@@ -1730,7 +1851,7 @@ sub RVT_index_regular_file () {
 		$mtime = "unknown (XX_RVT_FIXME)";
 	}
 
-	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">$basename$ext</a></td><td>$ext</td><td>$folder</td><td align=right>$size</td><td align=right>$mtime</td><td align=right>$atime</td><td>$remarks</td></tr>\n";
+	$buffer_index_regular = $buffer_index_regular."<tr><td><a href=\"$link\" target=\"_blank\">".basename($File::Find::name)."</a></td><td>$ext</td><td>$folder</td><td align=right>$size</td><td align=right>$mtime</td><td align=right>$atime</td><td>$remarks</td></tr>\n";
 	$count_regular++;
 	return 1;
 }
@@ -1755,6 +1876,28 @@ sub RVT_sanitize_compressed_office () {
 
 
 
+sub RVT_sanitize_http_link ($) {
+	# For creating <a href> links.
+	my ( $parm ) = @_;
+	$parm =~ s/%/%25/g;
+	$parm =~ s/#/%23/g;
+	$parm =~ s/\?/%3f/g;
+	$parm =~ s/\\/%5c/g;
+	return $parm;
+}
+
+
+
+sub RVT_sanitize_html_string ($) {
+	# For writing text inside HTML.
+	my ( $parm ) = @_;
+	$parm =~ s/</&lt;/g;
+	$parm =~ s/>/&gt;/g;
+	return $parm;
+}
+
+
+
 sub RVT_sanitize_libpff_attachment () {
 # WARNING!!! This function is to be called ONLY from within RVT_sanitize_libpff_item.
 # File descriptor RVT_ITEM is expected to be open when entering this sub,
@@ -1770,10 +1913,7 @@ sub RVT_sanitize_libpff_attachment () {
 		my $string = $File::Find::name;
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*)$/\1/;
-		$string =~ s/%/%25/g;
-		$string =~ s/#/%23/g;
-		$string =~ s/\?/%3f/g;
-		$string =~ s/\\/%5c/g;
+		$string = RVT_sanitize_http_link( $string );
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a> ($size bytes)</td></tr>\n";
 	} elsif( $item_depth eq $wanted_depth+1 && $File::Find::name =~ /.*[A-Z[a-z]*00001.html/ )  {
 		( my $short = $File::Find::name ) =~ s/.*\/output\/parser\/control\///;
@@ -1782,10 +1922,7 @@ sub RVT_sanitize_libpff_attachment () {
 		my $string = $File::Find::name;
 		chomp( $string );
 		$string =~ s/.*\/([^\/]*\/[^\/]*\/[^\/]*)$/\1/;
-		$string =~ s/%/%25/g;
-		$string =~ s/#/%23/g;
-		$string =~ s/\?/%3f/g;
-		$string =~ s/\\/%5c/g;
+		$string = RVT_sanitize_http_link( $string );
 		print RVT_ITEM "<tr><td><b>Attachment</b></td><td><a href=\"$string\" target=\"_blank\">", basename($File::Find::name), "</a></td></tr>\n"; # computing the SIZE is more complicated in this case.
 	}
 	return 1;
@@ -2143,6 +2280,7 @@ sub RVT_report ($$$) {
 	
 	return 1;
 }
+
 
 
 1;
