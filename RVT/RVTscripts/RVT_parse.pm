@@ -89,6 +89,7 @@ use File::stat; # needed by RVT_index_regular_file
 sub constructor {
 
 	my $evtparse = `evtparse.pl`;
+	my $exiftool = `exiftool -ver`;
 	my $fstrings = `f-strings -h`;
 	my $lnkparse = `lnk-parse-1.0.pl`;
 	my $mtftar = `mtftar 2>&1`;
@@ -100,6 +101,7 @@ sub constructor {
 	my $z7 = `7z`; # would Perl support a variable called $7z ?
    
 	if (!$evtparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Harlan Carvey\'s evtparse.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
+	if (!$exiftool) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find exiftool)'); return }
 	if (!$fstrings) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find f-strings, please locate in tools directory, compile (gcc f-strings.c -o f-strings) and copy to /usr/local/bin or somewhere in your path)'); return }
 	if (!$lnkparse) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find Jacob Cunningham\'s lnk-parse-1.0.pl, please locate in tools directory and copy to /usr/local/bin or somewhere in your path)'); return }
 	if (!$mtftar) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find mtftar)'); return }
@@ -111,6 +113,7 @@ sub constructor {
 	if (!$z7) { RVT_log ('ERR', 'RVT_parse not loaded (couldn\'t find 7z)'); return }
 
    $main::RVT_requirements{'evtparse'} = $evtparse;
+   $main::RVT_requirements{'exiftool'} = $exiftool;
    $main::RVT_requirements{'fstrings'} = $fstrings;
    $main::RVT_requirements{'lnkparse'} = $lnkparse;
    $main::RVT_requirements{'mtftar'} = $mtftar;
@@ -1305,6 +1308,7 @@ sub RVT_parse_evt {
 
 
 sub RVT_parse_graphics {
+	my $EXIFTOOL = "exiftool";
 	my $disk = shift(@_);
 	$disk = $main::RVT_level->{tag} unless $disk;
     if (RVT_check_format($disk) ne 'disk') { RVT_log('ERR', "that is not a disk"); return 0; }
@@ -1315,8 +1319,18 @@ sub RVT_parse_graphics {
 	printf ("Graphics... ");
 	if( our @filelist_graphics ) {
 		print "\n";
+		my $graphicspath = RVT_create_folder($opath, 'graphics');
+		my $fpath = RVT_create_file($graphicspath, 'graphics', 'txt');
+		( my $count = $fpath ) =~ s/.*-([0-9]*).txt$/\1/;
 		foreach my $f ( our @filelist_graphics ) {
 			print "  ".RVT_shorten_fs_path( $f )."\n";
+			$fpath = "$graphicspath/graphics-$count.txt"; # This is to avoid calling RVT_create_file thousands of times inside the loop.
+			open (EXIF, "-|", "$EXIFTOOL", "$f");
+			open (FOUT, ">:encoding(UTF-8)", "$fpath") or warn ("WARNING: failed to create output file: $!.");
+			print FOUT "# RVT SRC: $f\n";
+			while (<EXIF>) { print FOUT $_ }
+			close (FOUT);
+			$count++;
 			RVT_report( "graphics", $f, $disk);
 		}
 	}
@@ -1684,6 +1698,7 @@ sub RVT_get_source  ($$) { # parameters: ( $file, $disk )
 	elsif( $file =~ /.*\/output\/parser\/control\/dbx-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/eml-[0-9]*/ ) { $source_type = 'special_eml'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/evt-[0-9]*\/evt-[0-9]*\.txt/ ) { $source_type = 'infile'; }
+	elsif( $file =~ /.*\/output\/parser\/control\/graphics-[0-9]*\/graphics-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/lnk-[0-9]*\/lnk-[0-9]*\.txt/ ) { $source_type = 'infile'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/mbox-[0-9]*\/.*/ ) { $source_type = 'infolder'; }
 	elsif( $file =~ /.*\/output\/parser\/control\/msg-[0-9]*\/msg-[0-9]*\.eml/ ) { $source_type = 'special_msg'; }
